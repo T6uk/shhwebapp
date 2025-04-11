@@ -111,14 +111,14 @@ def get_data(
         table_name: str,
         draw: int = Query(1),
         start: int = Query(0),
-        length: int = Query(10),
+        length: int = Query(50),  # Increased default from 10 to 50
         search_value: Optional[str] = Query(None, alias="search[value]"),
         order_column: Optional[int] = Query(0, alias="order[0][column]"),
         order_dir: Optional[str] = Query("asc", alias="order[0][dir]"),
         db: Session = Depends(get_db)
 ):
     """
-    Get data in DataTables format
+    Get data in DataTables format with support for infinite scrolling
     """
     try:
         print(f"Processing request: draw={draw}, start={start}, length={length}, search={search_value}")
@@ -217,3 +217,41 @@ def update_row(
         print(f"Error updating row: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error updating row: {str(e)}")
+
+
+@router.get("/table/{table_name}/all-data")
+def get_all_data(
+        table_name: str,
+        db: Session = Depends(get_db)
+):
+    """
+    Get all data from a table at once - use with caution for large tables
+    """
+    try:
+        # Get all data with no limits
+        data, total = get_direct_table_data(
+            db,
+            table_name,
+            page=1,
+            page_size=-1,  # No limit
+            search=None,
+            sort_by='id',
+            sort_desc=False
+        )
+
+        return {
+            "success": True,
+            "total": total,
+            "data": data
+        }
+    except Exception as e:
+        # Log the error for server-side troubleshooting
+        print(f"Error in get_all_data: {str(e)}")
+        print(traceback.format_exc())
+        # Return error format
+        return {
+            "success": False,
+            "error": str(e),
+            "total": 0,
+            "data": []
+        }

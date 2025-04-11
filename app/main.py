@@ -51,6 +51,21 @@ async def index(request: Request, db: Session = Depends(get_db)):
         }
     )
 
+@app.get("/standalone")
+async def standalone_view(request: Request, db: Session = Depends(get_db)):
+    """Render the standalone version of the taitur_data table without navbar/footer"""
+    # Get column groups for the toolbar
+    column_groups = data.get_column_groups(db, "taitur_data")
+
+    return templates.TemplateResponse(
+        "specialized_table_standalone.html",  # Use our new template
+        {
+            "request": request,
+            "table_name": "taitur_data",
+            "column_groups": column_groups
+        }
+    )
+
 
 if __name__ == "__main__":
     import uvicorn
