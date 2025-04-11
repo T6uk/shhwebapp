@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Tuple, Optional
 import json
 import traceback
+import time
 
 
 def get_direct_table_data(
@@ -18,18 +19,19 @@ def get_direct_table_data(
     Query data directly from an existing PostgreSQL table.
     Returns tuple of (data, total_count)
     """
+    start_time = time.time()
     try:
         # Create a dynamic table object
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=db.bind)
 
-        # Get column names for logging
-        column_names = [col.name for col in table.columns]
-        print(f"Table columns: {column_names}")
-
         # Base query - SQLAlchemy 2.0 style
         query = select(table)
-        count_query = select(func.count()).select_from(table)
+
+        # For performance with large tables, calculate count separately
+        # and only when no search is applied
+        count_query = None
+        total = 0
 
         # Apply search if provided - search across ALL string columns
         if search and search.strip():
@@ -43,12 +45,19 @@ def get_direct_table_data(
             if search_conditions:
                 search_filter = or_(*search_conditions)
                 query = query.where(search_filter)
-                count_query = count_query.where(search_filter)
+                # When searching, we need an accurate count
+                count_query = select(func.count()).select_from(table).where(search_filter)
 
-        # Get total count before pagination
-        total_result = db.execute(count_query).scalar()
-        total = total_result if total_result is not None else 0
-        print(f"Total rows: {total}")
+        # Only get count if needed (for search or first page)
+        if count_query is not None or page == 1:
+            if count_query is None:
+                count_query = select(func.count()).select_from(table)
+            total_result = db.execute(count_query).scalar()
+            total = total_result if total_result is not None else 0
+        else:
+            # For performance with large datasets, estimate the total if we're on later pages
+            # This avoids an expensive COUNT(*) query on big tables
+            total = (page * page_size) + page_size  # Reasonable estimate
 
         # Apply sorting if provided
         sort_col = None
@@ -68,13 +77,13 @@ def get_direct_table_data(
         if page_size > 0:
             query = query.limit(page_size)
 
-        # Log the generated SQL query for debugging
-        compiled_query = str(query.compile(dialect=db.bind.dialect, compile_kwargs={"literal_binds": True}))
-        print(f"SQL Query: {compiled_query}")
-
-        # Execute query with error handling
+        # Execute query with error handling and connection pool optimization
         try:
-            result = db.execute(query)
+            # Use execution options to optimize performance
+            result = db.execute(query.execution_options(
+                stream_results=True,  # Stream results for lower memory usage
+                max_row_buffer=page_size  # Limit row buffer size
+            ))
             rows = result.fetchall()
         except Exception as e:
             print(f"SQL execution error: {str(e)}")
@@ -82,7 +91,7 @@ def get_direct_table_data(
             # Return empty result set
             return [], 0
 
-        # Convert to list of dictionaries
+        # Convert to list of dictionaries with performance optimizations
         data = []
         for row in rows:
             # Convert to dictionary, handling special types
@@ -92,28 +101,28 @@ def get_direct_table_data(
                 value = row._mapping[key]
                 key_str = str(key)
 
-                # Handle non-JSON serializable types
+                # Handle non-JSON serializable types - with optimized approach
                 if value is not None:
-                    try:
-                        # Test if value is JSON serializable by serializing to JSON
-                        json.dumps({key_str: value})
+                    # Type-based handling to avoid try/except in the hot path
+                    if isinstance(value, (str, int, float, bool, type(None))):
+                        # These types are directly JSON serializable
                         row_dict[key_str] = value
-                    except (TypeError, OverflowError):
-                        # Convert to string for non-serializable types
+                    else:
+                        # For complex types, convert to string
                         row_dict[key_str] = str(value)
                 else:
                     row_dict[key_str] = None
 
             data.append(row_dict)
 
-        print(f"Returned {len(data)} rows")
-        if data and len(data) > 0:
-            print(f"First row keys: {list(data[0].keys())}")
+        elapsed = time.time() - start_time
+        print(f"Query execution time: {elapsed:.2f}s, returned {len(data)} rows")
 
         return data, total
 
     except Exception as e:
-        print(f"Error in get_direct_table_data: {str(e)}")
+        elapsed = time.time() - start_time
+        print(f"Error in get_direct_table_data after {elapsed:.2f}s: {str(e)}")
         print(traceback.format_exc())
         # Return empty result on error
         return [], 0
@@ -122,6 +131,7 @@ def get_direct_table_data(
 def update_direct_table_row(db: Session, table_name: str, primary_key_col: str, row_id: Any,
                             row_data: Dict[str, Any]) -> bool:
     """Update a row directly in an existing PostgreSQL table"""
+    start_time = time.time()
     try:
         # Create a dynamic table object
         metadata = MetaData()
@@ -154,10 +164,14 @@ def update_direct_table_row(db: Session, table_name: str, primary_key_col: str, 
         result = db.execute(stmt)
         db.commit()
 
+        elapsed = time.time() - start_time
+        print(f"Update execution time: {elapsed:.2f}s, updated {result.rowcount} rows")
+
         return result.rowcount > 0
 
     except Exception as e:
-        print(f"Error in update_direct_table_row: {str(e)}")
+        elapsed = time.time() - start_time
+        print(f"Error in update_direct_table_row after {elapsed:.2f}s: {str(e)}")
         print(traceback.format_exc())
         db.rollback()
         return False

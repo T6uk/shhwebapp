@@ -4,6 +4,11 @@
 
 {% block head %}
 <style>
+    body {
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+    }
     .edit-controls {
         display: none;
     }
@@ -15,7 +20,8 @@
     }
     .table-container {
         overflow-x: auto;
-        max-height: calc(100vh - 220px);
+        height: 100vh;
+        width: 100%;
     }
     .dataTables_length, .dataTables_filter {
         margin-bottom: 15px;
@@ -53,9 +59,10 @@
     .toolbar {
         background-color: #f8f9fa;
         border-bottom: 1px solid #dee2e6;
-        border-top: 1px solid #dee2e6;
         padding: 10px;
-        margin-bottom: 15px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
     }
     .toolbar .btn-group {
         margin-right: 10px;
@@ -85,110 +92,125 @@
     div.dataTables_scrollBody {
         background: none !important;
     }
+    /* Full height content */
+    .content-wrapper {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        margin: 0 !important;
+        border: none;
+        border-radius: 0;
+    }
+    .card-body {
+        flex: 1;
+        padding: 0;
+        overflow: hidden;
+    }
+    /* Loading overlay */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255,255,255,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-3">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2>Taitur Data</h2>
+<div class="content-wrapper">
+    <div class="card shadow">
+        <div class="toolbar">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <h2 class="mb-0">Taitur Data</h2>
+                </div>
+                <div class="col">
                     <div class="input-group quick-filter">
-                        <input type="text" id="quick-table-filter" class="form-control" placeholder="Search anywhere in the data...">
+                        <input type="text" id="quick-table-filter" class="form-control" placeholder="Search anywhere...">
                         <button class="btn btn-outline-secondary" type="button" id="clear-filter">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
                 </div>
+                <div class="col-auto d-flex flex-wrap">
+                    <!-- Column Navigation -->
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-columns"></i> Columns
+                        </button>
+                        <ul class="dropdown-menu column-group-dropdown">
+                            {% for group_name, columns in column_groups.items() %}
+                                <li><h6 class="dropdown-header">{{ group_name }}</h6></li>
+                                {% for column in columns %}
+                                    <li><a class="dropdown-item column-link" href="#" data-column="{{ column.name }}">{{ column.name }}</a></li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                            {% endfor %}
+                            <li><a class="dropdown-item" href="#" id="column-settings-menu">Customize Columns...</a></li>
+                        </ul>
+                    </div>
 
-                <!-- Toolbar -->
-                <div class="toolbar">
-                    <div class="row">
-                        <div class="col d-flex flex-wrap">
-                            <!-- Column Navigation -->
-                            <div class="btn-group">
-                                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-columns"></i> Columns
-                                </button>
-                                <ul class="dropdown-menu column-group-dropdown">
-                                    {% for group_name, columns in column_groups.items() %}
-                                        <li><h6 class="dropdown-header">{{ group_name }}</h6></li>
-                                        {% for column in columns %}
-                                            <li><a class="dropdown-item column-link" href="#" data-column="{{ column.name }}">{{ column.name }}</a></li>
-                                        {% endfor %}
-                                        <li><hr class="dropdown-divider"></li>
-                                    {% endfor %}
-                                    <li><a class="dropdown-item" href="#" id="column-settings-menu">Customize Columns...</a></li>
-                                </ul>
-                            </div>
+                    <!-- Data Actions -->
+                    <div class="btn-group">
+                        <button id="refresh-btn" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                        <button id="export-btn" class="btn btn-outline-success">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                    </div>
 
-                            <!-- Data Actions -->
-                            <div class="btn-group">
-                                <button id="refresh-btn" class="btn btn-outline-primary">
-                                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                                </button>
-                                <button id="export-btn" class="btn btn-outline-success">
-                                    <i class="bi bi-download"></i> Export
-                                </button>
-                                <button id="print-btn" class="btn btn-outline-secondary">
-                                    <i class="bi bi-printer"></i> Print
-                                </button>
-                            </div>
-
-                            <!-- View Options -->
-                            <div class="btn-group">
-                                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-eye"></i> View
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item view-option" href="#" data-view="all">Show All Columns</a></li>
-                                    <li><a class="dropdown-item view-option" href="#" data-view="main">Main Columns Only</a></li>
-                                    <li><a class="dropdown-item view-option" href="#" data-view="minimal">Minimal View</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" id="save-current-view">Save Current View</a></li>
-                                </ul>
-                            </div>
-
-                            <!-- Saved Filters -->
-                            <div class="btn-group">
-                                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-funnel"></i> Filters
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><h6 class="dropdown-header">Saved Filters</h6></li>
-                                    <li><a class="dropdown-item filter-option" href="#" data-filter="active">Active Cases</a></li>
-                                    <li><a class="dropdown-item filter-option" href="#" data-filter="closed">Closed Cases</a></li>
-                                    <li><a class="dropdown-item filter-option" href="#" data-filter="high-value">High Value Cases</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" id="create-filter">Create New Filter...</a></li>
-                                </ul>
-                            </div>
-                        </div>
+                    <!-- View Options -->
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-eye"></i> View
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item view-option" href="#" data-view="all">Show All Columns</a></li>
+                            <li><a class="dropdown-item view-option" href="#" data-view="main">Main Columns Only</a></li>
+                            <li><a class="dropdown-item view-option" href="#" data-view="minimal">Minimal View</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="save-current-view">Save Current View</a></li>
+                        </ul>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Error Message Area -->
-                <div id="error-message" class="alert alert-danger mx-3"></div>
+        <!-- Error Message Area -->
+        <div id="error-message" class="alert alert-danger mx-3"></div>
 
-                <!-- Data Table -->
-                <div class="card-body">
-                    <div class="table-container">
-                        <table id="data-table" class="table table-striped table-bordered w-100">
-                            <thead>
-                                <tr id="table-header">
-                                    <th>Loading...</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Loading data...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- Data Table -->
+        <div class="card-body position-relative">
+            <div id="loading-indicator" class="loading-overlay">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading data...</span>
                 </div>
+            </div>
+            <div class="table-container">
+                <table id="data-table" class="table table-striped table-bordered w-100">
+                    <thead>
+                        <tr id="table-header">
+                            <th>Loading...</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Loading data...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -251,9 +273,7 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
-
 {% block scripts %}
 <script>
 let dataTable;
@@ -266,6 +286,7 @@ let MAIN_COLUMNS = [
     'võlgniku_perenimi', 'võlgniku_eesnimi', 'võlgniku_reg_isikukood', 'nõude_suurus',
     'tasud_ja_kulud_kokku', 'jäägid_kokku', 'staatus', 'märkused'
 ];
+let isTableInitializing = false;
 
 // Helper function to show errors
 function showError(message) {
@@ -281,10 +302,43 @@ function hideError() {
     errorDiv.style.display = 'none';
 }
 
+// Show/hide loading indicator
+function toggleLoading(show) {
+    const indicator = document.getElementById('loading-indicator');
+    indicator.style.display = show ? 'flex' : 'none';
+}
+
+// Check if element is in viewport
+function isInViewport(element) {
+    const rect = element.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+}
+
+// Optimize column visibility for performance
+function optimizeColumnVisibility() {
+    // For very large tables, limit visible columns to improve initial load time
+    if (allColumns.length > 50) {
+        // If we have many columns, start with just the essential ones
+        tableColumns.forEach(col => {
+            col.visible = MINIMAL_COLUMNS.includes(col.name);
+        });
+        visibleColumns = tableColumns.filter(col => col.visible);
+    }
+}
+
 // Initialize DataTable with first row data for columns
 async function initializeWithFirstRow() {
+    if (isTableInitializing) return;
+    isTableInitializing = true;
+
     try {
         hideError();
+        toggleLoading(true);
 
         // Make a simple request to get the first row of data
         const response = await fetch(`/api/table/{{ table_name }}/data?length=1`);
@@ -292,6 +346,8 @@ async function initializeWithFirstRow() {
 
         if (!data.data || data.data.length === 0) {
             showError('No data found in table. Unable to determine columns.');
+            toggleLoading(false);
+            isTableInitializing = false;
             return;
         }
 
@@ -350,6 +406,9 @@ async function initializeWithFirstRow() {
             }));
         }
 
+        // Optimize initial column visibility for performance
+        optimizeColumnVisibility();
+
         // Update visible columns list
         visibleColumns = tableColumns.filter(col => col.visible);
 
@@ -358,17 +417,31 @@ async function initializeWithFirstRow() {
 
     } catch (error) {
         showError(`Error fetching data: ${error.message}`);
+        toggleLoading(false);
+        isTableInitializing = false;
     }
 }
 
-// Initialize DataTable with virtual scrolling
+// Initialize DataTable with virtual scrolling and optimized settings
 function initializeTable() {
     try {
         // Create column definitions for DataTables
         const columnDefs = visibleColumns.map(column => ({
             data: column.name,
             title: column.name,
-            visible: true
+            visible: true,
+            render: function(data, type, row) {
+                // Optimize rendering based on data type
+                if (type === 'display') {
+                    if (data === null || data === undefined) return '';
+
+                    // Truncate long text for better performance
+                    if (typeof data === 'string' && data.length > 100) {
+                        return `<span title="${data.replace(/"/g, '&quot;')}">${data.substring(0, 100)}...</span>`;
+                    }
+                }
+                return data;
+            }
         }));
 
         // Add actions column
@@ -400,38 +473,61 @@ function initializeTable() {
                     ${columnDefs.map(col => `<th>${col.title}</th>`).join('')}
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="${columnDefs.length}">Loading data...</td>
-                    </tr>
-                </tbody>
+                <tbody></tbody>
             </table>
         `;
 
         // Initialize DataTable with Scroller for virtual scrolling
         dataTable = $('#data-table').DataTable({
-            processing: true,
+            processing: false, // We'll handle our own processing indicator
             serverSide: true,
             deferRender: true,
             scrollCollapse: true,
-            scroller: true,           // Enable virtual scrolling
-            scrollY: '65vh',          // Make the scrollable area tall
-            scrollX: true,            // Allow horizontal scrolling
+            scroller: {
+                loadingIndicator: false, // Use our own loading indicator
+                displayBuffer: 10, // Increase buffer for smoother scrolling
+                rowHeight: 'auto', // Use auto row height for more accurate display
+                serverWait: 100 // Reduce server wait time
+            },
+            scrollY: 'calc(100vh - 60px)', // Adjust based on toolbar height
+            scrollX: true,
             ajax: {
                 url: `/api/table/{{ table_name }}/data`,
+                beforeSend: function() {
+                    if (!isTableInitializing) toggleLoading(true);
+                },
+                complete: function() {
+                    toggleLoading(false);
+                    isTableInitializing = false;
+                },
                 error: function(xhr, error, thrown) {
                     showError(`DataTables error: ${error} - ${thrown}`);
+                    toggleLoading(false);
+                    isTableInitializing = false;
                 }
             },
             columns: columnDefs,
-            dom: 'Bfrti',             // Remove paging controls from DOM
+            dom: 'Brti', // Remove paging controls
             buttons: [
                 'copy', 'csv', 'excel'
             ],
-            stateSave: true,          // Save table state between loads
-            searchDelay: 500,         // Delay search to reduce server load
+            stateSave: true, // Save table state between loads
+            searchDelay: 350, // Optimized delay
             search: {
-                return: true          // Search on Enter key
+                return: true // Search on Enter key
+            },
+            language: {
+                processing: "Loading data, please wait..."
+            },
+            initComplete: function() {
+                // This ensures all initialization is complete
+                toggleLoading(false);
+                isTableInitializing = false;
+
+                // Lazy load visible rows for better performance
+                setTimeout(() => {
+                    this.scroller.measure();
+                }, 100);
             }
         });
 
@@ -443,10 +539,12 @@ function initializeTable() {
 
     } catch (error) {
         showError(`Error initializing table: ${error.message}`);
+        toggleLoading(false);
+        isTableInitializing = false;
     }
 }
 
-// Attach event handlers for edit/save/cancel buttons
+// Attach event handlers for edit/save/cancel buttons and other interactions
 function attachEventHandlers() {
     // Row editing functionality
     $('#data-table tbody').on('click', '.edit-btn', function() {
@@ -526,6 +624,8 @@ function attachEventHandlers() {
 
     // Save edited row
     $('#data-table tbody').on('click', '.save-btn', function() {
+        toggleLoading(true);
+
         const row = dataTable.row($(this).closest('tr'));
         const rowData = row.data();
         const rowNode = row.node();
@@ -573,6 +673,8 @@ function attachEventHandlers() {
             return response.json();
         })
         .then(result => {
+            toggleLoading(false);
+
             if (result.success) {
                 // Update row data in DataTable
                 row.data(updatedData).draw(false);
@@ -592,6 +694,7 @@ function attachEventHandlers() {
             }
         })
         .catch(error => {
+            toggleLoading(false);
             showError(`Error updating row: ${error.message}`);
         });
     });
@@ -601,22 +704,30 @@ function attachEventHandlers() {
 
     // Refresh button
     document.getElementById('refresh-btn').addEventListener('click', () => {
-        dataTable.ajax.reload();
+        toggleLoading(true);
+        dataTable.ajax.reload(() => {
+            toggleLoading(false);
+        });
     });
 
-    // Quick filter with better search
-    document.getElementById('quick-table-filter').addEventListener('keyup', function(e) {
-        // Only trigger search after user stops typing for a bit
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
+    // Quick filter with debounced search
+    const quickFilter = document.getElementById('quick-table-filter');
+    let searchTimeout;
+
+    quickFilter.addEventListener('keyup', function(e) {
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
         }
 
-        this.searchTimeout = setTimeout(() => {
+        searchTimeout = setTimeout(() => {
+            toggleLoading(true);
             dataTable.search(this.value).draw();
         }, 400);
 
         // Also search on Enter key
         if (e.key === 'Enter') {
+            clearTimeout(searchTimeout);
+            toggleLoading(true);
             dataTable.search(this.value).draw();
         }
     });
@@ -624,6 +735,7 @@ function attachEventHandlers() {
     // Clear filter button
     document.getElementById('clear-filter').addEventListener('click', function() {
         document.getElementById('quick-table-filter').value = '';
+        toggleLoading(true);
         dataTable.search('').draw();
     });
 
@@ -631,6 +743,7 @@ function attachEventHandlers() {
     document.querySelectorAll('.view-option').forEach(option => {
         option.addEventListener('click', function(e) {
             e.preventDefault();
+            toggleLoading(true);
             const viewType = this.dataset.view;
 
             switch(viewType) {
@@ -670,9 +783,11 @@ function attachEventHandlers() {
 
             // Make it visible if it's not already
             if (!column.visible) {
+                toggleLoading(true);
                 column.visible = true;
                 visibleColumns = tableColumns.filter(col => col.visible);
                 initializeTable();
+                return;
             }
 
             // Focus/highlight the column
@@ -721,9 +836,10 @@ function attachEventHandlers() {
         alert(`View "${viewName}" has been saved.`);
     });
 
-    // Print button
-    document.getElementById('print-btn').addEventListener('click', function() {
-        window.print();
+    // Export button
+    document.getElementById('export-btn').addEventListener('click', function() {
+        // Use built-in DataTables export buttons
+        $('.buttons-excel').click();
     });
 }
 
@@ -799,6 +915,8 @@ function openColumnSettings() {
 }
 
 function saveColumnSettings() {
+    toggleLoading(true);
+
     // Update column visibility and order
     const visibilityCheckboxes = document.querySelectorAll('.column-visible');
     const orderInputs = document.querySelectorAll('.column-order');
@@ -845,6 +963,22 @@ function saveColumnSettings() {
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', initializeWithFirstRow);
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply full screen layout
+    document.body.classList.add('overflow-hidden');
+
+    // Initialize the table
+    initializeWithFirstRow();
+
+    // Add window resize handler for better responsive behavior
+    window.addEventListener('resize', function() {
+        if (dataTable) {
+            dataTable.columns.adjust();
+            if (dataTable.scroller) {
+                dataTable.scroller.measure();
+            }
+        }
+    });
+});
 </script>
 {% endblock %}

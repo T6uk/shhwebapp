@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from fastapi.responses import RedirectResponse
 
 from app.database import get_db, init_db
 from app.api.endpoints import data
@@ -52,7 +53,22 @@ async def index(request: Request, db: Session = Depends(get_db)):
     )
 
 
+# Handle favicon
+@app.get('/favicon.ico')
+async def favicon():
+    return RedirectResponse(url='/static/favicon.ico')
+
+
 if __name__ == "__main__":
     import uvicorn
+
+    # Use uvloop for better performance if available
+    try:
+        import uvloop
+
+        uvloop.install()
+        print("Using uvloop for better performance")
+    except ImportError:
+        pass
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
