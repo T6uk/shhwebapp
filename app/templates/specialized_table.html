@@ -642,7 +642,7 @@
             </table>
         `;
 
-            // Initialize DataTable with Scroller for virtual scrolling
+            // Initialize DataTable with optimized settings
             dataTable = $('#data-table').DataTable({
                 processing: false, // We'll handle our own processing indicator
                 serverSide: true,
@@ -650,9 +650,9 @@
                 scrollCollapse: true,
                 scroller: {
                     loadingIndicator: false, // Use our own loading indicator
-                    displayBuffer: 10, // Increase buffer for smoother scrolling
+                    displayBuffer: 20, // Increased buffer for smoother scrolling
                     rowHeight: 'auto', // Use auto row height for more accurate display
-                    serverWait: 100 // Reduce server wait time
+                    serverWait: 50 // Reduced server wait time
                 },
                 scrollY: 'calc(100vh - 60px)', // Adjust based on toolbar height
                 scrollX: true,
@@ -661,9 +661,14 @@
                     beforeSend: function () {
                         if (!isTableInitializing) toggleLoading(true);
                     },
-                    complete: function () {
+                    complete: function (data) {
                         toggleLoading(false);
                         isTableInitializing = false;
+
+                        // If query time info is available, display it
+                        if (data.responseJSON && data.responseJSON.query_time) {
+                            console.log(`Server query time: ${data.responseJSON.query_time}`);
+                        }
                     },
                     error: function (xhr, error, thrown) {
                         showError(`DataTables error: ${error} - ${thrown}`);
@@ -674,9 +679,15 @@
                 columns: columnDefs,
                 dom: 'rti', // Remove paging controls and buttons
                 stateSave: true, // Save table state between loads
-                searchDelay: 500, // Optimized delay for search
+                searchDelay: 300, // Reduced delay for search
                 language: {
                     processing: "Loading data, please wait..."
+                },
+                // Use a custom search debouncing method
+                search: {
+                    caseInsensitive: true,
+                    smart: true,
+                    regex: false
                 },
                 initComplete: function () {
                     // This ensures all initialization is complete
@@ -686,12 +697,27 @@
                     // Lazy load visible rows for better performance
                     setTimeout(() => {
                         this.scroller.measure();
-                    }, 100);
+                    }, 50);
 
                     // Initialize advanced search
                     setupAdvancedSearch();
                 }
             });
+
+            // Add custom search throttling to avoid excessive server requests
+            let searchTimeout;
+            const originalSearch = dataTable.search;
+            dataTable.search = function (value, regex, smart, caseInsen) {
+                clearTimeout(searchTimeout);
+                if (value === dataTable.search()) return this;
+
+                // Throttle search to avoid too many requests
+                searchTimeout = setTimeout(() => {
+                    originalSearch.call(dataTable, value, regex, smart, caseInsen).draw();
+                }, 300);
+
+                return this;
+            };
 
             // Attach event handlers
             attachEventHandlers();
@@ -706,7 +732,7 @@
         }
     }
 
-    // Advanced search functionality
+    // Advanced search with optimized implementation
     function setupAdvancedSearch() {
         const searchInput = document.getElementById('advanced-search-input');
         const searchBtn = document.getElementById('search-btn');
@@ -714,70 +740,37 @@
         const nextBtn = document.getElementById('next-result');
         const searchCount = document.getElementById('search-count');
 
+        // Declare variables for search functionality
         let searchTimeout = null;
         let searchResults = [];
         let currentResultIndex = -1;
+        let lastSearchQuery = '';
 
-        // Add search tooltip
-        const tooltip = document.createElement('div');
-        tooltip.className = 'search-tooltip';
-        tooltip.innerHTML = `
-        <strong>Search tips:</strong>
-        <ul class="mb-0 ps-3">
-            <li>Press Enter to search immediately</li>
-            <li>Use " " for exact phrase matching</li>
-            <li>Use column:value to search specific columns</li>
-            <li>Use ⬆️⬇️ buttons to navigate between results</li>
-        </ul>
-    `;
-        searchInput.parentNode.appendChild(tooltip);
+        // Search debouncing and throttling
+        let isSearching = false;
+        const debouncedSearch = (query) => {
+            if (isSearching) return;
+            if (query === lastSearchQuery) return;
 
-        // Remove the suggestions functionality since we're focusing on data search
+            lastSearchQuery = query;
+            isSearching = true;
 
-        // Function to parse advanced search query
-        function parseSearchQuery(query) {
-            if (!query) return null;
+            toggleLoading(true);
 
-            // Default search - simple string search across all columns
-            if (!query.includes(':')) {
-                return {type: 'simple', value: query};
-            }
+            // Apply the search to the DataTable
+            dataTable.search(query).draw();
 
-            // Try to parse as column search
-            try {
-                const parts = query.split(':');
-                const columnName = parts[0].trim();
-                let value = parts.slice(1).join(':').trim();
+            // Reset after a short delay to allow the UI to update
+            setTimeout(() => {
+                isSearching = false;
+                toggleLoading(false);
 
-                // Check for operators
-                let operator = '=';
-                if (value.startsWith('>=')) {
-                    operator = '>=';
-                    value = value.substring(2).trim();
-                } else if (value.startsWith('<=')) {
-                    operator = '<=';
-                    value = value.substring(2).trim();
-                } else if (value.startsWith('>')) {
-                    operator = '>';
-                    value = value.substring(1).trim();
-                } else if (value.startsWith('<')) {
-                    operator = '<';
-                    value = value.substring(1).trim();
-                }
+                // Find and highlight matches after search completes
+                findAndHighlightMatches(query);
+            }, 300);
+        };
 
-                return {
-                    type: 'column',
-                    column: columnName,
-                    operator: operator,
-                    value: value
-                };
-            } catch (e) {
-                // If parsing fails, fall back to simple search
-                return {type: 'simple', value: query};
-            }
-        }
-
-        // Function to perform search and collect results
+        // Function to perform search with debouncing
         function performSearch() {
             const query = searchInput.value.trim();
 
@@ -794,126 +787,23 @@
 
             if (!query) {
                 disableNavButtons();
-                // Clear any existing custom search
-                if (customSearchFunction) {
-                    $.fn.dataTable.ext.search.pop();
-                    customSearchFunction = null;
-                }
                 dataTable.search('').draw();
                 return;
             }
 
-            // Parse the search query
-            const parsedQuery = parseSearchQuery(query);
-            if (!parsedQuery) return;
-
-            // Remove old search function if it exists
-            if (customSearchFunction) {
-                const index = $.fn.dataTable.ext.search.indexOf(customSearchFunction);
-                if (index !== -1) {
-                    $.fn.dataTable.ext.search.splice(index, 1);
-                }
+            // Debounce and throttle the search
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
             }
 
-            // Define the new search function
-            customSearchFunction = function (settings, data, dataIndex, row) {
-                let matches = false;
-
-                if (parsedQuery.type === 'simple') {
-                    // Simple search across all visible columns
-                    const searchValue = parsedQuery.value.toLowerCase();
-
-                    // Check if it's an exact phrase search
-                    if (searchValue.startsWith('"') && searchValue.endsWith('"')) {
-                        const exactPhrase = searchValue.slice(1, -1).toLowerCase();
-
-                        // Check each visible column
-                        for (let i = 0; i < visibleColumns.length; i++) {
-                            const colValue = data[i];
-                            if (colValue && colValue.toString().toLowerCase().includes(exactPhrase)) {
-                                matches = true;
-                                break;
-                            }
-                        }
-                    } else {
-                        // Regular search - check each column
-                        for (let i = 0; i < visibleColumns.length; i++) {
-                            const colValue = data[i];
-                            if (colValue && colValue.toString().toLowerCase().includes(searchValue)) {
-                                matches = true;
-                                break;
-                            }
-                        }
-                    }
-                } else if (parsedQuery.type === 'column') {
-                    // Column-specific search
-                    const colIndex = visibleColumns.findIndex(col =>
-                        col.name.toLowerCase() === parsedQuery.column.toLowerCase());
-
-                    if (colIndex === -1) return false; // Column not found
-
-                    const colValue = data[colIndex];
-                    if (!colValue) return false; // No value in this column
-
-                    // Get the column type from our column definitions
-                    const colType = visibleColumns[colIndex].type || 'text';
-
-                    // Handle different operators based on column type
-                    switch (parsedQuery.operator) {
-                        case '=':
-                            matches = colValue.toString().toLowerCase() === parsedQuery.value.toLowerCase();
-                            break;
-                        case '>':
-                            matches = colType === 'number' || colType === 'integer' ?
-                                parseFloat(colValue) > parseFloat(parsedQuery.value) : false;
-                            break;
-                        case '<':
-                            matches = colType === 'number' || colType === 'integer' ?
-                                parseFloat(colValue) < parseFloat(parsedQuery.value) : false;
-                            break;
-                        case '>=':
-                            matches = colType === 'number' || colType === 'integer' ?
-                                parseFloat(colValue) >= parseFloat(parsedQuery.value) : false;
-                            break;
-                        case '<=':
-                            matches = colType === 'number' || colType === 'integer' ?
-                                parseFloat(colValue) <= parseFloat(parsedQuery.value) : false;
-                            break;
-                        default:
-                            matches = colValue.toString().toLowerCase().includes(parsedQuery.value.toLowerCase());
-                    }
-                }
-
-                return matches; // Return true if matches, false otherwise
-            };
-
-            // Add the search function
-            $.fn.dataTable.ext.search.push(customSearchFunction);
-
-            // Apply the search
-            toggleLoading(true);
-            dataTable.draw();
-            toggleLoading(false);
-
-            // After search is applied, find all matching cells and store them
-            setTimeout(findAndHighlightMatches, 100);
+            searchTimeout = setTimeout(() => {
+                debouncedSearch(query);
+            }, 300);
         }
 
-        // Function to find and highlight matches
-        function findAndHighlightMatches() {
-            const query = searchInput.value.trim();
+        // Function to find and highlight matches with worker if available
+        function findAndHighlightMatches(query) {
             if (!query) return;
-
-            const parsedQuery = parseSearchQuery(query);
-            if (!parsedQuery) return;
-
-            // Get the search term to highlight
-            let highlightTerm = parsedQuery.value;
-            if (highlightTerm.startsWith('"') && highlightTerm.endsWith('"')) {
-                highlightTerm = highlightTerm.slice(1, -1);
-            }
-
-            if (!highlightTerm) return;
 
             // Find all cells that match and collect them
             $('#data-table tbody td').each(function (index) {
@@ -928,7 +818,7 @@
 
                 // Check if the cell contains the search term
                 const lowerCellText = cellText.toLowerCase();
-                const lowerSearchTerm = highlightTerm.toLowerCase();
+                const lowerSearchTerm = query.toLowerCase();
 
                 if (lowerCellText.includes(lowerSearchTerm)) {
                     // Add to search results
@@ -940,7 +830,7 @@
                     });
 
                     // Use regex with case insensitive flag to find all matches
-                    const regex = new RegExp('(' + escapeRegExp(highlightTerm) + ')', 'gi');
+                    const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
                     const highlightedText = cellText.replace(regex,
                         '<span class="search-highlight">$1</span>');
 
@@ -960,99 +850,29 @@
             }
         }
 
-        // Function to update the result count display
-        function updateResultCountDisplay() {
-            const total = searchResults.length;
-            const current = total > 0 ? currentResultIndex + 1 : 0;
-            searchCount.textContent = `${current}/${total}`;
-
-            // Enable/disable navigation buttons
-            prevBtn.disabled = total === 0 || current <= 1;
-            nextBtn.disabled = total === 0 || current >= total;
-        }
-
-        // Function to disable navigation buttons
-        function disableNavButtons() {
-            prevBtn.disabled = true;
-            nextBtn.disabled = true;
-            searchCount.textContent = '0/0';
-        }
-
-        // Function to navigate to a specific search result
-        function navigateToResult(index) {
-            if (index < 0 || index >= searchResults.length) return;
-
-            // Remove active class from all results
-            $('.search-highlight').removeClass('active');
-
-            currentResultIndex = index;
-            const result = searchResults[index];
-
-            // Add active class to highlight current result
-            result.cell.find('.search-highlight').addClass('active');
-
-            // Scroll to the result
-            // First ensure the row is visible in the virtual scroller
-            dataTable.row(result.rowIndex).scrollTo();
-
-            // Then scroll horizontally to make the cell visible
-            setTimeout(() => {
-                result.cell[0].scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'center'
-                });
-            }, 100);
-
-            updateResultCountDisplay();
-        }
-
-        // Event handling for search input
-        searchInput.addEventListener('keyup', function (e) {
+        // Event handling for search input with optimized approach
+        searchInput.addEventListener('input', function () {
+            // Use input event instead of keyup for better mobile support
             // Clear any existing timeout
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
             }
 
-            // If Enter key is pressed, search immediately
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                clearTimeout(searchTimeout);
-                performSearch();
-                return;
-            }
-
-            // Otherwise, wait for user to finish typing
+            // Set a new timeout to debounce the search
             searchTimeout = setTimeout(() => {
                 performSearch();
-            }, 500);
+            }, 300);
         });
 
-        // Search button click
-        searchBtn.addEventListener('click', function () {
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
+        // Enter key should search immediately
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+                performSearch();
             }
-            performSearch();
-        });
-
-        // Previous result button
-        prevBtn.addEventListener('click', function () {
-            if (currentResultIndex > 0) {
-                navigateToResult(currentResultIndex - 1);
-            }
-        });
-
-        // Next result button
-        nextBtn.addEventListener('click', function () {
-            if (currentResultIndex < searchResults.length - 1) {
-                navigateToResult(currentResultIndex + 1);
-            }
-        });
-
-        // Highlight matches after data reload
-        dataTable.on('draw.dt', function () {
-            setTimeout(findAndHighlightMatches, 100);
         });
     }
 

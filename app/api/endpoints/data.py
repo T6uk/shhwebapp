@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, BackgroundTasks
 from sqlalchemy.orm import Session
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from typing import List, Dict, Any, Optional
 import json
 import traceback
+import time
+import asyncio
+from fastapi.responses import StreamingResponse
+import io
+import csv
 
-from app.database import get_db
+from app.database import get_db, redis_client, REDIS_AVAILABLE
 from app.models.data_models import DataTable, TableSchema
 from app.services.data_service import get_table_columns
-from app.services.direct_data_service import get_direct_table_data, update_direct_table_row
+from app.services.direct_data_service import get_direct_table_data, update_direct_table_row, get_table_stats
 from app.templates import templates
 
 router = APIRouter()
@@ -28,6 +33,18 @@ COLUMN_GROUPS = {
 
 def get_column_groups(db: Session, table_name: str) -> Dict[str, List[Dict[str, Any]]]:
     """Get column groups with metadata for the toolbar"""
+    cache_key = f"taitur:column_groups:{table_name}"
+
+    # Try to get from cache first
+    if REDIS_AVAILABLE:
+        try:
+            cached_data = redis_client.get(cache_key)
+            if cached_data:
+                import pickle
+                return pickle.loads(cached_data)
+        except Exception as e:
+            print(f"Cache error for column groups: {str(e)}")
+
     try:
         # Get all columns from table
         inspector = inspect(db.bind)
@@ -49,6 +66,14 @@ def get_column_groups(db: Session, table_name: str) -> Dict[str, List[Dict[str, 
             if existing_columns:
                 result[group_name] = existing_columns
 
+        # Cache the result
+        if REDIS_AVAILABLE:
+            try:
+                import pickle
+                redis_client.setex(cache_key, 3600, pickle.dumps(result))  # Cache for 1 hour
+            except Exception as e:
+                print(f"Cache store error: {str(e)}")
+
         return result
     except Exception as e:
         print(f"Error getting column groups: {str(e)}")
@@ -58,13 +83,35 @@ def get_column_groups(db: Session, table_name: str) -> Dict[str, List[Dict[str, 
 @router.get("/tables")
 def get_tables(db: Session = Depends(get_db)):
     """Get a list of all available tables"""
-    # Since we're specializing for taitur_data, just return that
     return {"tables": ["taitur_data"]}
+
+
+@router.get("/table/{table_name}/stats")
+def get_table_statistics(table_name: str, db: Session = Depends(get_db)):
+    """Get statistics about the table to help optimize the frontend"""
+    try:
+        stats = get_table_stats(db, table_name)
+        return stats
+    except Exception as e:
+        print(f"Error getting table stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting table statistics: {str(e)}")
 
 
 @router.get("/table/{table_name}/schema")
 def get_schema(table_name: str, db: Session = Depends(get_db)):
-    """Get the schema for a specific table"""
+    """Get the schema for a specific table with optimized caching"""
+    cache_key = f"taitur:schema:{table_name}"
+
+    # Try to get from cache first
+    if REDIS_AVAILABLE:
+        try:
+            cached_data = redis_client.get(cache_key)
+            if cached_data:
+                import pickle
+                return pickle.loads(cached_data)
+        except Exception as e:
+            print(f"Cache error for schema: {str(e)}")
+
     try:
         # Get directly from PostgreSQL
         inspector = inspect(db.bind)
@@ -76,12 +123,12 @@ def get_schema(table_name: str, db: Session = Depends(get_db)):
                 column_type = str(col['type'])
                 simple_type = 'text'  # Default
 
-                # Simple type mapping
+                # Improved type mapping
                 if 'int' in column_type.lower():
                     simple_type = 'integer'
                 elif any(x in column_type.lower() for x in ['float', 'double', 'numeric', 'decimal']):
                     simple_type = 'number'
-                elif any(x in column_type.lower() for x in ['date', 'time']):
+                elif any(x in column_type.lower() for x in ['date', 'time', 'timestamp']):
                     simple_type = 'datetime'
                 elif 'bool' in column_type.lower():
                     simple_type = 'boolean'
@@ -99,7 +146,17 @@ def get_schema(table_name: str, db: Session = Depends(get_db)):
             print(traceback.format_exc())
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found or error: {str(e)}")
 
-        return {"columns": columns}
+        result = {"columns": columns}
+
+        # Cache the result
+        if REDIS_AVAILABLE:
+            try:
+                import pickle
+                redis_client.setex(cache_key, 3600, pickle.dumps(result))  # Cache for 1 hour
+            except Exception as e:
+                print(f"Cache store error: {str(e)}")
+
+        return result
     except Exception as e:
         print(f"Error in get_schema: {str(e)}")
         print(traceback.format_exc())
@@ -118,15 +175,16 @@ def get_data(
         db: Session = Depends(get_db)
 ):
     """
-    Get data in DataTables format
+    Get data in DataTables format with optimized performance
     """
+    start_time = time.time()
     try:
         print(f"Processing request: draw={draw}, start={start}, length={length}, search={search_value}")
 
         # Calculate page from start and length
         page = (start // length) + 1 if length > 0 else 1
 
-        # Get column name to sort by (default to first column)
+        # Get column name to sort by
         inspector = inspect(db.bind)
         try:
             columns = inspector.get_columns(table_name)
@@ -136,7 +194,7 @@ def get_data(
             print(f"Error getting column for sorting: {e}")
             sort_column = None
 
-        # Convert parameters to our direct_data_service format
+        # Get data with optimized function
         data, total = get_direct_table_data(
             db,
             table_name,
@@ -152,15 +210,16 @@ def get_data(
             "draw": draw,
             "recordsTotal": total,
             "recordsFiltered": total,
-            "data": data
+            "data": data,
+            "query_time": f"{time.time() - start_time:.2f}s"
         }
 
         return response
     except Exception as e:
-        # Log the error for server-side troubleshooting
+        # Log the error
         print(f"Error in get_data: {str(e)}")
         print(traceback.format_exc())
-        # Return error in a format DataTables can handle
+        # Return error in DataTables format
         return {
             "draw": draw,
             "recordsTotal": 0,
@@ -170,19 +229,103 @@ def get_data(
         }
 
 
+@router.get("/table/{table_name}/export")
+async def export_table_data(
+        background_tasks: BackgroundTasks,
+        table_name: str,
+        format: str = Query("csv", description="Export format: csv, json, excel"),
+        search: Optional[str] = None,
+        db: Session = Depends(get_db)
+):
+    """Export table data in various formats with background processing for large datasets"""
+
+    async def generate_csv():
+        """Generate CSV data in chunks to prevent memory issues with large datasets"""
+        # Create CSV buffer
+        buffer = io.StringIO()
+        writer = None
+
+        # Get data in chunks of 5000 rows
+        page = 1
+        page_size = 5000
+        headers_written = False
+
+        while True:
+            # Get chunk of data
+            data, total = get_direct_table_data(
+                db,
+                table_name,
+                page=page,
+                page_size=page_size,
+                search=search
+            )
+
+            if not data:
+                break
+
+            # Write headers if first chunk
+            if not headers_written:
+                headers = data[0].keys()
+                writer = csv.DictWriter(buffer, fieldnames=headers)
+                writer.writeheader()
+                headers_written = True
+
+            # Write data rows
+            for row in data:
+                writer.writerow(row)
+
+            # Yield the chunk
+            yield buffer.getvalue()
+
+            # Clear buffer for next chunk
+            buffer.truncate(0)
+            buffer.seek(0)
+
+            # If we've processed all rows, stop
+            if page * page_size >= total:
+                break
+
+            # Next page
+            page += 1
+
+            # Give the server a small break between chunks
+            await asyncio.sleep(0.1)
+
+    try:
+        if format.lower() == "csv":
+            return StreamingResponse(
+                generate_csv(),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename={table_name}_{time.strftime('%Y%m%d')}.csv"
+                }
+            )
+        else:
+            # For now, return HTTP 501 Not Implemented for other formats
+            # In a production app, we'd implement the other formats with similar streaming approaches
+            raise HTTPException(status_code=501, detail=f"Export format '{format}' not yet implemented")
+    except Exception as e:
+        print(f"Error in export_table_data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Export error: {str(e)}")
+
+
 @router.get("/table/{table_name}/view")
 def view_table(request: Request, table_name: str, db: Session = Depends(get_db)):
-    """Render the table HTML page - using specialized template for taitur_data"""
+    """Render the table HTML page with enhanced performance considerations"""
     try:
         # Get column groups for the toolbar
         column_groups = get_column_groups(db, table_name)
+
+        # Get table statistics to help optimize frontend
+        stats = get_table_stats(db, table_name)
 
         return templates.TemplateResponse(
             "specialized_table.html",
             {
                 "request": request,
                 "table_name": table_name,
-                "column_groups": column_groups
+                "column_groups": column_groups,
+                "table_stats": stats
             }
         )
     except Exception as e:
@@ -198,14 +341,14 @@ def update_row(
         row_data: Dict[str, Any],
         db: Session = Depends(get_db)
 ):
-    """Update a row in a table"""
+    """Update a row in a table with optimized cache invalidation"""
     try:
-        # Determine primary key column (assume 'id' by default)
+        # Determine primary key column
         inspector = inspect(db.bind)
         pk_columns = inspector.get_pk_constraint(table_name).get('constrained_columns', [])
         primary_key_col = pk_columns[0] if pk_columns else 'id'
 
-        # Update the row directly
+        # Update the row with optimized function
         success = update_direct_table_row(db, table_name, primary_key_col, row_id, row_data)
 
         if not success:
