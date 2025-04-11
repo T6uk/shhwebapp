@@ -3,6 +3,49 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Tuple, Optional
 import json
 import traceback
+import hashlib
+import time
+from redis import Redis
+from app.config import settings
+
+# Redis client - will be initialized in get_redis_client()
+redis_client = None
+
+
+def get_redis_client():
+    """Get or initialize Redis client"""
+    global redis_client
+    if redis_client is None:
+        try:
+            redis_client = Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD,
+                decode_responses=False,  # Keep as binary for proper data serialization
+                socket_timeout=5
+            )
+            # Test connection
+            redis_client.ping()
+        except Exception as e:
+            print(f"Redis connection error: {str(e)}")
+            redis_client = None
+    return redis_client
+
+
+def get_cache_key(table_name: str, page: int, page_size: int, search: Optional[str], sort_by: Optional[str],
+                  sort_desc: bool) -> str:
+    """Generate a cache key based on query parameters"""
+    key_parts = [
+        f"table={table_name}",
+        f"page={page}",
+        f"size={page_size}",
+        f"search={search or ''}",
+        f"sort={sort_by or ''}",
+        f"desc={sort_desc}"
+    ]
+    key_str = ":".join(key_parts)
+    return f"data:{hashlib.md5(key_str.encode()).hexdigest()}"
 
 
 def get_direct_table_data(
@@ -12,12 +55,28 @@ def get_direct_table_data(
         page_size: int = 100,
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
-        sort_desc: bool = False
+        sort_desc: bool = False,
+        use_cache: bool = True,
+        cache_ttl: int = 300  # Cache for 5 minutes by default
 ) -> Tuple[List[Dict[str, Any]], int]:
     """
-    Query data directly from an existing PostgreSQL table.
+    Query data directly from an existing PostgreSQL table with Redis caching.
     Returns tuple of (data, total_count)
     """
+    # Try to get from cache if enabled
+    if use_cache and settings.USE_REDIS_CACHE:
+        redis = get_redis_client()
+        if redis:
+            cache_key = get_cache_key(table_name, page, page_size, search, sort_by, sort_desc)
+            cached_data = redis.get(cache_key)
+            if cached_data:
+                try:
+                    cache_result = json.loads(cached_data)
+                    print(f"Cache hit for {cache_key}")
+                    return cache_result["data"], cache_result["total"]
+                except Exception as e:
+                    print(f"Error deserializing cached data: {str(e)}")
+
     try:
         # Create a dynamic table object
         metadata = MetaData()
@@ -110,6 +169,22 @@ def get_direct_table_data(
         if data and len(data) > 0:
             print(f"First row keys: {list(data[0].keys())}")
 
+        # Cache the result if enabled
+        if use_cache and settings.USE_REDIS_CACHE:
+            redis = get_redis_client()
+            if redis:
+                cache_key = get_cache_key(table_name, page, page_size, search, sort_by, sort_desc)
+                try:
+                    cache_data = {
+                        "data": data,
+                        "total": total,
+                        "timestamp": time.time()
+                    }
+                    redis.setex(cache_key, cache_ttl, json.dumps(cache_data))
+                    print(f"Cached data with key {cache_key}")
+                except Exception as e:
+                    print(f"Error caching data: {str(e)}")
+
         return data, total
 
     except Exception as e:
@@ -154,10 +229,43 @@ def update_direct_table_row(db: Session, table_name: str, primary_key_col: str, 
         result = db.execute(stmt)
         db.commit()
 
+        # Invalidate cache for this table after update
+        if settings.USE_REDIS_CACHE:
+            redis = get_redis_client()
+            if redis:
+                # Delete all cache entries for this table (using pattern matching)
+                pattern = f"data:*table={table_name}*"
+                cache_keys = redis.keys(pattern)
+                if cache_keys:
+                    redis.delete(*cache_keys)
+                    print(f"Invalidated {len(cache_keys)} cache entries after row update")
+
         return result.rowcount > 0
 
     except Exception as e:
         print(f"Error in update_direct_table_row: {str(e)}")
         print(traceback.format_exc())
         db.rollback()
+        return False
+
+
+def clear_table_cache(table_name: str) -> bool:
+    """Clear all cached entries for a specific table"""
+    if not settings.USE_REDIS_CACHE:
+        return False
+
+    redis = get_redis_client()
+    if not redis:
+        return False
+
+    try:
+        pattern = f"data:*table={table_name}*"
+        cache_keys = redis.keys(pattern)
+        if cache_keys:
+            redis.delete(*cache_keys)
+            print(f"Cleared {len(cache_keys)} cache entries for table {table_name}")
+            return True
+        return False
+    except Exception as e:
+        print(f"Error clearing table cache: {str(e)}")
         return False

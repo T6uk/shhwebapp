@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect
 from typing import List, Dict, Any, Optional
 import json
 import traceback
+import asyncio
 
 from app.database import get_db
 from app.models.data_models import DataTable, TableSchema
 from app.services.data_service import get_table_columns
-from app.services.direct_data_service import get_direct_table_data, update_direct_table_row
+from app.services.direct_data_service import get_direct_table_data, update_direct_table_row, clear_table_cache
 from app.templates import templates
+from app.config import settings
 
 router = APIRouter()
 
@@ -24,6 +26,9 @@ COLUMN_GROUPS = {
     "Tasud": ["täituritasu_suurus", "täitekulu_kokku", "tasud_ja_kulud_kokku", "jäägid_kokku"],
     "Menetlus": ["staatus", "staatuse_kpv", "menetluse_lõpetamise_kpv", "lõpetamise_alus", "märkused"]
 }
+
+# Active WebSocket connections for broadcasting updates
+active_connections = []
 
 
 def get_column_groups(db: Session, table_name: str) -> Dict[str, List[Dict[str, Any]]]:
@@ -115,13 +120,19 @@ def get_data(
         search_value: Optional[str] = Query(None, alias="search[value]"),
         order_column: Optional[int] = Query(0, alias="order[0][column]"),
         order_dir: Optional[str] = Query("asc", alias="order[0][dir]"),
+        columns: Optional[str] = Query(None),  # New parameter to select specific columns
+        use_cache: bool = Query(True),  # New parameter to control caching
         db: Session = Depends(get_db)
 ):
     """
-    Get data in DataTables format with support for infinite scrolling
+    Get data in DataTables format with support for filtering, sorting, and optional caching
     """
     try:
         print(f"Processing request: draw={draw}, start={start}, length={length}, search={search_value}")
+
+        # Enforce max page size
+        if length > settings.MAX_PAGE_SIZE:
+            length = settings.MAX_PAGE_SIZE
 
         # Calculate page from start and length
         page = (start // length) + 1 if length > 0 else 1
@@ -129,8 +140,8 @@ def get_data(
         # Get column name to sort by (default to first column)
         inspector = inspect(db.bind)
         try:
-            columns = inspector.get_columns(table_name)
-            sort_column = columns[order_column]['name'] if order_column < len(columns) else None
+            all_columns = inspector.get_columns(table_name)
+            sort_column = all_columns[order_column]['name'] if order_column < len(all_columns) else None
             print(f"Sort column: {sort_column}, Direction: {order_dir}")
         except Exception as e:
             print(f"Error getting column for sorting: {e}")
@@ -144,7 +155,9 @@ def get_data(
             page_size=length,
             search=search_value,
             sort_by=sort_column,
-            sort_desc=(order_dir.lower() == "desc")
+            sort_desc=(order_dir.lower() == "desc"),
+            use_cache=use_cache,
+            cache_ttl=settings.CACHE_TTL
         )
 
         # Format response in DataTables expected format
@@ -212,6 +225,9 @@ def update_row(
             raise HTTPException(status_code=404,
                                 detail=f"Row {row_id} in table '{table_name}' not found or could not be updated")
 
+        # Broadcast update notification to all connected clients
+        broadcast_update(table_name, row_id, row_data)
+
         return {"success": True, "message": "Row updated successfully"}
     except Exception as e:
         print(f"Error updating row: {str(e)}")
@@ -219,39 +235,146 @@ def update_row(
         raise HTTPException(status_code=500, detail=f"Error updating row: {str(e)}")
 
 
-@router.get("/table/{table_name}/all-data")
-def get_all_data(
-        table_name: str,
-        db: Session = Depends(get_db)
-):
-    """
-    Get all data from a table at once - use with caution for large tables
-    """
+@router.websocket("/ws/table/{table_name}")
+async def websocket_endpoint(websocket: WebSocket, table_name: str, db: Session = Depends(get_db)):
+    """WebSocket endpoint for streaming data and real-time updates"""
+    await websocket.accept()
+
+    # Add connection to active connections
+    connection_info = {
+        "websocket": websocket,
+        "table_name": table_name
+    }
+    active_connections.append(connection_info)
+
     try:
-        # Get all data with no limits
+        # Initial message
+        await websocket.send_json({"type": "connection_established", "table": table_name})
+
+        # Process commands from client
+        while True:
+            # Wait for client commands
+            data = await websocket.receive_json()
+            command = data.get("command")
+
+            if command == "fetch_data":
+                # Get parameters from request
+                start = data.get("start", 0)
+                chunk_size = min(data.get("chunk_size", settings.STREAM_CHUNK_SIZE), settings.MAX_PAGE_SIZE)
+                search = data.get("search")
+                sort_by = data.get("sort_by")
+                sort_desc = data.get("sort_desc", False)
+
+                # Calculate page
+                page = (start // chunk_size) + 1 if chunk_size > 0 else 1
+
+                # Get data
+                chunk_data, total = get_direct_table_data(
+                    db,
+                    table_name,
+                    page=page,
+                    page_size=chunk_size,
+                    search=search,
+                    sort_by=sort_by,
+                    sort_desc=sort_desc,
+                    use_cache=True
+                )
+
+                # Send data back to client
+                await websocket.send_json({
+                    "type": "data_chunk",
+                    "start": start,
+                    "total": total,
+                    "data": chunk_data
+                })
+
+            elif command == "clear_cache":
+                # Clear cache for this table
+                cleared = clear_table_cache(table_name)
+                await websocket.send_json({
+                    "type": "cache_cleared",
+                    "success": cleared
+                })
+
+    except WebSocketDisconnect:
+        # Remove from active connections
+        active_connections.remove(connection_info)
+    except Exception as e:
+        print(f"WebSocket error: {str(e)}")
+        print(traceback.format_exc())
+        # Try to send error message
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except:
+            pass
+        # Remove from active connections if still there
+        if connection_info in active_connections:
+            active_connections.remove(connection_info)
+
+
+async def broadcast_update(table_name: str, row_id: Any, row_data: Dict[str, Any]):
+    """Broadcast update notifications to all connected clients"""
+    update_message = {
+        "type": "row_updated",
+        "table": table_name,
+        "row_id": row_id,
+        "data": row_data
+    }
+
+    for connection in active_connections:
+        if connection["table_name"] == table_name:
+            try:
+                await connection["websocket"].send_json(update_message)
+            except Exception as e:
+                print(f"Error broadcasting update: {str(e)}")
+
+
+@router.get("/table/{table_name}/stream")
+def stream_data_page(request: Request, table_name: str, db: Session = Depends(get_db)):
+    """Render the streaming data page using WebSockets"""
+    try:
+        # Get column groups for the toolbar
+        column_groups = get_column_groups(db, table_name)
+
+        return templates.TemplateResponse(
+            "streaming_table.html",
+            {
+                "request": request,
+                "table_name": table_name,
+                "column_groups": column_groups,
+                "enable_websockets": settings.ENABLE_WEBSOCKETS,
+                "stream_chunk_size": settings.STREAM_CHUNK_SIZE
+            }
+        )
+    except Exception as e:
+        print(f"Error rendering stream view: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Template error: {str(e)}")
+
+
+@router.get("/table/{table_name}/refresh-cache")
+def refresh_cache(table_name: str, db: Session = Depends(get_db)):
+    """Clear cache and reload data for a table"""
+    try:
+        # Clear existing cache
+        cleared = clear_table_cache(table_name)
+
+        # Optionally pre-warm cache with common queries
         data, total = get_direct_table_data(
             db,
             table_name,
             page=1,
-            page_size=-1,  # No limit
-            search=None,
-            sort_by='id',
-            sort_desc=False
+            page_size=settings.DEFAULT_PAGE_SIZE,
+            use_cache=True
         )
 
         return {
             "success": True,
-            "total": total,
-            "data": data
+            "cache_cleared": cleared,
+            "rows_preloaded": len(data),
+            "total_rows": total
         }
     except Exception as e:
-        # Log the error for server-side troubleshooting
-        print(f"Error in get_all_data: {str(e)}")
+        print(f"Error refreshing cache: {str(e)}")
         print(traceback.format_exc())
-        # Return error format
-        return {
-            "success": False,
-            "error": str(e),
-            "total": 0,
-            "data": []
-        }
+        raise HTTPException(status_code=500, detail=f"Error refreshing cache: {str(e)}")

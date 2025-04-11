@@ -16,15 +16,29 @@ class Settings(BaseSettings):
 
     DATABASE_URL: Optional[str] = None
 
+    # Redis cache settings
+    USE_REDIS_CACHE: bool = True
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_DB: int = 0
+    CACHE_TTL: int = 300  # 5 minutes default cache lifetime
+
+    # Websocket settings
+    ENABLE_WEBSOCKETS: bool = True
+
+    # Performance settings
+    DEFAULT_PAGE_SIZE: int = 100
+    MAX_PAGE_SIZE: int = 1000
+    STREAM_CHUNK_SIZE: int = 1000
+    PAGE_SIZE: int = 100  # Add this line back to keep compatibility
+
     # Compute the DATABASE_URL if not explicitly provided
     @property
     def computed_database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-
-    # Number of rows to show per page in the data table
-    PAGE_SIZE: int = 100
 
     class Config:
         env_file = ".env"
