@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Taitur Data Viewer{% endblock %}
+{% block title %}WebApp{% endblock %}
 
 {% block head %}
 <style>
@@ -9,27 +9,34 @@
         margin: 0;
         overflow: hidden;
     }
+
     .edit-controls {
         display: none;
     }
+
     tr.editing .edit-controls {
         display: inline-block;
     }
+
     tr.editing .view-controls {
         display: none;
     }
+
     .table-container {
         overflow-x: auto;
         height: 100vh;
         width: 100%;
     }
+
     .dataTables_length, .dataTables_filter {
         margin-bottom: 15px;
     }
+
     /* Highlight edited cells */
     td.edited {
         background-color: rgba(255, 255, 0, 0.1);
     }
+
     /* Make table header sticky */
     thead th {
         position: sticky;
@@ -38,23 +45,28 @@
         z-index: 2;
         white-space: nowrap;
     }
+
     /* Column groups dropdown */
     .column-group-dropdown {
         max-height: 500px;
         overflow-y: auto;
         padding: 0;
     }
+
     .column-group-dropdown .dropdown-item {
         padding: 0.5rem 1rem;
     }
+
     .column-group-dropdown .dropdown-header {
         font-weight: bold;
         color: #212529;
         background-color: #f8f9fa;
     }
+
     .column-group-dropdown .dropdown-divider {
         margin: 0.2rem 0;
     }
+
     /* Toolbar */
     .toolbar {
         background-color: #f8f9fa;
@@ -64,40 +76,113 @@
         top: 0;
         z-index: 100;
     }
+
     .toolbar .btn-group {
         margin-right: 10px;
     }
-    /* Search highlight */
+
+    /* Advanced search */
+    .advanced-search {
+        width: 350px;
+        position: relative;
+    }
+
+    .advanced-search .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
     .search-highlight {
-        background-color: yellow;
-        font-weight: bold;
+        background-color: rgba(255, 255, 0, 0.4);
+        border-radius: 2px;
+        padding: 0 2px;
     }
-    /* Quick filter input */
-    .quick-filter {
+
+    /* Tooltip for search shortcuts */
+    .search-tooltip {
+        position: absolute;
+        top: 40px;
+        left: 0;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px 12px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
         width: 300px;
-        display: inline-block;
+        font-size: 0.85rem;
     }
+
+    .advanced-search:hover .search-tooltip {
+        display: block;
+    }
+
+    /* Search suggestions */
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1050;
+        display: none;
+    }
+
+    .search-suggestion-item {
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .search-suggestion-item:hover,
+    .search-suggestion-item.active {
+        background-color: #f8f9fa;
+    }
+
+    .search-suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-highlight.active {
+        background-color: #ffc107;
+        color: #000;
+        font-weight: bold;
+        border-radius: 2px;
+        padding: 0 2px;
+        outline: 2px solid #fd7e14;
+    }
+
     .active-view {
         background-color: #e9ecef;
         border-left: 4px solid #007bff;
     }
+
     .toolbar-row {
         margin-bottom: 8px;
     }
+
     #error-message {
         display: none;
         margin-bottom: 15px;
     }
+
     /* Virtual scrolling styles */
     div.dataTables_scrollBody {
         background: none !important;
     }
+
     /* Full height content */
     .content-wrapper {
         height: 100vh;
         display: flex;
         flex-direction: column;
     }
+
     .card {
         flex: 1;
         display: flex;
@@ -106,11 +191,13 @@
         border: none;
         border-radius: 0;
     }
+
     .card-body {
         flex: 1;
         padding: 0;
         overflow: hidden;
     }
+
     /* Loading overlay */
     .loading-overlay {
         position: absolute;
@@ -118,7 +205,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(255,255,255,0.7);
+        background-color: rgba(255, 255, 255, 0.7);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -132,32 +219,42 @@
     <div class="card shadow">
         <div class="toolbar">
             <div class="row align-items-center">
-                <div class="col-auto">
-                    <h2 class="mb-0">Taitur Data</h2>
-                </div>
                 <div class="col">
-                    <div class="input-group quick-filter">
-                        <input type="text" id="quick-table-filter" class="form-control" placeholder="Search anywhere...">
-                        <button class="btn btn-outline-secondary" type="button" id="clear-filter">
-                            <i class="bi bi-x"></i>
+                    <div class="input-group advanced-search">
+                        <input type="text" id="advanced-search-input" class="form-control"
+                               placeholder="Type to search all fields...">
+                        <button class="btn btn-outline-primary" type="button" id="search-btn">
+                            <i class="bi bi-search"></i>
                         </button>
+                        <button class="btn btn-outline-secondary" type="button" id="prev-result" disabled>
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" id="next-result" disabled>
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                        <span class="input-group-text" id="search-count">0/0</span>
                     </div>
                 </div>
                 <div class="col-auto d-flex flex-wrap">
                     <!-- Column Navigation -->
                     <div class="btn-group">
-                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
                             <i class="bi bi-columns"></i> Columns
                         </button>
                         <ul class="dropdown-menu column-group-dropdown">
                             {% for group_name, columns in column_groups.items() %}
-                                <li><h6 class="dropdown-header">{{ group_name }}</h6></li>
-                                {% for column in columns %}
-                                    <li><a class="dropdown-item column-link" href="#" data-column="{{ column.name }}">{{ column.name }}</a></li>
-                                {% endfor %}
-                                <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">{{ group_name }}</h6></li>
+                            {% for column in columns %}
+                            <li><a class="dropdown-item column-link" href="#" data-column="{{ column.name }}">{{
+                                column.name }}</a></li>
                             {% endfor %}
-                            <li><a class="dropdown-item" href="#" id="column-settings-menu">Customize Columns...</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            {% endfor %}
+                            <li><a class="dropdown-item" href="#" id="column-settings-menu">Customize Columns...</a>
+                            </li>
                         </ul>
                     </div>
 
@@ -173,14 +270,18 @@
 
                     <!-- View Options -->
                     <div class="btn-group">
-                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
                             <i class="bi bi-eye"></i> View
                         </button>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item view-option" href="#" data-view="all">Show All Columns</a></li>
-                            <li><a class="dropdown-item view-option" href="#" data-view="main">Main Columns Only</a></li>
+                            <li><a class="dropdown-item view-option" href="#" data-view="main">Main Columns Only</a>
+                            </li>
                             <li><a class="dropdown-item view-option" href="#" data-view="minimal">Minimal View</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item" href="#" id="save-current-view">Save Current View</a></li>
                         </ul>
                     </div>
@@ -201,14 +302,14 @@
             <div class="table-container">
                 <table id="data-table" class="table table-striped table-bordered w-100">
                     <thead>
-                        <tr id="table-header">
-                            <th>Loading...</th>
-                        </tr>
+                    <tr id="table-header">
+                        <th>Loading...</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Loading data...</td>
-                        </tr>
+                    <tr>
+                        <td>Loading data...</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
@@ -231,15 +332,15 @@
                 <div class="table-responsive">
                     <table class="table table-sm" id="column-settings-table">
                         <thead>
-                            <tr>
-                                <th>Visible</th>
-                                <th>Column Name</th>
-                                <th>Type</th>
-                                <th>Order</th>
-                            </tr>
+                        <tr>
+                            <th>Visible</th>
+                            <th>Column Name</th>
+                            <th>Type</th>
+                            <th>Order</th>
+                        </tr>
                         </thead>
                         <tbody id="column-settings-body">
-                            <!-- Column settings will be loaded dynamically -->
+                        <!-- Column settings will be loaded dynamically -->
                         </tbody>
                     </table>
                 </div>
@@ -273,200 +374,264 @@
         </div>
     </div>
 </div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" id="export-csv">
+                        <i class="bi bi-filetype-csv"></i> Export as CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="export-excel">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export as Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="export-json">
+                        <i class="bi bi-filetype-json"></i> Export as JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-let dataTable;
-let tableColumns = [];
-let visibleColumns = [];
-let allColumns = [];
-let MINIMAL_COLUMNS = ['id', 'võlgnik', 'toimiku_nr', 'nõude_suurus', 'staatus'];
-let MAIN_COLUMNS = [
-    'id', 'võlgnik', 'toimiku_nr', 'toimiku_olek', 'sissenõudja_perenimi', 'sissenõudja_eesnimi',
-    'võlgniku_perenimi', 'võlgniku_eesnimi', 'võlgniku_reg_isikukood', 'nõude_suurus',
-    'tasud_ja_kulud_kokku', 'jäägid_kokku', 'staatus', 'märkused'
-];
-let isTableInitializing = false;
+    let dataTable;
+    let tableColumns = [];
+    let visibleColumns = [];
+    let allColumns = [];
+    let MINIMAL_COLUMNS = ['id', 'võlgnik', 'toimiku_nr', 'nõude_suurus', 'staatus'];
+    let MAIN_COLUMNS = [
+        'id', 'võlgnik', 'toimiku_nr', 'toimiku_olek', 'sissenõudja_perenimi', 'sissenõudja_eesnimi',
+        'võlgniku_perenimi', 'võlgniku_eesnimi', 'võlgniku_reg_isikukood', 'nõude_suurus',
+        'tasud_ja_kulud_kokku', 'jäägid_kokku', 'staatus', 'märkused'
+    ];
+    let isTableInitializing = false;
+    let customSearchFunction = null;
 
-// Helper function to show errors
-function showError(message) {
-    const errorDiv = document.getElementById('error-message');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-    console.error(message);
-}
-
-// Helper function to hide errors
-function hideError() {
-    const errorDiv = document.getElementById('error-message');
-    errorDiv.style.display = 'none';
-}
-
-// Show/hide loading indicator
-function toggleLoading(show) {
-    const indicator = document.getElementById('loading-indicator');
-    indicator.style.display = show ? 'flex' : 'none';
-}
-
-// Check if element is in viewport
-function isInViewport(element) {
-    const rect = element.getBoundingClientRect();
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-}
-
-// Optimize column visibility for performance
-function optimizeColumnVisibility() {
-    // For very large tables, limit visible columns to improve initial load time
-    if (allColumns.length > 50) {
-        // If we have many columns, start with just the essential ones
-        tableColumns.forEach(col => {
-            col.visible = MINIMAL_COLUMNS.includes(col.name);
-        });
-        visibleColumns = tableColumns.filter(col => col.visible);
+    // Helper function to show errors
+    function showError(message) {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        console.error(message);
     }
-}
 
-// Initialize DataTable with first row data for columns
-async function initializeWithFirstRow() {
-    if (isTableInitializing) return;
-    isTableInitializing = true;
+    // Helper function to hide errors
+    function hideError() {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.style.display = 'none';
+    }
 
-    try {
-        hideError();
-        toggleLoading(true);
+    // Show/hide loading indicator
+    function toggleLoading(show) {
+        const indicator = document.getElementById('loading-indicator');
+        indicator.style.display = show ? 'flex' : 'none';
+    }
 
-        // Make a simple request to get the first row of data
-        const response = await fetch(`/api/table/{{ table_name }}/data?length=1`);
-        const data = await response.json();
+    // Check if element is in viewport
+    function isInViewport(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
 
-        if (!data.data || data.data.length === 0) {
-            showError('No data found in table. Unable to determine columns.');
+    // Helper function to escape regex special characters
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Optimize column visibility for performance
+    function optimizeColumnVisibility() {
+        // For very large tables, limit visible columns to improve initial load time
+        if (allColumns.length > 50) {
+            // If we have many columns, start with just the essential ones
+            tableColumns.forEach(col => {
+                col.visible = MINIMAL_COLUMNS.includes(col.name);
+            });
+            visibleColumns = tableColumns.filter(col => col.visible);
+        }
+    }
+
+    // Initialize DataTable with first row data for columns
+    async function initializeWithFirstRow() {
+        if (isTableInitializing) return;
+        isTableInitializing = true;
+
+        try {
+            hideError();
+            toggleLoading(true);
+
+            // Make a simple request to get the first row of data
+            const response = await fetch(`/api/table/{{ table_name }}/data?length=1`);
+            const data = await response.json();
+
+            if (!data.data || data.data.length === 0) {
+                showError('No data found in table. Unable to determine columns.');
+                toggleLoading(false);
+                isTableInitializing = false;
+                return;
+            }
+
+            // Use the first row to determine columns
+            const firstRow = data.data[0];
+
+            // Get schema information
+            const schemaResponse = await fetch(`/api/table/{{ table_name }}/schema`);
+            const schemaData = await schemaResponse.json();
+
+            // Create all columns array from schema if available, otherwise from first row
+            if (schemaData.columns && schemaData.columns.length > 0) {
+                allColumns = schemaData.columns;
+            } else {
+                allColumns = Object.keys(firstRow).map(key => {
+                    const value = firstRow[key];
+                    let dataType = 'text';
+
+                    // Simple type detection
+                    if (typeof value === 'number') {
+                        dataType = 'number';
+                    } else if (typeof value === 'boolean') {
+                        dataType = 'boolean';
+                    } else if (value instanceof Date) {
+                        dataType = 'date';
+                    }
+
+                    return {
+                        name: key,
+                        type: dataType
+                    };
+                });
+            }
+
+            // If columns were previously stored, use those settings
+            const savedColumns = JSON.parse(localStorage.getItem('taitur_columns'));
+
+            if (savedColumns) {
+                // Use saved column visibility and order
+                tableColumns = savedColumns;
+
+                // Make sure any new columns are included
+                allColumns.forEach(colSchema => {
+                    if (!tableColumns.find(col => col.name === colSchema.name)) {
+                        tableColumns.push({
+                            ...colSchema,
+                            visible: MAIN_COLUMNS.includes(colSchema.name)
+                        });
+                    }
+                });
+            } else {
+                // Set default visibility based on MAIN_COLUMNS
+                tableColumns = allColumns.map(col => ({
+                    ...col,
+                    visible: MAIN_COLUMNS.includes(col.name)
+                }));
+            }
+
+            // Optimize initial column visibility for performance
+            optimizeColumnVisibility();
+
+            // Update visible columns list
+            visibleColumns = tableColumns.filter(col => col.visible);
+
+            // Initialize table with these columns
+            initializeTable();
+
+        } catch (error) {
+            showError(`Error fetching data: ${error.message}`);
             toggleLoading(false);
             isTableInitializing = false;
-            return;
         }
-
-        // Use the first row to determine columns
-        const firstRow = data.data[0];
-
-        // Get schema information
-        const schemaResponse = await fetch(`/api/table/{{ table_name }}/schema`);
-        const schemaData = await schemaResponse.json();
-
-        // Create all columns array from schema if available, otherwise from first row
-        if (schemaData.columns && schemaData.columns.length > 0) {
-            allColumns = schemaData.columns;
-        } else {
-            allColumns = Object.keys(firstRow).map(key => {
-                const value = firstRow[key];
-                let dataType = 'text';
-
-                // Simple type detection
-                if (typeof value === 'number') {
-                    dataType = 'number';
-                } else if (typeof value === 'boolean') {
-                    dataType = 'boolean';
-                } else if (value instanceof Date) {
-                    dataType = 'date';
-                }
-
-                return {
-                    name: key,
-                    type: dataType
-                };
-            });
-        }
-
-        // If columns were previously stored, use those settings
-        const savedColumns = JSON.parse(localStorage.getItem('taitur_columns'));
-
-        if (savedColumns) {
-            // Use saved column visibility and order
-            tableColumns = savedColumns;
-
-            // Make sure any new columns are included
-            allColumns.forEach(colSchema => {
-                if (!tableColumns.find(col => col.name === colSchema.name)) {
-                    tableColumns.push({
-                        ...colSchema,
-                        visible: MAIN_COLUMNS.includes(colSchema.name)
-                    });
-                }
-            });
-        } else {
-            // Set default visibility based on MAIN_COLUMNS
-            tableColumns = allColumns.map(col => ({
-                ...col,
-                visible: MAIN_COLUMNS.includes(col.name)
-            }));
-        }
-
-        // Optimize initial column visibility for performance
-        optimizeColumnVisibility();
-
-        // Update visible columns list
-        visibleColumns = tableColumns.filter(col => col.visible);
-
-        // Initialize table with these columns
-        initializeTable();
-
-    } catch (error) {
-        showError(`Error fetching data: ${error.message}`);
-        toggleLoading(false);
-        isTableInitializing = false;
     }
-}
 
-// Initialize DataTable with virtual scrolling and optimized settings
-function initializeTable() {
-    try {
-        // Create column definitions for DataTables
-        const columnDefs = visibleColumns.map(column => ({
-            data: column.name,
-            title: column.name,
-            visible: true,
-            render: function(data, type, row) {
-                // Optimize rendering based on data type
-                if (type === 'display') {
-                    if (data === null || data === undefined) return '';
-
-                    // Truncate long text for better performance
-                    if (typeof data === 'string' && data.length > 100) {
-                        return `<span title="${data.replace(/"/g, '&quot;')}">${data.substring(0, 100)}...</span>`;
+    // Initialize DataTable with virtual scrolling and optimized settings
+    function initializeTable() {
+        try {
+            // Create column definitions for DataTables
+            const columnDefs = visibleColumns.map(column => ({
+                data: column.name,
+                title: column.name,
+                visible: true,
+                render: function (data, type, row) {
+                    // For ordering and searching, use the raw data
+                    if (type === 'sort' || type === 'filter') {
+                        return data;
                     }
-                }
-                return data;
-            }
-        }));
 
-        // Add actions column
-        columnDefs.push({
-            data: null,
-            title: 'Actions',
-            orderable: false,
-            width: '100px',
-            defaultContent: `
+                    // For display, handle different data types
+                    if (type === 'display') {
+                        if (data === null || data === undefined) return '';
+
+                        // Handle different data types
+                        if (column.type === 'boolean') {
+                            return data ? 'Yes' : 'No';
+                        }
+
+                        // Format dates in a readable way
+                        if (column.type === 'date' || column.type === 'datetime') {
+                            if (data instanceof Date) {
+                                return data.toLocaleDateString();
+                            }
+
+                            // Try to parse date strings
+                            if (typeof data === 'string' && data.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                try {
+                                    return new Date(data).toLocaleDateString();
+                                } catch (e) {
+                                    return data;
+                                }
+                            }
+                        }
+
+                        // Truncate long strings for better performance
+                        if (typeof data === 'string' && data.length > 100) {
+                            return `<span title="${data.replace(/"/g, '&quot;')}">${data.substring(0, 100)}...</span>`;
+                        }
+
+                        return data;
+                    }
+
+                    return data;
+                }
+            }));
+
+            // Add actions column
+            columnDefs.push({
+                data: null,
+                title: 'Actions',
+                orderable: false,
+                width: '100px',
+                defaultContent: `
                 <div class="btn-group">
                     <button class="btn btn-sm btn-outline-primary edit-btn view-controls">Edit</button>
                     <button class="btn btn-sm btn-success save-btn edit-controls">Save</button>
                     <button class="btn btn-sm btn-danger cancel-btn edit-controls">Cancel</button>
                 </div>
             `
-        });
+            });
 
-        // Clear any existing DataTable
-        if (dataTable) {
-            dataTable.destroy();
-        }
+            // Clear any existing DataTable
+            if (dataTable) {
+                dataTable.destroy();
+            }
 
-        // Recreate the table element to avoid any legacy issues
-        const tableContainer = document.querySelector('.table-container');
-        tableContainer.innerHTML = `
+            // Reset custom search function
+            customSearchFunction = null;
+
+            // Recreate the table element to avoid any legacy issues
+            const tableContainer = document.querySelector('.table-container');
+            tableContainer.innerHTML = `
             <table id="data-table" class="table table-striped table-bordered w-100">
                 <thead>
                     <tr>
@@ -477,508 +642,994 @@ function initializeTable() {
             </table>
         `;
 
-        // Initialize DataTable with Scroller for virtual scrolling
-        dataTable = $('#data-table').DataTable({
-            processing: false, // We'll handle our own processing indicator
-            serverSide: true,
-            deferRender: true,
-            scrollCollapse: true,
-            scroller: {
-                loadingIndicator: false, // Use our own loading indicator
-                displayBuffer: 10, // Increase buffer for smoother scrolling
-                rowHeight: 'auto', // Use auto row height for more accurate display
-                serverWait: 100 // Reduce server wait time
-            },
-            scrollY: 'calc(100vh - 60px)', // Adjust based on toolbar height
-            scrollX: true,
-            ajax: {
-                url: `/api/table/{{ table_name }}/data`,
-                beforeSend: function() {
-                    if (!isTableInitializing) toggleLoading(true);
+            // Initialize DataTable with Scroller for virtual scrolling
+            dataTable = $('#data-table').DataTable({
+                processing: false, // We'll handle our own processing indicator
+                serverSide: true,
+                deferRender: true,
+                scrollCollapse: true,
+                scroller: {
+                    loadingIndicator: false, // Use our own loading indicator
+                    displayBuffer: 10, // Increase buffer for smoother scrolling
+                    rowHeight: 'auto', // Use auto row height for more accurate display
+                    serverWait: 100 // Reduce server wait time
                 },
-                complete: function() {
+                scrollY: 'calc(100vh - 60px)', // Adjust based on toolbar height
+                scrollX: true,
+                ajax: {
+                    url: `/api/table/{{ table_name }}/data`,
+                    beforeSend: function () {
+                        if (!isTableInitializing) toggleLoading(true);
+                    },
+                    complete: function () {
+                        toggleLoading(false);
+                        isTableInitializing = false;
+                    },
+                    error: function (xhr, error, thrown) {
+                        showError(`DataTables error: ${error} - ${thrown}`);
+                        toggleLoading(false);
+                        isTableInitializing = false;
+                    }
+                },
+                columns: columnDefs,
+                dom: 'rti', // Remove paging controls and buttons
+                stateSave: true, // Save table state between loads
+                searchDelay: 500, // Optimized delay for search
+                language: {
+                    processing: "Loading data, please wait..."
+                },
+                initComplete: function () {
+                    // This ensures all initialization is complete
                     toggleLoading(false);
                     isTableInitializing = false;
-                },
-                error: function(xhr, error, thrown) {
-                    showError(`DataTables error: ${error} - ${thrown}`);
-                    toggleLoading(false);
-                    isTableInitializing = false;
-                }
-            },
-            columns: columnDefs,
-            dom: 'Brti', // Remove paging controls
-            buttons: [
-                'copy', 'csv', 'excel'
-            ],
-            stateSave: true, // Save table state between loads
-            searchDelay: 350, // Optimized delay
-            search: {
-                return: true // Search on Enter key
-            },
-            language: {
-                processing: "Loading data, please wait..."
-            },
-            initComplete: function() {
-                // This ensures all initialization is complete
-                toggleLoading(false);
-                isTableInitializing = false;
 
-                // Lazy load visible rows for better performance
-                setTimeout(() => {
-                    this.scroller.measure();
-                }, 100);
+                    // Lazy load visible rows for better performance
+                    setTimeout(() => {
+                        this.scroller.measure();
+                    }, 100);
+
+                    // Initialize advanced search
+                    setupAdvancedSearch();
+                }
+            });
+
+            // Attach event handlers
+            attachEventHandlers();
+
+            // Save column settings to localStorage
+            localStorage.setItem('taitur_columns', JSON.stringify(tableColumns));
+
+        } catch (error) {
+            showError(`Error initializing table: ${error.message}`);
+            toggleLoading(false);
+            isTableInitializing = false;
+        }
+    }
+
+    // Advanced search functionality
+    function setupAdvancedSearch() {
+        const searchInput = document.getElementById('advanced-search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const prevBtn = document.getElementById('prev-result');
+        const nextBtn = document.getElementById('next-result');
+        const searchCount = document.getElementById('search-count');
+
+        let searchTimeout = null;
+        let searchResults = [];
+        let currentResultIndex = -1;
+
+        // Add search tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'search-tooltip';
+        tooltip.innerHTML = `
+        <strong>Search tips:</strong>
+        <ul class="mb-0 ps-3">
+            <li>Press Enter to search immediately</li>
+            <li>Use " " for exact phrase matching</li>
+            <li>Use column:value to search specific columns</li>
+            <li>Use ⬆️⬇️ buttons to navigate between results</li>
+        </ul>
+    `;
+        searchInput.parentNode.appendChild(tooltip);
+
+        // Remove the suggestions functionality since we're focusing on data search
+
+        // Function to parse advanced search query
+        function parseSearchQuery(query) {
+            if (!query) return null;
+
+            // Default search - simple string search across all columns
+            if (!query.includes(':')) {
+                return {type: 'simple', value: query};
+            }
+
+            // Try to parse as column search
+            try {
+                const parts = query.split(':');
+                const columnName = parts[0].trim();
+                let value = parts.slice(1).join(':').trim();
+
+                // Check for operators
+                let operator = '=';
+                if (value.startsWith('>=')) {
+                    operator = '>=';
+                    value = value.substring(2).trim();
+                } else if (value.startsWith('<=')) {
+                    operator = '<=';
+                    value = value.substring(2).trim();
+                } else if (value.startsWith('>')) {
+                    operator = '>';
+                    value = value.substring(1).trim();
+                } else if (value.startsWith('<')) {
+                    operator = '<';
+                    value = value.substring(1).trim();
+                }
+
+                return {
+                    type: 'column',
+                    column: columnName,
+                    operator: operator,
+                    value: value
+                };
+            } catch (e) {
+                // If parsing fails, fall back to simple search
+                return {type: 'simple', value: query};
+            }
+        }
+
+        // Function to perform search and collect results
+        function performSearch() {
+            const query = searchInput.value.trim();
+
+            // Reset search results
+            searchResults = [];
+            currentResultIndex = -1;
+            updateResultCountDisplay();
+
+            // Clear highlighting
+            $('#data-table tbody td span.search-highlight').each(function () {
+                const parent = $(this).parent();
+                parent.text($(this).text());
+            });
+
+            if (!query) {
+                disableNavButtons();
+                // Clear any existing custom search
+                if (customSearchFunction) {
+                    $.fn.dataTable.ext.search.pop();
+                    customSearchFunction = null;
+                }
+                dataTable.search('').draw();
+                return;
+            }
+
+            // Parse the search query
+            const parsedQuery = parseSearchQuery(query);
+            if (!parsedQuery) return;
+
+            // Remove old search function if it exists
+            if (customSearchFunction) {
+                const index = $.fn.dataTable.ext.search.indexOf(customSearchFunction);
+                if (index !== -1) {
+                    $.fn.dataTable.ext.search.splice(index, 1);
+                }
+            }
+
+            // Define the new search function
+            customSearchFunction = function (settings, data, dataIndex, row) {
+                let matches = false;
+
+                if (parsedQuery.type === 'simple') {
+                    // Simple search across all visible columns
+                    const searchValue = parsedQuery.value.toLowerCase();
+
+                    // Check if it's an exact phrase search
+                    if (searchValue.startsWith('"') && searchValue.endsWith('"')) {
+                        const exactPhrase = searchValue.slice(1, -1).toLowerCase();
+
+                        // Check each visible column
+                        for (let i = 0; i < visibleColumns.length; i++) {
+                            const colValue = data[i];
+                            if (colValue && colValue.toString().toLowerCase().includes(exactPhrase)) {
+                                matches = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Regular search - check each column
+                        for (let i = 0; i < visibleColumns.length; i++) {
+                            const colValue = data[i];
+                            if (colValue && colValue.toString().toLowerCase().includes(searchValue)) {
+                                matches = true;
+                                break;
+                            }
+                        }
+                    }
+                } else if (parsedQuery.type === 'column') {
+                    // Column-specific search
+                    const colIndex = visibleColumns.findIndex(col =>
+                        col.name.toLowerCase() === parsedQuery.column.toLowerCase());
+
+                    if (colIndex === -1) return false; // Column not found
+
+                    const colValue = data[colIndex];
+                    if (!colValue) return false; // No value in this column
+
+                    // Get the column type from our column definitions
+                    const colType = visibleColumns[colIndex].type || 'text';
+
+                    // Handle different operators based on column type
+                    switch (parsedQuery.operator) {
+                        case '=':
+                            matches = colValue.toString().toLowerCase() === parsedQuery.value.toLowerCase();
+                            break;
+                        case '>':
+                            matches = colType === 'number' || colType === 'integer' ?
+                                parseFloat(colValue) > parseFloat(parsedQuery.value) : false;
+                            break;
+                        case '<':
+                            matches = colType === 'number' || colType === 'integer' ?
+                                parseFloat(colValue) < parseFloat(parsedQuery.value) : false;
+                            break;
+                        case '>=':
+                            matches = colType === 'number' || colType === 'integer' ?
+                                parseFloat(colValue) >= parseFloat(parsedQuery.value) : false;
+                            break;
+                        case '<=':
+                            matches = colType === 'number' || colType === 'integer' ?
+                                parseFloat(colValue) <= parseFloat(parsedQuery.value) : false;
+                            break;
+                        default:
+                            matches = colValue.toString().toLowerCase().includes(parsedQuery.value.toLowerCase());
+                    }
+                }
+
+                return matches; // Return true if matches, false otherwise
+            };
+
+            // Add the search function
+            $.fn.dataTable.ext.search.push(customSearchFunction);
+
+            // Apply the search
+            toggleLoading(true);
+            dataTable.draw();
+            toggleLoading(false);
+
+            // After search is applied, find all matching cells and store them
+            setTimeout(findAndHighlightMatches, 100);
+        }
+
+        // Function to find and highlight matches
+        function findAndHighlightMatches() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            const parsedQuery = parseSearchQuery(query);
+            if (!parsedQuery) return;
+
+            // Get the search term to highlight
+            let highlightTerm = parsedQuery.value;
+            if (highlightTerm.startsWith('"') && highlightTerm.endsWith('"')) {
+                highlightTerm = highlightTerm.slice(1, -1);
+            }
+
+            if (!highlightTerm) return;
+
+            // Find all cells that match and collect them
+            $('#data-table tbody td').each(function (index) {
+                // Skip the actions column (last column)
+                if (index % (visibleColumns.length + 1) === visibleColumns.length) return;
+
+                const cell = $(this);
+                const cellText = cell.text();
+
+                // Skip cells with no text or with input elements (being edited)
+                if (!cellText || cell.find('input, select, textarea').length > 0) return;
+
+                // Check if the cell contains the search term
+                const lowerCellText = cellText.toLowerCase();
+                const lowerSearchTerm = highlightTerm.toLowerCase();
+
+                if (lowerCellText.includes(lowerSearchTerm)) {
+                    // Add to search results
+                    searchResults.push({
+                        cell: cell,
+                        row: cell.closest('tr'),
+                        colIndex: index % (visibleColumns.length + 1),
+                        rowIndex: Math.floor(index / (visibleColumns.length + 1))
+                    });
+
+                    // Use regex with case insensitive flag to find all matches
+                    const regex = new RegExp('(' + escapeRegExp(highlightTerm) + ')', 'gi');
+                    const highlightedText = cellText.replace(regex,
+                        '<span class="search-highlight">$1</span>');
+
+                    // Only update if needed to avoid unnecessary DOM manipulation
+                    if (cell.html() !== highlightedText) {
+                        cell.html(highlightedText);
+                    }
+                }
+            });
+
+            // Update result count and enable/disable navigation buttons
+            updateResultCountDisplay();
+
+            // Navigate to first result if any found
+            if (searchResults.length > 0) {
+                navigateToResult(0);
+            }
+        }
+
+        // Function to update the result count display
+        function updateResultCountDisplay() {
+            const total = searchResults.length;
+            const current = total > 0 ? currentResultIndex + 1 : 0;
+            searchCount.textContent = `${current}/${total}`;
+
+            // Enable/disable navigation buttons
+            prevBtn.disabled = total === 0 || current <= 1;
+            nextBtn.disabled = total === 0 || current >= total;
+        }
+
+        // Function to disable navigation buttons
+        function disableNavButtons() {
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            searchCount.textContent = '0/0';
+        }
+
+        // Function to navigate to a specific search result
+        function navigateToResult(index) {
+            if (index < 0 || index >= searchResults.length) return;
+
+            // Remove active class from all results
+            $('.search-highlight').removeClass('active');
+
+            currentResultIndex = index;
+            const result = searchResults[index];
+
+            // Add active class to highlight current result
+            result.cell.find('.search-highlight').addClass('active');
+
+            // Scroll to the result
+            // First ensure the row is visible in the virtual scroller
+            dataTable.row(result.rowIndex).scrollTo();
+
+            // Then scroll horizontally to make the cell visible
+            setTimeout(() => {
+                result.cell[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'center'
+                });
+            }, 100);
+
+            updateResultCountDisplay();
+        }
+
+        // Event handling for search input
+        searchInput.addEventListener('keyup', function (e) {
+            // Clear any existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // If Enter key is pressed, search immediately
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(searchTimeout);
+                performSearch();
+                return;
+            }
+
+            // Otherwise, wait for user to finish typing
+            searchTimeout = setTimeout(() => {
+                performSearch();
+            }, 500);
+        });
+
+        // Search button click
+        searchBtn.addEventListener('click', function () {
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            performSearch();
+        });
+
+        // Previous result button
+        prevBtn.addEventListener('click', function () {
+            if (currentResultIndex > 0) {
+                navigateToResult(currentResultIndex - 1);
             }
         });
 
-        // Attach event handlers
-        attachEventHandlers();
+        // Next result button
+        nextBtn.addEventListener('click', function () {
+            if (currentResultIndex < searchResults.length - 1) {
+                navigateToResult(currentResultIndex + 1);
+            }
+        });
 
-        // Save column settings to localStorage
-        localStorage.setItem('taitur_columns', JSON.stringify(tableColumns));
-
-    } catch (error) {
-        showError(`Error initializing table: ${error.message}`);
-        toggleLoading(false);
-        isTableInitializing = false;
+        // Highlight matches after data reload
+        dataTable.on('draw.dt', function () {
+            setTimeout(findAndHighlightMatches, 100);
+        });
     }
-}
 
-// Attach event handlers for edit/save/cancel buttons and other interactions
-function attachEventHandlers() {
-    // Row editing functionality
-    $('#data-table tbody').on('click', '.edit-btn', function() {
-        const row = dataTable.row($(this).closest('tr'));
-        const rowData = row.data();
-        const rowNode = row.node();
+    // Attach event handlers for edit/save/cancel buttons and other interactions
+    function attachEventHandlers() {
+        // Row editing functionality
+        $('#data-table tbody').on('click', '.edit-btn', function () {
+            const row = dataTable.row($(this).closest('tr'));
+            const rowData = row.data();
+            const rowNode = row.node();
 
-        // Mark row as being edited
-        $(rowNode).addClass('editing');
+            // Mark row as being edited
+            $(rowNode).addClass('editing');
 
-        // Replace cell contents with input fields
-        $(rowNode).find('td').each(function(cellIndex) {
-            // Skip actions column (last column)
-            if (cellIndex >= visibleColumns.length) return;
+            // Replace cell contents with input fields
+            $(rowNode).find('td').each(function (cellIndex) {
+                // Skip actions column (last column)
+                if (cellIndex >= visibleColumns.length) return;
 
-            const columnName = visibleColumns[cellIndex].name;
-            const columnType = visibleColumns[cellIndex].type;
-            const cellValue = rowData[columnName] || '';
+                const columnName = visibleColumns[cellIndex].name;
+                const columnType = visibleColumns[cellIndex].type;
+                const cellValue = rowData[columnName] || '';
 
-            const originalContent = $(this).html();
-            $(this).data('original', originalContent);
+                const originalContent = $(this).html();
+                $(this).data('original', originalContent);
 
-            // Create appropriate input based on column type
-            let inputField;
-            switch(columnType) {
-                case 'boolean':
-                    inputField = `<select class="form-control form-control-sm edit-field"
+                // Create appropriate input based on column type
+                let inputField;
+                switch (columnType) {
+                    case 'boolean':
+                        inputField = `<select class="form-control form-control-sm edit-field"
                                   data-column="${columnName}">
                                   <option value="true" ${cellValue ? 'selected' : ''}>Yes</option>
                                   <option value="false" ${!cellValue ? 'selected' : ''}>No</option>
                                   </select>`;
-                    break;
-                case 'date':
-                case 'datetime':
-                    inputField = `<input type="date" class="form-control form-control-sm edit-field"
+                        break;
+                    case 'date':
+                    case 'datetime':
+                        inputField = `<input type="date" class="form-control form-control-sm edit-field"
                                   value="${cellValue}" data-column="${columnName}">`;
-                    break;
-                case 'number':
-                case 'integer':
-                    inputField = `<input type="number" class="form-control form-control-sm edit-field"
-                                  value="${cellValue}" data-column="${columnName}">`;
-                    break;
-                case 'text':
-                    if (cellValue && cellValue.length > 50) {
-                        inputField = `<textarea class="form-control form-control-sm edit-field"
-                                    data-column="${columnName}" rows="3">${cellValue}</textarea>`;
-                    } else {
-                        inputField = `<input type="text" class="form-control form-control-sm edit-field"
-                                    value="${cellValue}" data-column="${columnName}">`;
-                    }
-                    break;
-                default:
-                    inputField = `<input type="text" class="form-control form-control-sm edit-field"
-                                  value="${cellValue}" data-column="${columnName}">`;
-            }
-
-            $(this).html(inputField);
-        });
-    });
-
-    // Cancel editing
-    $('#data-table tbody').on('click', '.cancel-btn', function() {
-        const row = dataTable.row($(this).closest('tr'));
-        const rowNode = row.node();
-
-        // Restore original cell contents
-        $(rowNode).find('td').each(function() {
-            const originalContent = $(this).data('original');
-            if (originalContent) {
-                $(this).html(originalContent);
-            }
-        });
-
-        // Remove editing class
-        $(rowNode).removeClass('editing');
-    });
-
-    // Save edited row
-    $('#data-table tbody').on('click', '.save-btn', function() {
-        toggleLoading(true);
-
-        const row = dataTable.row($(this).closest('tr'));
-        const rowData = row.data();
-        const rowNode = row.node();
-
-        // Find primary key column and value (assuming 'id' for now)
-        const rowId = rowData['id'];
-
-        // Collect updated values
-        const updatedData = { ...rowData };
-        $(rowNode).find('.edit-field').each(function() {
-            const columnName = $(this).data('column');
-            let value = $(this).val();
-
-            // Convert value based on column type
-            const columnDef = tableColumns.find(col => col.name === columnName);
-            if (columnDef) {
-                switch(columnDef.type) {
-                    case 'boolean':
-                        value = value === 'true';
                         break;
                     case 'number':
-                        value = parseFloat(value);
-                        break;
                     case 'integer':
-                        value = parseInt(value, 10);
+                        inputField = `<input type="number" class="form-control form-control-sm edit-field"
+                                  value="${cellValue}" data-column="${columnName}">`;
+                        break;
+                    case 'text':
+                        if (cellValue && cellValue.length > 50) {
+                            inputField = `<textarea class="form-control form-control-sm edit-field"
+                                    data-column="${columnName}" rows="3">${cellValue}</textarea>`;
+                        } else {
+                            inputField = `<input type="text" class="form-control form-control-sm edit-field"
+                                    value="${cellValue}" data-column="${columnName}">`;
+                        }
+                        break;
+                    default:
+                        inputField = `<input type="text" class="form-control form-control-sm edit-field"
+                                  value="${cellValue}" data-column="${columnName}">`;
+                }
+
+                $(this).html(inputField);
+            });
+        });
+
+        // Cancel editing
+        $('#data-table tbody').on('click', '.cancel-btn', function () {
+            const row = dataTable.row($(this).closest('tr'));
+            const rowNode = row.node();
+
+            // Restore original cell contents
+            $(rowNode).find('td').each(function () {
+                const originalContent = $(this).data('original');
+                if (originalContent) {
+                    $(this).html(originalContent);
+                }
+            });
+
+            // Remove editing class
+            $(rowNode).removeClass('editing');
+        });
+
+        // Save edited row
+        $('#data-table tbody').on('click', '.save-btn', function () {
+            toggleLoading(true);
+
+            const row = dataTable.row($(this).closest('tr'));
+            const rowData = row.data();
+            const rowNode = row.node();
+
+            // Find primary key column and value (assuming 'id' for now)
+            const rowId = rowData['id'];
+
+            // Collect updated values
+            const updatedData = {...rowData};
+            $(rowNode).find('.edit-field').each(function () {
+                const columnName = $(this).data('column');
+                let value = $(this).val();
+
+                // Convert value based on column type
+                const columnDef = tableColumns.find(col => col.name === columnName);
+                if (columnDef) {
+                    switch (columnDef.type) {
+                        case 'boolean':
+                            value = value === 'true';
+                            break;
+                        case 'number':
+                            value = parseFloat(value);
+                            break;
+                        case 'integer':
+                            value = parseInt(value, 10);
+                            break;
+                    }
+                }
+
+                updatedData[columnName] = value;
+            });
+
+            // Send update to server
+            fetch(`/api/table/{{ table_name }}/rows/${rowId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    toggleLoading(false);
+
+                    if (result.success) {
+                        // Update row data in DataTable
+                        row.data(updatedData).draw(false);
+                        $(rowNode).removeClass('editing');
+
+                        // Highlight updated cells
+                        $(rowNode).find('td').each(function (cellIndex) {
+                            if (cellIndex === visibleColumns.length) return;
+
+                            $(this).addClass('edited');
+                            setTimeout(() => {
+                                $(this).removeClass('edited');
+                            }, 3000);
+                        });
+                    } else {
+                        showError('Error updating row: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    toggleLoading(false);
+                    showError(`Error updating row: ${error.message}`);
+                });
+        });
+
+        // Column settings button
+        document.getElementById('column-settings-menu').addEventListener('click', openColumnSettings);
+
+        // Refresh button
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            toggleLoading(true);
+            dataTable.ajax.reload(() => {
+                toggleLoading(false);
+            });
+        });
+
+        // Export button
+        document.getElementById('export-btn').addEventListener('click', function () {
+            // Show export modal
+            const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
+            exportModal.show();
+        });
+
+        // Export options
+        document.getElementById('export-csv').addEventListener('click', function () {
+            exportData('csv');
+        });
+
+        document.getElementById('export-excel').addEventListener('click', function () {
+            exportData('excel');
+        });
+
+        document.getElementById('export-json').addEventListener('click', function () {
+            exportData('json');
+        });
+
+        // View options
+        document.querySelectorAll('.view-option').forEach(option => {
+            option.addEventListener('click', function (e) {
+                e.preventDefault();
+                toggleLoading(true);
+                const viewType = this.dataset.view;
+
+                switch (viewType) {
+                    case 'all':
+                        // Show all columns
+                        tableColumns.forEach(col => col.visible = true);
+                        break;
+                    case 'main':
+                        // Show only main columns
+                        tableColumns.forEach(col => {
+                            col.visible = MAIN_COLUMNS.includes(col.name);
+                        });
+                        break;
+                    case 'minimal':
+                        // Show minimal set of columns
+                        tableColumns.forEach(col => {
+                            col.visible = MINIMAL_COLUMNS.includes(col.name);
+                        });
                         break;
                 }
-            }
 
-            updatedData[columnName] = value;
-        });
-
-        // Send update to server
-        fetch(`/api/table/{{ table_name }}/rows/${rowId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updatedData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(result => {
-            toggleLoading(false);
-
-            if (result.success) {
-                // Update row data in DataTable
-                row.data(updatedData).draw(false);
-                $(rowNode).removeClass('editing');
-
-                // Highlight updated cells
-                $(rowNode).find('td').each(function(cellIndex) {
-                    if (cellIndex === visibleColumns.length) return;
-
-                    $(this).addClass('edited');
-                    setTimeout(() => {
-                        $(this).removeClass('edited');
-                    }, 3000);
-                });
-            } else {
-                showError('Error updating row: ' + result.message);
-            }
-        })
-        .catch(error => {
-            toggleLoading(false);
-            showError(`Error updating row: ${error.message}`);
-        });
-    });
-
-    // Column settings button
-    document.getElementById('column-settings-menu').addEventListener('click', openColumnSettings);
-
-    // Refresh button
-    document.getElementById('refresh-btn').addEventListener('click', () => {
-        toggleLoading(true);
-        dataTable.ajax.reload(() => {
-            toggleLoading(false);
-        });
-    });
-
-    // Quick filter with debounced search
-    const quickFilter = document.getElementById('quick-table-filter');
-    let searchTimeout;
-
-    quickFilter.addEventListener('keyup', function(e) {
-        if (searchTimeout) {
-            clearTimeout(searchTimeout);
-        }
-
-        searchTimeout = setTimeout(() => {
-            toggleLoading(true);
-            dataTable.search(this.value).draw();
-        }, 400);
-
-        // Also search on Enter key
-        if (e.key === 'Enter') {
-            clearTimeout(searchTimeout);
-            toggleLoading(true);
-            dataTable.search(this.value).draw();
-        }
-    });
-
-    // Clear filter button
-    document.getElementById('clear-filter').addEventListener('click', function() {
-        document.getElementById('quick-table-filter').value = '';
-        toggleLoading(true);
-        dataTable.search('').draw();
-    });
-
-    // View options
-    document.querySelectorAll('.view-option').forEach(option => {
-        option.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggleLoading(true);
-            const viewType = this.dataset.view;
-
-            switch(viewType) {
-                case 'all':
-                    // Show all columns
-                    tableColumns.forEach(col => col.visible = true);
-                    break;
-                case 'main':
-                    // Show only main columns
-                    tableColumns.forEach(col => {
-                        col.visible = MAIN_COLUMNS.includes(col.name);
-                    });
-                    break;
-                case 'minimal':
-                    // Show minimal set of columns
-                    tableColumns.forEach(col => {
-                        col.visible = MINIMAL_COLUMNS.includes(col.name);
-                    });
-                    break;
-            }
-
-            // Update visible columns and reinitialize
-            visibleColumns = tableColumns.filter(col => col.visible);
-            initializeTable();
-        });
-    });
-
-    // Column links (quick navigation)
-    document.querySelectorAll('.column-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const columnName = this.dataset.column;
-
-            // Find the column
-            const column = tableColumns.find(col => col.name === columnName);
-            if (!column) return;
-
-            // Make it visible if it's not already
-            if (!column.visible) {
-                toggleLoading(true);
-                column.visible = true;
+                // Update visible columns and reinitialize
                 visibleColumns = tableColumns.filter(col => col.visible);
                 initializeTable();
+            });
+        });
+
+        // Column links (quick navigation)
+        document.querySelectorAll('.column-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const columnName = this.dataset.column;
+
+                // Find the column
+                const column = tableColumns.find(col => col.name === columnName);
+                if (!column) return;
+
+                // Make it visible if it's not already
+                if (!column.visible) {
+                    toggleLoading(true);
+                    column.visible = true;
+                    visibleColumns = tableColumns.filter(col => col.visible);
+                    initializeTable();
+                    return;
+                }
+
+                // Focus/highlight the column
+                const colIndex = visibleColumns.findIndex(col => col.name === columnName);
+                if (colIndex >= 0) {
+                    // Scroll to make column visible
+                    const headerCell = document.querySelector(`#data-table thead th:nth-child(${colIndex + 1})`);
+                    if (headerCell) {
+                        headerCell.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
+
+                        // Highlight the column temporarily
+                        const cells = document.querySelectorAll(`#data-table td:nth-child(${colIndex + 1}), #data-table th:nth-child(${colIndex + 1})`);
+                        cells.forEach(cell => {
+                            cell.style.backgroundColor = '#fff3cd';
+                            setTimeout(() => {
+                                cell.style.backgroundColor = '';
+                            }, 2000);
+                        });
+                    }
+                }
+            });
+        });
+
+        // Save view button
+        document.getElementById('save-current-view').addEventListener('click', function (e) {
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById('saveViewModal'));
+            modal.show();
+        });
+
+        // Confirm save view
+        document.getElementById('confirm-save-view').addEventListener('click', function () {
+            const viewName = document.getElementById('view-name').value.trim();
+            if (!viewName) return;
+
+            // Save current visible columns as a view
+            const savedViews = JSON.parse(localStorage.getItem('taitur_saved_views') || '{}');
+            savedViews[viewName] = visibleColumns.map(col => col.name);
+            localStorage.setItem('taitur_saved_views', JSON.stringify(savedViews));
+
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saveViewModal'));
+            modal.hide();
+
+            // Show a success message
+            alert(`View "${viewName}" has been saved.`);
+        });
+    }
+
+    // Export data function
+    function exportData(format) {
+        // Hide export modal
+        const exportModal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+        if (exportModal) exportModal.hide();
+
+        toggleLoading(true);
+
+        try {
+            // Get current visible data (respecting search and sort)
+            const visibleData = [];
+            dataTable.rows({search: 'applied'}).every(function () {
+                visibleData.push(this.data());
+            });
+
+            // Format data for export (only visible columns)
+            const exportData = visibleData.map(row => {
+                const filteredRow = {};
+                visibleColumns.forEach(col => {
+                    filteredRow[col.name] = row[col.name];
+                });
+                return filteredRow;
+            });
+
+            if (exportData.length === 0) {
+                showError('No data to export. Try changing your search criteria.');
+                toggleLoading(false);
                 return;
             }
 
-            // Focus/highlight the column
-            const colIndex = visibleColumns.findIndex(col => col.name === columnName);
-            if (colIndex >= 0) {
-                // Scroll to make column visible
-                const headerCell = document.querySelector(`#data-table thead th:nth-child(${colIndex + 1})`);
-                if (headerCell) {
-                    headerCell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            let content, filename, type;
 
-                    // Highlight the column temporarily
-                    const cells = document.querySelectorAll(`#data-table td:nth-child(${colIndex + 1}), #data-table th:nth-child(${colIndex + 1})`);
-                    cells.forEach(cell => {
-                        cell.style.backgroundColor = '#fff3cd';
-                        setTimeout(() => {
-                            cell.style.backgroundColor = '';
-                        }, 2000);
+            switch (format) {
+                case 'csv':
+                    // Create CSV content
+                    const header = visibleColumns.map(col => `"${col.name}"`).join(',');
+                    const rows = exportData.map(row => {
+                        return visibleColumns.map(col => {
+                            const value = row[col.name];
+                            if (value === null || value === undefined) return '""';
+                            if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
+                            return `"${value}"`;
+                        }).join(',');
+                    }).join('\n');
+
+                    content = header + '\n' + rows;
+                    filename = `taitur_data_${new Date().toISOString().slice(0, 10)}.csv`;
+                    type = 'text/csv';
+                    break;
+
+                case 'json':
+                    content = JSON.stringify(exportData, null, 2);
+                    filename = `taitur_data_${new Date().toISOString().slice(0, 10)}.json`;
+                    type = 'application/json';
+                    break;
+
+                case 'excel':
+                    // For Excel we'll use a trick with HTML tables
+                    const table = document.createElement('table');
+
+                    // Add header row
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    visibleColumns.forEach(col => {
+                        const th = document.createElement('th');
+                        th.textContent = col.name;
+                        headerRow.appendChild(th);
                     });
+                    thead.appendChild(headerRow);
+                    table.appendChild(thead);
+
+                    // Add data rows
+                    const tbody = document.createElement('tbody');
+                    exportData.forEach(rowData => {
+                        const tr = document.createElement('tr');
+                        visibleColumns.forEach(col => {
+                            const td = document.createElement('td');
+                            td.textContent = rowData[col.name] !== null && rowData[col.name] !== undefined ?
+                                rowData[col.name] : '';
+                            tr.appendChild(td);
+                        });
+                        tbody.appendChild(tr);
+                    });
+                    table.appendChild(tbody);
+
+                    // Create HTML with MSO styles for Excel
+                    content = `
+                        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+                        <head>
+                            <!--[if gte mso 9]>
+                            <xml>
+                                <x:ExcelWorkbook>
+                                    <x:ExcelWorksheets>
+                                        <x:ExcelWorksheet>
+                                            <x:Name>Taitur Data</x:Name>
+                                            <x:WorksheetOptions>
+                                                <x:DisplayGridlines/>
+                                            </x:WorksheetOptions>
+                                        </x:ExcelWorksheet>
+                                    </x:ExcelWorksheets>
+                                </x:ExcelWorkbook>
+                            </xml>
+                            <![endif]-->
+                            <style>
+                                table, th, td {
+                                    border: 1px solid black;
+                                    border-collapse: collapse;
+                                    padding: 5px;
+                                }
+                                th {
+                                    background-color: #f2f2f2;
+                                    font-weight: bold;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            ${table.outerHTML}
+                        </body>
+                        </html>
+                    `;
+                    filename = `taitur_data_${new Date().toISOString().slice(0, 10)}.xls`;
+                    type = 'application/vnd.ms-excel';
+                    break;
+
+                default:
+                    showError(`Unsupported export format: ${format}`);
+                    toggleLoading(false);
+                    return;
+            }
+
+            // Create download link
+            const blob = new Blob([content], {type: type});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+
+            // Clean up
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+
+            toggleLoading(false);
+
+        } catch (error) {
+            console.error('Export error:', error);
+            showError(`Error exporting data: ${error.message}`);
+            toggleLoading(false);
+        }
+    }
+
+    // Column settings modal
+    function openColumnSettings() {
+        const settingsBody = document.getElementById('column-settings-body');
+        settingsBody.innerHTML = '';
+
+        // Add filter functionality
+        document.getElementById('column-filter').addEventListener('keyup', function () {
+            const filterValue = this.value.toLowerCase();
+            document.querySelectorAll('#column-settings-table tbody tr').forEach(row => {
+                const columnName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                if (columnName.includes(filterValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Add all columns to settings
+        tableColumns.forEach((column, index) => {
+            const row = document.createElement('tr');
+
+            // Visible checkbox
+            const visibleCell = document.createElement('td');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'form-check-input column-visible';
+            checkbox.dataset.column = column.name;
+            checkbox.checked = column.visible;
+            visibleCell.appendChild(checkbox);
+
+            // Column name
+            const nameCell = document.createElement('td');
+            nameCell.textContent = column.name;
+
+            // Type
+            const typeCell = document.createElement('td');
+            typeCell.textContent = column.type;
+
+            // Order
+            const orderCell = document.createElement('td');
+            const orderInput = document.createElement('input');
+            orderInput.type = 'number';
+            orderInput.className = 'form-control form-control-sm column-order';
+            orderInput.dataset.column = column.name;
+            orderInput.value = index;
+            orderInput.min = 0;
+            orderCell.appendChild(orderInput);
+
+            row.appendChild(visibleCell);
+            row.appendChild(nameCell);
+            row.appendChild(typeCell);
+            row.appendChild(orderCell);
+
+            settingsBody.appendChild(row);
+        });
+
+        // Reset column filter
+        document.getElementById('column-filter').value = '';
+        document.querySelectorAll('#column-settings-table tbody tr').forEach(row => {
+            row.style.display = '';
+        });
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('columnSettingsModal'));
+        modal.show();
+
+        // Save settings button
+        document.getElementById('save-column-settings').addEventListener('click', saveColumnSettings);
+    }
+
+    function saveColumnSettings() {
+        toggleLoading(true);
+
+        // Update column visibility and order
+        const visibilityCheckboxes = document.querySelectorAll('.column-visible');
+        const orderInputs = document.querySelectorAll('.column-order');
+
+        // Update tableColumns array with new settings
+        visibilityCheckboxes.forEach(checkbox => {
+            const columnName = checkbox.dataset.column;
+            const column = tableColumns.find(col => col.name === columnName);
+            if (column) {
+                column.visible = checkbox.checked;
+            }
+        });
+
+        // Create array of {name, order} objects
+        const columnOrders = Array.from(orderInputs).map(input => ({
+            name: input.dataset.column,
+            order: parseInt(input.value, 10)
+        }));
+
+        // Sort by order
+        columnOrders.sort((a, b) => a.order - b.order);
+
+        // Reorder tableColumns array
+        const orderedColumns = [];
+        columnOrders.forEach(item => {
+            const column = tableColumns.find(col => col.name === item.name);
+            if (column) {
+                orderedColumns.push(column);
+            }
+        });
+
+        // Update tableColumns with new order
+        tableColumns = orderedColumns;
+
+        // Update visible columns
+        visibleColumns = tableColumns.filter(col => col.visible);
+
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
+        modal.hide();
+
+        // Reinitialize table with new column settings
+        initializeTable();
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Apply full screen layout
+        document.body.classList.add('overflow-hidden');
+
+        // Initialize the table
+        initializeWithFirstRow();
+
+        // Add window resize handler for better responsive behavior
+        window.addEventListener('resize', function () {
+            if (dataTable) {
+                dataTable.columns.adjust();
+                if (dataTable.scroller) {
+                    dataTable.scroller.measure();
                 }
             }
         });
     });
-
-    // Save view button
-    document.getElementById('save-current-view').addEventListener('click', function(e) {
-        e.preventDefault();
-        const modal = new bootstrap.Modal(document.getElementById('saveViewModal'));
-        modal.show();
-    });
-
-    // Confirm save view
-    document.getElementById('confirm-save-view').addEventListener('click', function() {
-        const viewName = document.getElementById('view-name').value.trim();
-        if (!viewName) return;
-
-        // Save current visible columns as a view
-        const savedViews = JSON.parse(localStorage.getItem('taitur_saved_views') || '{}');
-        savedViews[viewName] = visibleColumns.map(col => col.name);
-        localStorage.setItem('taitur_saved_views', JSON.stringify(savedViews));
-
-        // Hide modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('saveViewModal'));
-        modal.hide();
-
-        // Show a success message
-        alert(`View "${viewName}" has been saved.`);
-    });
-
-    // Export button
-    document.getElementById('export-btn').addEventListener('click', function() {
-        // Use built-in DataTables export buttons
-        $('.buttons-excel').click();
-    });
-}
-
-// Column settings modal
-function openColumnSettings() {
-    const settingsBody = document.getElementById('column-settings-body');
-    settingsBody.innerHTML = '';
-
-    // Add filter functionality
-    document.getElementById('column-filter').addEventListener('keyup', function() {
-        const filterValue = this.value.toLowerCase();
-        document.querySelectorAll('#column-settings-table tbody tr').forEach(row => {
-            const columnName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-            if (columnName.includes(filterValue)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    });
-
-    // Add all columns to settings
-    tableColumns.forEach((column, index) => {
-        const row = document.createElement('tr');
-
-        // Visible checkbox
-        const visibleCell = document.createElement('td');
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'form-check-input column-visible';
-        checkbox.dataset.column = column.name;
-        checkbox.checked = column.visible;
-        visibleCell.appendChild(checkbox);
-
-        // Column name
-        const nameCell = document.createElement('td');
-        nameCell.textContent = column.name;
-
-        // Type
-        const typeCell = document.createElement('td');
-        typeCell.textContent = column.type;
-
-        // Order
-        const orderCell = document.createElement('td');
-        const orderInput = document.createElement('input');
-        orderInput.type = 'number';
-        orderInput.className = 'form-control form-control-sm column-order';
-        orderInput.dataset.column = column.name;
-        orderInput.value = index;
-        orderInput.min = 0;
-        orderCell.appendChild(orderInput);
-
-        row.appendChild(visibleCell);
-        row.appendChild(nameCell);
-        row.appendChild(typeCell);
-        row.appendChild(orderCell);
-
-        settingsBody.appendChild(row);
-    });
-
-    // Reset column filter
-    document.getElementById('column-filter').value = '';
-    document.querySelectorAll('#column-settings-table tbody tr').forEach(row => {
-        row.style.display = '';
-    });
-
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('columnSettingsModal'));
-    modal.show();
-
-    // Save settings button
-    document.getElementById('save-column-settings').addEventListener('click', saveColumnSettings);
-}
-
-function saveColumnSettings() {
-    toggleLoading(true);
-
-    // Update column visibility and order
-    const visibilityCheckboxes = document.querySelectorAll('.column-visible');
-    const orderInputs = document.querySelectorAll('.column-order');
-
-    // Update tableColumns array with new settings
-    visibilityCheckboxes.forEach(checkbox => {
-        const columnName = checkbox.dataset.column;
-        const column = tableColumns.find(col => col.name === columnName);
-        if (column) {
-            column.visible = checkbox.checked;
-        }
-    });
-
-    // Create array of {name, order} objects
-    const columnOrders = Array.from(orderInputs).map(input => ({
-        name: input.dataset.column,
-        order: parseInt(input.value, 10)
-    }));
-
-    // Sort by order
-    columnOrders.sort((a, b) => a.order - b.order);
-
-    // Reorder tableColumns array
-    const orderedColumns = [];
-    columnOrders.forEach(item => {
-        const column = tableColumns.find(col => col.name === item.name);
-        if (column) {
-            orderedColumns.push(column);
-        }
-    });
-
-    // Update tableColumns with new order
-    tableColumns = orderedColumns;
-
-    // Update visible columns
-    visibleColumns = tableColumns.filter(col => col.visible);
-
-    // Hide modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
-    modal.hide();
-
-    // Reinitialize table with new column settings
-    initializeTable();
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Apply full screen layout
-    document.body.classList.add('overflow-hidden');
-
-    // Initialize the table
-    initializeWithFirstRow();
-
-    // Add window resize handler for better responsive behavior
-    window.addEventListener('resize', function() {
-        if (dataTable) {
-            dataTable.columns.adjust();
-            if (dataTable.scroller) {
-                dataTable.scroller.measure();
-            }
-        }
-    });
-});
 </script>
 {% endblock %}
