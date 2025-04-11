@@ -1,4 +1,3 @@
-
 from sqlalchemy import text, Table, MetaData, select, func, inspect, column, desc, asc, or_, and_
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Tuple, Optional
