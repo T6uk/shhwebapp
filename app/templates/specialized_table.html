@@ -1,0 +1,850 @@
+{% extends "base.html" %}
+
+{% block title %}Taitur Data Viewer{% endblock %}
+
+{% block head %}
+<style>
+    .edit-controls {
+        display: none;
+    }
+    tr.editing .edit-controls {
+        display: inline-block;
+    }
+    tr.editing .view-controls {
+        display: none;
+    }
+    .table-container {
+        overflow-x: auto;
+        max-height: calc(100vh - 220px);
+    }
+    .dataTables_length, .dataTables_filter {
+        margin-bottom: 15px;
+    }
+    /* Highlight edited cells */
+    td.edited {
+        background-color: rgba(255, 255, 0, 0.1);
+    }
+    /* Make table header sticky */
+    thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 2;
+        white-space: nowrap;
+    }
+    /* Column groups dropdown */
+    .column-group-dropdown {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 0;
+    }
+    .column-group-dropdown .dropdown-item {
+        padding: 0.5rem 1rem;
+    }
+    .column-group-dropdown .dropdown-header {
+        font-weight: bold;
+        color: #212529;
+        background-color: #f8f9fa;
+    }
+    .column-group-dropdown .dropdown-divider {
+        margin: 0.2rem 0;
+    }
+    /* Toolbar */
+    .toolbar {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        border-top: 1px solid #dee2e6;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    .toolbar .btn-group {
+        margin-right: 10px;
+    }
+    /* Search highlight */
+    .search-highlight {
+        background-color: yellow;
+        font-weight: bold;
+    }
+    /* Quick filter input */
+    .quick-filter {
+        width: 300px;
+        display: inline-block;
+    }
+    .active-view {
+        background-color: #e9ecef;
+        border-left: 4px solid #007bff;
+    }
+    .toolbar-row {
+        margin-bottom: 8px;
+    }
+    #error-message {
+        display: none;
+        margin-bottom: 15px;
+    }
+    /* Virtual scrolling styles */
+    div.dataTables_scrollBody {
+        background: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2>Taitur Data</h2>
+                    <div class="input-group quick-filter">
+                        <input type="text" id="quick-table-filter" class="form-control" placeholder="Search anywhere in the data...">
+                        <button class="btn btn-outline-secondary" type="button" id="clear-filter">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="row">
+                        <div class="col d-flex flex-wrap">
+                            <!-- Column Navigation -->
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-columns"></i> Columns
+                                </button>
+                                <ul class="dropdown-menu column-group-dropdown">
+                                    {% for group_name, columns in column_groups.items() %}
+                                        <li><h6 class="dropdown-header">{{ group_name }}</h6></li>
+                                        {% for column in columns %}
+                                            <li><a class="dropdown-item column-link" href="#" data-column="{{ column.name }}">{{ column.name }}</a></li>
+                                        {% endfor %}
+                                        <li><hr class="dropdown-divider"></li>
+                                    {% endfor %}
+                                    <li><a class="dropdown-item" href="#" id="column-settings-menu">Customize Columns...</a></li>
+                                </ul>
+                            </div>
+
+                            <!-- Data Actions -->
+                            <div class="btn-group">
+                                <button id="refresh-btn" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                                </button>
+                                <button id="export-btn" class="btn btn-outline-success">
+                                    <i class="bi bi-download"></i> Export
+                                </button>
+                                <button id="print-btn" class="btn btn-outline-secondary">
+                                    <i class="bi bi-printer"></i> Print
+                                </button>
+                            </div>
+
+                            <!-- View Options -->
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item view-option" href="#" data-view="all">Show All Columns</a></li>
+                                    <li><a class="dropdown-item view-option" href="#" data-view="main">Main Columns Only</a></li>
+                                    <li><a class="dropdown-item view-option" href="#" data-view="minimal">Minimal View</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" id="save-current-view">Save Current View</a></li>
+                                </ul>
+                            </div>
+
+                            <!-- Saved Filters -->
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-funnel"></i> Filters
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><h6 class="dropdown-header">Saved Filters</h6></li>
+                                    <li><a class="dropdown-item filter-option" href="#" data-filter="active">Active Cases</a></li>
+                                    <li><a class="dropdown-item filter-option" href="#" data-filter="closed">Closed Cases</a></li>
+                                    <li><a class="dropdown-item filter-option" href="#" data-filter="high-value">High Value Cases</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" id="create-filter">Create New Filter...</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message Area -->
+                <div id="error-message" class="alert alert-danger mx-3"></div>
+
+                <!-- Data Table -->
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="data-table" class="table table-striped table-bordered w-100">
+                            <thead>
+                                <tr id="table-header">
+                                    <th>Loading...</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Loading data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Settings Modal -->
+<div class="modal fade" id="columnSettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Column Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="column-filter" placeholder="Filter columns...">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm" id="column-settings-table">
+                        <thead>
+                            <tr>
+                                <th>Visible</th>
+                                <th>Column Name</th>
+                                <th>Type</th>
+                                <th>Order</th>
+                            </tr>
+                        </thead>
+                        <tbody id="column-settings-body">
+                            <!-- Column settings will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-column-settings">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Save Modal -->
+<div class="modal fade" id="saveViewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save View</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="view-name" class="form-label">View Name</label>
+                    <input type="text" class="form-control" id="view-name" placeholder="E.g., Financial Overview">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-save-view">Save View</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let dataTable;
+let tableColumns = [];
+let visibleColumns = [];
+let allColumns = [];
+let MINIMAL_COLUMNS = ['id', 'võlgnik', 'toimiku_nr', 'nõude_suurus', 'staatus'];
+let MAIN_COLUMNS = [
+    'id', 'võlgnik', 'toimiku_nr', 'toimiku_olek', 'sissenõudja_perenimi', 'sissenõudja_eesnimi',
+    'võlgniku_perenimi', 'võlgniku_eesnimi', 'võlgniku_reg_isikukood', 'nõude_suurus',
+    'tasud_ja_kulud_kokku', 'jäägid_kokku', 'staatus', 'märkused'
+];
+
+// Helper function to show errors
+function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    console.error(message);
+}
+
+// Helper function to hide errors
+function hideError() {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.style.display = 'none';
+}
+
+// Initialize DataTable with first row data for columns
+async function initializeWithFirstRow() {
+    try {
+        hideError();
+
+        // Make a simple request to get the first row of data
+        const response = await fetch(`/api/table/{{ table_name }}/data?length=1`);
+        const data = await response.json();
+
+        if (!data.data || data.data.length === 0) {
+            showError('No data found in table. Unable to determine columns.');
+            return;
+        }
+
+        // Use the first row to determine columns
+        const firstRow = data.data[0];
+
+        // Get schema information
+        const schemaResponse = await fetch(`/api/table/{{ table_name }}/schema`);
+        const schemaData = await schemaResponse.json();
+
+        // Create all columns array from schema if available, otherwise from first row
+        if (schemaData.columns && schemaData.columns.length > 0) {
+            allColumns = schemaData.columns;
+        } else {
+            allColumns = Object.keys(firstRow).map(key => {
+                const value = firstRow[key];
+                let dataType = 'text';
+
+                // Simple type detection
+                if (typeof value === 'number') {
+                    dataType = 'number';
+                } else if (typeof value === 'boolean') {
+                    dataType = 'boolean';
+                } else if (value instanceof Date) {
+                    dataType = 'date';
+                }
+
+                return {
+                    name: key,
+                    type: dataType
+                };
+            });
+        }
+
+        // If columns were previously stored, use those settings
+        const savedColumns = JSON.parse(localStorage.getItem('taitur_columns'));
+
+        if (savedColumns) {
+            // Use saved column visibility and order
+            tableColumns = savedColumns;
+
+            // Make sure any new columns are included
+            allColumns.forEach(colSchema => {
+                if (!tableColumns.find(col => col.name === colSchema.name)) {
+                    tableColumns.push({
+                        ...colSchema,
+                        visible: MAIN_COLUMNS.includes(colSchema.name)
+                    });
+                }
+            });
+        } else {
+            // Set default visibility based on MAIN_COLUMNS
+            tableColumns = allColumns.map(col => ({
+                ...col,
+                visible: MAIN_COLUMNS.includes(col.name)
+            }));
+        }
+
+        // Update visible columns list
+        visibleColumns = tableColumns.filter(col => col.visible);
+
+        // Initialize table with these columns
+        initializeTable();
+
+    } catch (error) {
+        showError(`Error fetching data: ${error.message}`);
+    }
+}
+
+// Initialize DataTable with virtual scrolling
+function initializeTable() {
+    try {
+        // Create column definitions for DataTables
+        const columnDefs = visibleColumns.map(column => ({
+            data: column.name,
+            title: column.name,
+            visible: true
+        }));
+
+        // Add actions column
+        columnDefs.push({
+            data: null,
+            title: 'Actions',
+            orderable: false,
+            width: '100px',
+            defaultContent: `
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary edit-btn view-controls">Edit</button>
+                    <button class="btn btn-sm btn-success save-btn edit-controls">Save</button>
+                    <button class="btn btn-sm btn-danger cancel-btn edit-controls">Cancel</button>
+                </div>
+            `
+        });
+
+        // Clear any existing DataTable
+        if (dataTable) {
+            dataTable.destroy();
+        }
+
+        // Recreate the table element to avoid any legacy issues
+        const tableContainer = document.querySelector('.table-container');
+        tableContainer.innerHTML = `
+            <table id="data-table" class="table table-striped table-bordered w-100">
+                <thead>
+                    <tr>
+                    ${columnDefs.map(col => `<th>${col.title}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="${columnDefs.length}">Loading data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+
+        // Initialize DataTable with Scroller for virtual scrolling
+        dataTable = $('#data-table').DataTable({
+            processing: true,
+            serverSide: true,
+            deferRender: true,
+            scrollCollapse: true,
+            scroller: true,           // Enable virtual scrolling
+            scrollY: '65vh',          // Make the scrollable area tall
+            scrollX: true,            // Allow horizontal scrolling
+            ajax: {
+                url: `/api/table/{{ table_name }}/data`,
+                error: function(xhr, error, thrown) {
+                    showError(`DataTables error: ${error} - ${thrown}`);
+                }
+            },
+            columns: columnDefs,
+            dom: 'Bfrti',             // Remove paging controls from DOM
+            buttons: [
+                'copy', 'csv', 'excel'
+            ],
+            stateSave: true,          // Save table state between loads
+            searchDelay: 500,         // Delay search to reduce server load
+            search: {
+                return: true          // Search on Enter key
+            }
+        });
+
+        // Attach event handlers
+        attachEventHandlers();
+
+        // Save column settings to localStorage
+        localStorage.setItem('taitur_columns', JSON.stringify(tableColumns));
+
+    } catch (error) {
+        showError(`Error initializing table: ${error.message}`);
+    }
+}
+
+// Attach event handlers for edit/save/cancel buttons
+function attachEventHandlers() {
+    // Row editing functionality
+    $('#data-table tbody').on('click', '.edit-btn', function() {
+        const row = dataTable.row($(this).closest('tr'));
+        const rowData = row.data();
+        const rowNode = row.node();
+
+        // Mark row as being edited
+        $(rowNode).addClass('editing');
+
+        // Replace cell contents with input fields
+        $(rowNode).find('td').each(function(cellIndex) {
+            // Skip actions column (last column)
+            if (cellIndex >= visibleColumns.length) return;
+
+            const columnName = visibleColumns[cellIndex].name;
+            const columnType = visibleColumns[cellIndex].type;
+            const cellValue = rowData[columnName] || '';
+
+            const originalContent = $(this).html();
+            $(this).data('original', originalContent);
+
+            // Create appropriate input based on column type
+            let inputField;
+            switch(columnType) {
+                case 'boolean':
+                    inputField = `<select class="form-control form-control-sm edit-field"
+                                  data-column="${columnName}">
+                                  <option value="true" ${cellValue ? 'selected' : ''}>Yes</option>
+                                  <option value="false" ${!cellValue ? 'selected' : ''}>No</option>
+                                  </select>`;
+                    break;
+                case 'date':
+                case 'datetime':
+                    inputField = `<input type="date" class="form-control form-control-sm edit-field"
+                                  value="${cellValue}" data-column="${columnName}">`;
+                    break;
+                case 'number':
+                case 'integer':
+                    inputField = `<input type="number" class="form-control form-control-sm edit-field"
+                                  value="${cellValue}" data-column="${columnName}">`;
+                    break;
+                case 'text':
+                    if (cellValue && cellValue.length > 50) {
+                        inputField = `<textarea class="form-control form-control-sm edit-field"
+                                    data-column="${columnName}" rows="3">${cellValue}</textarea>`;
+                    } else {
+                        inputField = `<input type="text" class="form-control form-control-sm edit-field"
+                                    value="${cellValue}" data-column="${columnName}">`;
+                    }
+                    break;
+                default:
+                    inputField = `<input type="text" class="form-control form-control-sm edit-field"
+                                  value="${cellValue}" data-column="${columnName}">`;
+            }
+
+            $(this).html(inputField);
+        });
+    });
+
+    // Cancel editing
+    $('#data-table tbody').on('click', '.cancel-btn', function() {
+        const row = dataTable.row($(this).closest('tr'));
+        const rowNode = row.node();
+
+        // Restore original cell contents
+        $(rowNode).find('td').each(function() {
+            const originalContent = $(this).data('original');
+            if (originalContent) {
+                $(this).html(originalContent);
+            }
+        });
+
+        // Remove editing class
+        $(rowNode).removeClass('editing');
+    });
+
+    // Save edited row
+    $('#data-table tbody').on('click', '.save-btn', function() {
+        const row = dataTable.row($(this).closest('tr'));
+        const rowData = row.data();
+        const rowNode = row.node();
+
+        // Find primary key column and value (assuming 'id' for now)
+        const rowId = rowData['id'];
+
+        // Collect updated values
+        const updatedData = { ...rowData };
+        $(rowNode).find('.edit-field').each(function() {
+            const columnName = $(this).data('column');
+            let value = $(this).val();
+
+            // Convert value based on column type
+            const columnDef = tableColumns.find(col => col.name === columnName);
+            if (columnDef) {
+                switch(columnDef.type) {
+                    case 'boolean':
+                        value = value === 'true';
+                        break;
+                    case 'number':
+                        value = parseFloat(value);
+                        break;
+                    case 'integer':
+                        value = parseInt(value, 10);
+                        break;
+                }
+            }
+
+            updatedData[columnName] = value;
+        });
+
+        // Send update to server
+        fetch(`/api/table/{{ table_name }}/rows/${rowId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                // Update row data in DataTable
+                row.data(updatedData).draw(false);
+                $(rowNode).removeClass('editing');
+
+                // Highlight updated cells
+                $(rowNode).find('td').each(function(cellIndex) {
+                    if (cellIndex === visibleColumns.length) return;
+
+                    $(this).addClass('edited');
+                    setTimeout(() => {
+                        $(this).removeClass('edited');
+                    }, 3000);
+                });
+            } else {
+                showError('Error updating row: ' + result.message);
+            }
+        })
+        .catch(error => {
+            showError(`Error updating row: ${error.message}`);
+        });
+    });
+
+    // Column settings button
+    document.getElementById('column-settings-menu').addEventListener('click', openColumnSettings);
+
+    // Refresh button
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+        dataTable.ajax.reload();
+    });
+
+    // Quick filter with better search
+    document.getElementById('quick-table-filter').addEventListener('keyup', function(e) {
+        // Only trigger search after user stops typing for a bit
+        if (this.searchTimeout) {
+            clearTimeout(this.searchTimeout);
+        }
+
+        this.searchTimeout = setTimeout(() => {
+            dataTable.search(this.value).draw();
+        }, 400);
+
+        // Also search on Enter key
+        if (e.key === 'Enter') {
+            dataTable.search(this.value).draw();
+        }
+    });
+
+    // Clear filter button
+    document.getElementById('clear-filter').addEventListener('click', function() {
+        document.getElementById('quick-table-filter').value = '';
+        dataTable.search('').draw();
+    });
+
+    // View options
+    document.querySelectorAll('.view-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            const viewType = this.dataset.view;
+
+            switch(viewType) {
+                case 'all':
+                    // Show all columns
+                    tableColumns.forEach(col => col.visible = true);
+                    break;
+                case 'main':
+                    // Show only main columns
+                    tableColumns.forEach(col => {
+                        col.visible = MAIN_COLUMNS.includes(col.name);
+                    });
+                    break;
+                case 'minimal':
+                    // Show minimal set of columns
+                    tableColumns.forEach(col => {
+                        col.visible = MINIMAL_COLUMNS.includes(col.name);
+                    });
+                    break;
+            }
+
+            // Update visible columns and reinitialize
+            visibleColumns = tableColumns.filter(col => col.visible);
+            initializeTable();
+        });
+    });
+
+    // Column links (quick navigation)
+    document.querySelectorAll('.column-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const columnName = this.dataset.column;
+
+            // Find the column
+            const column = tableColumns.find(col => col.name === columnName);
+            if (!column) return;
+
+            // Make it visible if it's not already
+            if (!column.visible) {
+                column.visible = true;
+                visibleColumns = tableColumns.filter(col => col.visible);
+                initializeTable();
+            }
+
+            // Focus/highlight the column
+            const colIndex = visibleColumns.findIndex(col => col.name === columnName);
+            if (colIndex >= 0) {
+                // Scroll to make column visible
+                const headerCell = document.querySelector(`#data-table thead th:nth-child(${colIndex + 1})`);
+                if (headerCell) {
+                    headerCell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+                    // Highlight the column temporarily
+                    const cells = document.querySelectorAll(`#data-table td:nth-child(${colIndex + 1}), #data-table th:nth-child(${colIndex + 1})`);
+                    cells.forEach(cell => {
+                        cell.style.backgroundColor = '#fff3cd';
+                        setTimeout(() => {
+                            cell.style.backgroundColor = '';
+                        }, 2000);
+                    });
+                }
+            }
+        });
+    });
+
+    // Save view button
+    document.getElementById('save-current-view').addEventListener('click', function(e) {
+        e.preventDefault();
+        const modal = new bootstrap.Modal(document.getElementById('saveViewModal'));
+        modal.show();
+    });
+
+    // Confirm save view
+    document.getElementById('confirm-save-view').addEventListener('click', function() {
+        const viewName = document.getElementById('view-name').value.trim();
+        if (!viewName) return;
+
+        // Save current visible columns as a view
+        const savedViews = JSON.parse(localStorage.getItem('taitur_saved_views') || '{}');
+        savedViews[viewName] = visibleColumns.map(col => col.name);
+        localStorage.setItem('taitur_saved_views', JSON.stringify(savedViews));
+
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('saveViewModal'));
+        modal.hide();
+
+        // Show a success message
+        alert(`View "${viewName}" has been saved.`);
+    });
+
+    // Print button
+    document.getElementById('print-btn').addEventListener('click', function() {
+        window.print();
+    });
+}
+
+// Column settings modal
+function openColumnSettings() {
+    const settingsBody = document.getElementById('column-settings-body');
+    settingsBody.innerHTML = '';
+
+    // Add filter functionality
+    document.getElementById('column-filter').addEventListener('keyup', function() {
+        const filterValue = this.value.toLowerCase();
+        document.querySelectorAll('#column-settings-table tbody tr').forEach(row => {
+            const columnName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            if (columnName.includes(filterValue)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Add all columns to settings
+    tableColumns.forEach((column, index) => {
+        const row = document.createElement('tr');
+
+        // Visible checkbox
+        const visibleCell = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'form-check-input column-visible';
+        checkbox.dataset.column = column.name;
+        checkbox.checked = column.visible;
+        visibleCell.appendChild(checkbox);
+
+        // Column name
+        const nameCell = document.createElement('td');
+        nameCell.textContent = column.name;
+
+        // Type
+        const typeCell = document.createElement('td');
+        typeCell.textContent = column.type;
+
+        // Order
+        const orderCell = document.createElement('td');
+        const orderInput = document.createElement('input');
+        orderInput.type = 'number';
+        orderInput.className = 'form-control form-control-sm column-order';
+        orderInput.dataset.column = column.name;
+        orderInput.value = index;
+        orderInput.min = 0;
+        orderCell.appendChild(orderInput);
+
+        row.appendChild(visibleCell);
+        row.appendChild(nameCell);
+        row.appendChild(typeCell);
+        row.appendChild(orderCell);
+
+        settingsBody.appendChild(row);
+    });
+
+    // Reset column filter
+    document.getElementById('column-filter').value = '';
+    document.querySelectorAll('#column-settings-table tbody tr').forEach(row => {
+        row.style.display = '';
+    });
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('columnSettingsModal'));
+    modal.show();
+
+    // Save settings button
+    document.getElementById('save-column-settings').addEventListener('click', saveColumnSettings);
+}
+
+function saveColumnSettings() {
+    // Update column visibility and order
+    const visibilityCheckboxes = document.querySelectorAll('.column-visible');
+    const orderInputs = document.querySelectorAll('.column-order');
+
+    // Update tableColumns array with new settings
+    visibilityCheckboxes.forEach(checkbox => {
+        const columnName = checkbox.dataset.column;
+        const column = tableColumns.find(col => col.name === columnName);
+        if (column) {
+            column.visible = checkbox.checked;
+        }
+    });
+
+    // Create array of {name, order} objects
+    const columnOrders = Array.from(orderInputs).map(input => ({
+        name: input.dataset.column,
+        order: parseInt(input.value, 10)
+    }));
+
+    // Sort by order
+    columnOrders.sort((a, b) => a.order - b.order);
+
+    // Reorder tableColumns array
+    const orderedColumns = [];
+    columnOrders.forEach(item => {
+        const column = tableColumns.find(col => col.name === item.name);
+        if (column) {
+            orderedColumns.push(column);
+        }
+    });
+
+    // Update tableColumns with new order
+    tableColumns = orderedColumns;
+
+    // Update visible columns
+    visibleColumns = tableColumns.filter(col => col.visible);
+
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
+    modal.hide();
+
+    // Reinitialize table with new column settings
+    initializeTable();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initializeWithFirstRow);
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Big Data Web App{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h1 class="card-title">Welcome to Big Data Web App</h1>
+                    <p class="card-text">Select a table to view and interact with your data:</p>
+
+                    <div class="tables-list mt-4">
+                        <div class="spinner-border text-primary" role="status" id="loading-spinner">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <ul class="list-group" id="tables-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mt-4">
+                <div class="card-body">
+                    <h2 class="card-title">Recent Activity</h2>
+                    <p>Recently viewed tables will appear here.</p>
+                    <div id="recent-tables" class="d-flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/tables');
+        const data = await response.json();
+
+        const tablesList = document.getElementById('tables-list');
+        document.getElementById('loading-spinner').style.display = 'none';
+
+        if (data.tables && data.tables.length > 0) {
+            data.tables.forEach(table => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+
+                const link = document.createElement('a');
+                link.href = `/api/table/${table}/view`;
+                link.textContent = table;
+                link.className = 'text-decoration-none';
+
+                li.appendChild(link);
+                tablesList.appendChild(li);
+            });
+        } else {
+            tablesList.innerHTML = '<li class="list-group-item">No tables found. Please import your data first.</li>';
+        }
+
+        // Check local storage for recent tables
+        const recentTables = JSON.parse(localStorage.getItem('recentTables') || '[]');
+        const recentTablesEl = document.getElementById('recent-tables');
+
+        recentTables.forEach(table => {
+            const badge = document.createElement('a');
+            badge.className = 'badge bg-light text-dark text-decoration-none p-2';
+            badge.href = `/api/table/${table}/view`;
+            badge.textContent = table;
+            recentTablesEl.appendChild(badge);
+        });
+    } catch (error) {
+        console.error('Error fetching tables:', error);
+        document.getElementById('loading-spinner').style.display = 'none';
+        document.getElementById('tables-list').innerHTML =
+            '<li class="list-group-item text-danger">Error loading tables. Please try again later.</li>';
+    }
+});
+</script>
+{% endblock %}

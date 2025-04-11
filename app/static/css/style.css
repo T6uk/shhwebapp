@@ -1,0 +1,63 @@
+/* Custom styles for Big Data Web App */
+
+/* General layout enhancements */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Table styling */
+.table-container {
+    position: relative;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Make headers sticky */
+thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+}
+
+/* Style for edited cells */
+td.edited {
+    animation: highlight 3s;
+}
+
+@keyframes highlight {
+    0% { background-color: rgba(255, 255, 0, 0.5); }
+    100% { background-color: transparent; }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .table-container {
+        max-height: 50vh;
+    }
+
+    .card-body {
+        padding: 0.75rem;
+    }
+}
+
+/* Button improvements */
+.btn-group-sm {
+    display: flex;
+}
+
+/* Navbar tweaks */
+.navbar-brand {
+    font-weight: bold;
+}
+
+/* Footer adjustments */
+.footer {
+    margin-top: auto;
+}

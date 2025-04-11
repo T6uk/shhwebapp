@@ -1,0 +1,2 @@
+python -m uvicorn app.main:app --reload
+pip install uvicorn, fastapi, sqlalchemy, pydantic_settings, psycopg2
