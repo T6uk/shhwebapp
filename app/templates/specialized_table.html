@@ -436,16 +436,6 @@
                             <i class="bi bi-arrow-down"></i>
                         </button>
                         <span class="input-group-text search-counter" id="search-count">0/0</span>
-                        <div class="search-tooltip">
-                            <p class="mb-1"><strong>Advanced Search:</strong></p>
-                            <ul class="mb-0 ps-3">
-                                <li><code>column:value</code> - Search in specific column</li>
-                                <li><code>"exact phrase"</code> - Match exact phrase</li>
-                                <li><code>-exclude</code> - Exclude results with word</li>
-                                <li>F3/Shift+F3 - Navigate results</li>
-                                <li>Ctrl+F - Focus search</li>
-                            </ul>
-                        </div>
                     </div>
                     <div class="search-suggestions" id="search-suggestions">
                         <!-- Search history will be populated here -->
@@ -789,6 +779,11 @@
     }
 
     function initializeTable() {
+
+        let searchResults = [];
+        let currentResultIndex = -1;
+        let searchHistory = [];
+
         try {
             // Create column definitions for DataTables
             const columnDefs = visibleColumns.map(column => ({
@@ -921,9 +916,6 @@
                     smart: true,
                     regex: false
                 },
-                let searchResults = [];
-                let currentResultIndex = -1;
-                let searchHistory = [];
 
 // Then enhance the initialization to be more robust with error handling
                 initComplete: function () {

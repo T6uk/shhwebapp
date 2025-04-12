@@ -48,7 +48,7 @@ def get_direct_table_data(
         db: Session,
         table_name: str,
         page: int = 1,
-        page_size: int = 100,
+        page_size: int = 200000,
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
         sort_desc: bool = False

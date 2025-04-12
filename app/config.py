@@ -28,10 +28,10 @@ class Settings(BaseSettings):
     SCHEMA_CACHE_TTL: int = 3600  # 1 hour
 
     # Keep original PAGE_SIZE for backward compatibility
-    PAGE_SIZE: int = 100
+    PAGE_SIZE: int = 20000
 
     # Additional pagination settings
-    MAX_PAGE_SIZE: int = 1000
+    MAX_PAGE_SIZE: int = 20000
 
     # Compute the DATABASE_URL if not explicitly provided
     @property
