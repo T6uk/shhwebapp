@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import Optional, Dict, Any, List
 import logging
-import json
 
 from app.core.db import get_db
 from app.models.table import BigTable
@@ -18,24 +17,16 @@ router = APIRouter(prefix="/table", tags=["table"])
 
 @router.get("/data")
 async def get_table_data(
-        page: int = Query(1, ge=1),
-        size: int = Query(100, ge=10, le=1000),
+        search: Optional[str] = None,
         sort: Optional[str] = None,
         sort_dir: Optional[str] = None,
-        search: Optional[str] = None,
         db: AsyncSession = Depends(get_db)
 ):
     """
-    Get paginated table data with optional filtering and sorting
+    Get all table data at once with optional filtering and sorting
     """
     try:
-        # Get total count
-        count_sql = f'SELECT COUNT(*) FROM "{BigTable.name}"'
-        result = await db.execute(text(count_sql))
-        total_count = result.scalar() or 0
-
-        # Build query with paging
-        offset = (page - 1) * size
+        # Build query to get all data
         sql = f'SELECT * FROM "{BigTable.name}"'
 
         # Add search if provided
@@ -67,12 +58,8 @@ async def get_table_data(
             # Default ordering by the first column
             sql += ' ORDER BY 1'
 
-        # Add pagination
-        sql += " LIMIT :limit OFFSET :offset"
-        params["limit"] = size
-        params["offset"] = offset
-
         # Execute query
+        logger.info(f"Executing query: {sql} with params: {params}")
         result = await db.execute(text(sql), params)
         rows = result.fetchall()
 
@@ -90,19 +77,10 @@ async def get_table_data(
                     row_dict[str(key)] = value
             data.append(row_dict)
 
-        # Calculate pagination info
-        last_page = (total_count + size - 1) // size if size > 0 else 1
+        logger.info(f"Returning all {len(data)} rows in a single response")
 
         # Create response
-        response = {
-            "data": data,
-            "total": total_count,
-            "last_page": last_page
-        }
-
-        logger.info(f"Returning {len(data)} rows, total: {total_count}, last_page: {last_page}")
-
-        return response
+        return {"data": data}
 
     except Exception as e:
         logger.exception(f"Error getting table data: {str(e)}")
