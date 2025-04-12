@@ -1,3 +1,4 @@
+# app/api/endpoints/data.py
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
@@ -10,7 +11,7 @@ from fastapi.responses import StreamingResponse
 import io
 import csv
 
-from app.database import get_db, redis_client, REDIS_AVAILABLE
+from app.database import get_db, memory_cache
 from app.models.data_models import DataTable, TableSchema
 from app.services.data_service import get_table_columns
 from app.services.direct_data_service import get_direct_table_data, update_direct_table_row, get_table_stats
@@ -36,14 +37,9 @@ def get_column_groups(db: Session, table_name: str) -> Dict[str, List[Dict[str, 
     cache_key = f"taitur:column_groups:{table_name}"
 
     # Try to get from cache first
-    if REDIS_AVAILABLE:
-        try:
-            cached_data = redis_client.get(cache_key)
-            if cached_data:
-                import pickle
-                return pickle.loads(cached_data)
-        except Exception as e:
-            print(f"Cache error for column groups: {str(e)}")
+    cached_data = memory_cache.get(cache_key)
+    if cached_data:
+        return cached_data
 
     try:
         # Get all columns from table
@@ -67,12 +63,7 @@ def get_column_groups(db: Session, table_name: str) -> Dict[str, List[Dict[str, 
                 result[group_name] = existing_columns
 
         # Cache the result
-        if REDIS_AVAILABLE:
-            try:
-                import pickle
-                redis_client.setex(cache_key, 3600, pickle.dumps(result))  # Cache for 1 hour
-            except Exception as e:
-                print(f"Cache store error: {str(e)}")
+        memory_cache.set(cache_key, result, 3600)  # Cache for 1 hour
 
         return result
     except Exception as e:
@@ -103,14 +94,9 @@ def get_schema(table_name: str, db: Session = Depends(get_db)):
     cache_key = f"taitur:schema:{table_name}"
 
     # Try to get from cache first
-    if REDIS_AVAILABLE:
-        try:
-            cached_data = redis_client.get(cache_key)
-            if cached_data:
-                import pickle
-                return pickle.loads(cached_data)
-        except Exception as e:
-            print(f"Cache error for schema: {str(e)}")
+    cached_data = memory_cache.get(cache_key)
+    if cached_data:
+        return cached_data
 
     try:
         # Get directly from PostgreSQL
@@ -149,12 +135,7 @@ def get_schema(table_name: str, db: Session = Depends(get_db)):
         result = {"columns": columns}
 
         # Cache the result
-        if REDIS_AVAILABLE:
-            try:
-                import pickle
-                redis_client.setex(cache_key, 3600, pickle.dumps(result))  # Cache for 1 hour
-            except Exception as e:
-                print(f"Cache store error: {str(e)}")
+        memory_cache.set(cache_key, result, 3600)  # Cache for 1 hour
 
         return result
     except Exception as e:

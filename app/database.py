@@ -1,12 +1,14 @@
+# app/database.py
 from sqlalchemy import create_engine, inspect, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
-import redis
-import json
-import pickle
+import threading
+import time
 from functools import wraps
 from app.config import settings
+import pickle
+from typing import Dict, Any, Tuple
 
 # Create SQLAlchemy engine with optimized connection pooling
 engine = create_engine(
@@ -41,19 +43,68 @@ SessionLocal = sessionmaker(
     expire_on_commit=False  # Improve performance by avoiding unnecessary reloads
 )
 
-# Redis client for caching
-try:
-    redis_client = redis.Redis(
-        host=settings.REDIS_HOST if hasattr(settings, 'REDIS_HOST') else 'localhost',
-        port=settings.REDIS_PORT if hasattr(settings, 'REDIS_PORT') else 6379,
-        db=settings.REDIS_DB if hasattr(settings, 'REDIS_DB') else 0,
-        socket_timeout=5,
-        decode_responses=False  # We'll handle serialization ourselves
-    )
-    REDIS_AVAILABLE = True
-except:
-    REDIS_AVAILABLE = False
-    redis_client = None
+
+# In-memory cache implementation
+class MemoryCache:
+    def __init__(self):
+        self.cache: Dict[str, Tuple[Any, float]] = {}
+        self.lock = threading.RLock()
+
+        # Start a background thread to clean expired entries
+        self.cleanup_thread = threading.Thread(target=self._cleanup_expired, daemon=True)
+        self.cleanup_thread.start()
+
+    def get(self, key):
+        with self.lock:
+            if key in self.cache:
+                value, expiry = self.cache[key]
+                if expiry > time.time():
+                    return value
+                # Remove expired
+                del self.cache[key]
+        return None
+
+    def set(self, key, value, ttl=300):
+        with self.lock:
+            expiry = time.time() + ttl
+            self.cache[key] = (value, expiry)
+
+    def delete(self, key):
+        with self.lock:
+            if key in self.cache:
+                del self.cache[key]
+
+    def keys(self, pattern='*'):
+        """Simple pattern matching for cache keys"""
+        with self.lock:
+            if pattern == '*':
+                return list(self.cache.keys())
+
+            # Simple wildcard implementation
+            if pattern.endswith('*'):
+                prefix = pattern[:-1]
+                return [k for k in self.cache.keys() if k.startswith(prefix)]
+
+            return [k for k in self.cache.keys() if pattern in k]
+
+    def _cleanup_expired(self):
+        """Background thread to clean expired cache entries"""
+        while True:
+            time.sleep(60)  # Check every minute
+            current_time = time.time()
+            with self.lock:
+                # Find expired keys
+                expired_keys = [
+                    k for k, (_, exp) in self.cache.items()
+                    if exp <= current_time
+                ]
+                # Remove expired keys
+                for k in expired_keys:
+                    del self.cache[k]
+
+
+# Create a singleton instance of the memory cache
+memory_cache = MemoryCache()
 
 # Base class for models
 Base = declarative_base()
@@ -61,14 +112,11 @@ Base = declarative_base()
 
 # Cache decorator for database queries
 def cache_query(ttl=300):
-    """Cache results of database queries in Redis"""
+    """Cache results of database queries in memory"""
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not REDIS_AVAILABLE:
-                return func(*args, **kwargs)
-
             # Create a cache key from function name and arguments
             key_parts = [func.__name__]
             for arg in args[1:]:  # Skip 'self' or 'db' argument
@@ -79,21 +127,15 @@ def cache_query(ttl=300):
             cache_key = f"taitur:cache:{'_'.join(key_parts)}"
 
             # Try to get from cache
-            cached = redis_client.get(cache_key)
+            cached = memory_cache.get(cache_key)
             if cached:
-                try:
-                    return pickle.loads(cached)
-                except:
-                    pass  # If deserialization fails, execute the query
+                return cached
 
             # Execute the query
             result = func(*args, **kwargs)
 
             # Cache the result
-            try:
-                redis_client.setex(cache_key, ttl, pickle.dumps(result))
-            except:
-                pass  # If caching fails, just return the result
+            memory_cache.set(cache_key, result, ttl)
 
             return result
 

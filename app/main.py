@@ -1,3 +1,4 @@
+# app/main.py
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 # Create FastAPI app with optimized settings
 app = FastAPI(
     title="Taitur Data Viewer",
-    version="1.0.1",
+    version="1.0.2",
     description="High-performance application for viewing and managing taitur_data",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -24,13 +25,14 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_db_client():
     init_db()
+    print("Application initialized and ready to use!")
 
 
 # Clean up resources on shutdown
 @app.on_event("shutdown")
 async def shutdown_event():
     # Add any necessary cleanup code here
-    pass
+    print("Application shutting down, performing cleanup...")
 
 
 # Set up CORS with optimized settings
@@ -86,7 +88,7 @@ async def favicon():
 # Health check endpoint
 @app.get('/health')
 async def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": "1.0.2"}
 
 
 if __name__ == "__main__":
@@ -95,16 +97,16 @@ if __name__ == "__main__":
     # Use uvloop for better performance if available
     try:
         import uvloop
-
         uvloop.install()
         print("Using uvloop for better performance")
     except ImportError:
-        pass
+        print("uvloop not available, using standard event loop")
+
 
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=5000,
         reload=True,
         workers=4,  # Use multiple workers for better performance
         log_level="info"

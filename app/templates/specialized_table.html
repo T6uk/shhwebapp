@@ -24,7 +24,7 @@
 
     .table-container {
         overflow-x: auto;
-        height: 100vh;
+        height: 100%;
         width: 100%;
     }
 
@@ -555,7 +555,6 @@
         }
     }
 
-    // Initialize DataTable with virtual scrolling and optimized settings
     function initializeTable() {
         try {
             // Create column definitions for DataTables
@@ -683,7 +682,7 @@
                 language: {
                     processing: "Loading data, please wait..."
                 },
-                // Use a custom search debouncing method
+                // Use optimized search settings
                 search: {
                     caseInsensitive: true,
                     smart: true,
@@ -696,25 +695,38 @@
 
                     // Lazy load visible rows for better performance
                     setTimeout(() => {
-                        this.scroller.measure();
+                        if (this.scroller) {
+                            this.scroller.measure();
+                        }
                     }, 50);
 
                     // Initialize advanced search
                     setupAdvancedSearch();
+
+                    // Add keyboard shortcuts for navigation
+                    setupKeyboardNavigation();
                 }
             });
 
-            // Add custom search throttling to avoid excessive server requests
-            let searchTimeout;
+            // Add search throttling for better performance
             const originalSearch = dataTable.search;
+            let searchThrottleTimeout;
+
             dataTable.search = function (value, regex, smart, caseInsen) {
-                clearTimeout(searchTimeout);
+                clearTimeout(searchThrottleTimeout);
+
+                // Skip if value is the same as current search
                 if (value === dataTable.search()) return this;
 
-                // Throttle search to avoid too many requests
-                searchTimeout = setTimeout(() => {
+                // Show loading indicator for longer searches
+                if (value && value.length > 2) {
+                    toggleLoading(true);
+                }
+
+                // Throttle search requests
+                searchThrottleTimeout = setTimeout(() => {
                     originalSearch.call(dataTable, value, regex, smart, caseInsen).draw();
-                }, 300);
+                }, 350);
 
                 return this;
             };
@@ -727,9 +739,40 @@
 
         } catch (error) {
             showError(`Error initializing table: ${error.message}`);
+            console.error(error);
             toggleLoading(false);
             isTableInitializing = false;
         }
+    }
+
+    // Add a new function for keyboard navigation
+    function setupKeyboardNavigation() {
+        // Add keyboard shortcuts for table navigation
+        document.addEventListener('keydown', function (e) {
+            // Skip if in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                return;
+            }
+
+            // Ctrl+F to focus search
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('advanced-search-input').focus();
+            }
+
+            // Esc to clear search
+            if (e.key === 'Escape') {
+                const searchInput = document.getElementById('advanced-search-input');
+                if (searchInput.value) {
+                    searchInput.value = '';
+                    dataTable.search('').draw();
+                    $('#data-table tbody td span.search-highlight').each(function () {
+                        const parent = $(this).parent();
+                        parent.text($(this).text());
+                    });
+                }
+            }
+        });
     }
 
     // Advanced search with optimized implementation
@@ -746,66 +789,64 @@
         let currentResultIndex = -1;
         let lastSearchQuery = '';
 
-        // Search debouncing and throttling
-        let isSearching = false;
-        const debouncedSearch = (query) => {
-            if (isSearching) return;
-            if (query === lastSearchQuery) return;
+        // Function to update navigation buttons and result count display
+        function updateResultCountDisplay() {
+            if (searchResults.length > 0) {
+                searchCount.textContent = `${currentResultIndex + 1}/${searchResults.length}`;
+                prevBtn.disabled = currentResultIndex <= 0;
+                nextBtn.disabled = currentResultIndex >= searchResults.length - 1;
+            } else {
+                searchCount.textContent = '0/0';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
+        }
 
-            lastSearchQuery = query;
-            isSearching = true;
+        // Function to scroll to and highlight the current result
+        function navigateToResult(index) {
+            if (index < 0 || index >= searchResults.length) return;
 
-            toggleLoading(true);
+            // Remove active highlight from previous result
+            $('.search-highlight.active').removeClass('active');
 
-            // Apply the search to the DataTable
-            dataTable.search(query).draw();
+            currentResultIndex = index;
+            const result = searchResults[index];
 
-            // Reset after a short delay to allow the UI to update
-            setTimeout(() => {
-                isSearching = false;
-                toggleLoading(false);
+            // Scroll to the cell
+            const cellSelector = `#data-table tbody tr:nth-child(${result.rowIndex + 1}) td:nth-child(${result.colIndex + 1})`;
+            const cell = $(cellSelector);
 
-                // Find and highlight matches after search completes
-                findAndHighlightMatches(query);
-            }, 300);
-        };
+            if (cell.length > 0) {
+                // Find the highlight within the cell and make it active
+                cell.find('.search-highlight').addClass('active');
 
-        // Function to perform search with debouncing
-        function performSearch() {
-            const query = searchInput.value.trim();
+                // Scroll the row into view with a smooth effect
+                cell[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+
+            // Update navigation buttons and counter
+            updateResultCountDisplay();
+        }
+
+        // Function to disable navigation buttons
+        function disableNavButtons() {
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            searchCount.textContent = '0/0';
+        }
+
+        // Client-side search on loaded data (faster for smaller datasets)
+        function clientSideSearch(query) {
+            if (!query) return;
 
             // Reset search results
             searchResults = [];
             currentResultIndex = -1;
-            updateResultCountDisplay();
 
-            // Clear highlighting
-            $('#data-table tbody td span.search-highlight').each(function () {
-                const parent = $(this).parent();
-                parent.text($(this).text());
-            });
-
-            if (!query) {
-                disableNavButtons();
-                dataTable.search('').draw();
-                return;
-            }
-
-            // Debounce and throttle the search
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-            }
-
-            searchTimeout = setTimeout(() => {
-                debouncedSearch(query);
-            }, 300);
-        }
-
-        // Function to find and highlight matches with worker if available
-        function findAndHighlightMatches(query) {
-            if (!query) return;
-
-            // Find all cells that match and collect them
+            // Get all visible cells
             $('#data-table tbody td').each(function (index) {
                 // Skip the actions column (last column)
                 if (index % (visibleColumns.length + 1) === visibleColumns.length) return;
@@ -816,32 +857,36 @@
                 // Skip cells with no text or with input elements (being edited)
                 if (!cellText || cell.find('input, select, textarea').length > 0) return;
 
-                // Check if the cell contains the search term
-                const lowerCellText = cellText.toLowerCase();
-                const lowerSearchTerm = query.toLowerCase();
+                // Check if the cell contains the search term (case-insensitive)
+                const cellTextLower = cellText.toLowerCase();
+                const queryLower = query.toLowerCase();
 
-                if (lowerCellText.includes(lowerSearchTerm)) {
+                if (cellTextLower.includes(queryLower)) {
+                    // Calculate row and column index
+                    const colIndex = index % (visibleColumns.length + 1);
+                    const rowIndex = Math.floor(index / (visibleColumns.length + 1));
+
                     // Add to search results
                     searchResults.push({
                         cell: cell,
                         row: cell.closest('tr'),
-                        colIndex: index % (visibleColumns.length + 1),
-                        rowIndex: Math.floor(index / (visibleColumns.length + 1))
+                        colIndex: colIndex,
+                        rowIndex: rowIndex,
+                        textIndex: cellTextLower.indexOf(queryLower)
                     });
 
-                    // Use regex with case insensitive flag to find all matches
-                    const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
-                    const highlightedText = cellText.replace(regex,
-                        '<span class="search-highlight">$1</span>');
-
-                    // Only update if needed to avoid unnecessary DOM manipulation
+                    // Highlight the matching text
+                    const highlightedText = highlightText(cellText, query);
                     if (cell.html() !== highlightedText) {
                         cell.html(highlightedText);
                     }
                 }
             });
 
-            // Update result count and enable/disable navigation buttons
+            // Sort results by text index (to prioritize matches at beginning of text)
+            searchResults.sort((a, b) => a.textIndex - b.textIndex);
+
+            // Update UI
             updateResultCountDisplay();
 
             // Navigate to first result if any found
@@ -850,28 +895,133 @@
             }
         }
 
-        // Event handling for search input with optimized approach
+        // Helper function to highlight text
+        function highlightText(text, query) {
+            if (!query) return text;
+
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        // Combined search - client-side search for visible data then server-side search if needed
+        function performSearch() {
+            const query = searchInput.value.trim();
+
+            // Clear existing highlights
+            $('#data-table tbody td span.search-highlight').each(function () {
+                const parent = $(this).parent();
+                parent.text($(this).text());
+            });
+
+            // Reset search results and UI
+            searchResults = [];
+            currentResultIndex = -1;
+            disableNavButtons();
+
+            if (!query) {
+                // Clear search if query is empty
+                dataTable.search('').draw();
+                return;
+            }
+
+            // First try client-side search on currently loaded data
+            clientSideSearch(query);
+
+            // If no results found or fewer than expected, do server-side search
+            if (searchResults.length === 0) {
+                toggleLoading(true);
+
+                // Apply the search to the DataTable (server-side)
+                dataTable.search(query).draw();
+
+                // Setup a listener for when data is reloaded
+                dataTable.on('draw.dt', function () {
+                    toggleLoading(false);
+
+                    // Only run this once
+                    dataTable.off('draw.dt');
+
+                    // Perform client-side search again on new data
+                    setTimeout(() => {
+                        clientSideSearch(query);
+                    }, 100);
+                });
+            }
+        }
+
+        // Event handlers
+        searchBtn.addEventListener('click', function () {
+            performSearch();
+        });
+
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+
+        // Debounced input handler
         searchInput.addEventListener('input', function () {
-            // Use input event instead of keyup for better mobile support
-            // Clear any existing timeout
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
             }
 
-            // Set a new timeout to debounce the search
             searchTimeout = setTimeout(() => {
-                performSearch();
+                // For quick typing, use client-side search with a delay
+                const query = searchInput.value.trim();
+                if (query.length >= 2) {
+                    performSearch();
+                } else if (!query) {
+                    // Clear search if empty
+                    $('#data-table tbody td span.search-highlight').each(function () {
+                        const parent = $(this).parent();
+                        parent.text($(this).text());
+                    });
+                    disableNavButtons();
+                }
             }, 300);
         });
 
-        // Enter key should search immediately
-        searchInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
+        // Navigation buttons
+        nextBtn.addEventListener('click', function () {
+            if (currentResultIndex < searchResults.length - 1) {
+                navigateToResult(currentResultIndex + 1);
+            }
+        });
+
+        prevBtn.addEventListener('click', function () {
+            if (currentResultIndex > 0) {
+                navigateToResult(currentResultIndex - 1);
+            }
+        });
+
+        // Keyboard shortcuts for navigation
+        document.addEventListener('keydown', function (e) {
+            // Only handle if we have search results
+            if (searchResults.length === 0) return;
+
+            // F3 or Ctrl+G for next
+            if (e.key === 'F3' || (e.ctrlKey && e.key === 'g')) {
                 e.preventDefault();
-                if (searchTimeout) {
-                    clearTimeout(searchTimeout);
+                if (currentResultIndex < searchResults.length - 1) {
+                    navigateToResult(currentResultIndex + 1);
+                } else {
+                    // Wrap around to first result
+                    navigateToResult(0);
                 }
-                performSearch();
+            }
+
+            // Shift+F3 or Ctrl+Shift+G for previous
+            if ((e.shiftKey && e.key === 'F3') || (e.ctrlKey && e.shiftKey && e.key === 'g')) {
+                e.preventDefault();
+                if (currentResultIndex > 0) {
+                    navigateToResult(currentResultIndex - 1);
+                } else {
+                    // Wrap around to last result
+                    navigateToResult(searchResults.length - 1);
+                }
             }
         });
     }

@@ -1,10 +1,11 @@
+# app/services/direct_data_service.py
 from sqlalchemy import text, Table, MetaData, select, func, inspect, column, desc, asc, or_, and_, cast, String
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Tuple, Optional
 import json
 import traceback
 import time
-from app.database import cache_query, redis_client, REDIS_AVAILABLE
+from app.database import memory_cache
 import concurrent.futures
 import threading
 
@@ -42,17 +43,11 @@ def get_direct_table_data(
     cache_key = f"taitur:direct_data:{'_'.join(cache_components)}"
 
     # Try to get from cache first
-    if REDIS_AVAILABLE:
-        try:
-            cached_data = redis_client.get(cache_key)
-            if cached_data:
-                import pickle
-                result = pickle.loads(cached_data)
-                elapsed = time.time() - start_time
-                print(f"Cache hit for {cache_key}, returned in {elapsed:.2f}s")
-                return result
-        except Exception as e:
-            print(f"Cache error: {str(e)}")
+    cached_data = memory_cache.get(cache_key)
+    if cached_data:
+        elapsed = time.time() - start_time
+        print(f"Cache hit for {cache_key}, returned in {elapsed:.2f}s")
+        return cached_data
 
     try:
         # Create dynamic table object
@@ -64,74 +59,36 @@ def get_direct_table_data(
         count_query = None
         total = 0
 
-        # Apply search using full text search capabilities if available
+        # Apply search using optimized approach for Windows compatibility
         if search and search.strip():
-            # Check if PostgreSQL full-text search is feasible for this query
-            if len(search) > 2:  # Don't use FTS for very short queries
-                try:
-                    # Try using PostgreSQL full-text search for better performance
-                    # Convert all text columns to tsvector and search across them
-                    search_conditions = []
+            # Improved search approach
+            search_conditions = []
 
-                    # First try exact match conditions for efficiency
-                    exact_conditions = []
-                    for col in table.columns:
-                        col_type = str(col.type).lower()
-                        if any(t in col_type for t in ('varchar', 'text', 'char')):
-                            exact_conditions.append(col.ilike(f'%{search}%'))
+            # For text columns, use ILIKE for case-insensitive search
+            for col in table.columns:
+                col_type = str(col.type).lower()
+                if any(t in col_type for t in ('varchar', 'text', 'char')):
+                    search_conditions.append(col.cast(String).ilike(f'%{search}%'))
 
-                    if exact_conditions:
-                        search_conditions.append(or_(*exact_conditions))
+            # Add numeric and other type searches if needed
+            # This helps when searching for numeric values as strings
+            for col in table.columns:
+                col_type = str(col.type).lower()
+                if any(t in col_type for t in ('int', 'float', 'numeric', 'decimal')):
+                    try:
+                        # Try to convert search term to number for numeric columns
+                        if search.isdigit():
+                            search_conditions.append(col == int(search))
+                        elif search.replace('.', '', 1).isdigit():
+                            search_conditions.append(col == float(search))
+                    except (ValueError, TypeError):
+                        pass
 
-                    # Build full text search clause for PostgreSQL
-                    fts_columns = []
-                    for col in table.columns:
-                        col_type = str(col.type).lower()
-                        if any(t in col_type for t in ('varchar', 'text', 'char')):
-                            fts_columns.append(col)
-
-                    # If we have text columns, add the FTS condition
-                    if fts_columns:
-                        # Make the search query PostgreSQL FTS friendly
-                        search_terms = " & ".join(search.split())
-
-                        # Build the to_tsvector expression for multiple columns
-                        fts_condition = text(
-                            f"to_tsvector('simple', {' || '.join([f'COALESCE({c.name}::text, '')' for c in fts_columns])}) "
-                            f"@@ to_tsquery('simple', :search_query)")
-                        search_conditions.append(fts_condition.bindparams(search_query=search_terms))
-
-                    if search_conditions:
-                        search_filter = or_(*search_conditions)
-                        query = query.where(search_filter)
-                        # When searching, we need a count for pagination
-                        count_query = select(func.count()).select_from(table).where(search_filter)
-
-                except Exception as e:
-                    print(f"FTS error: {str(e)}, falling back to regular search")
-                    # Fall back to regular ILIKE search
-                    search_conditions = []
-                    for col in table.columns:
-                        # Only apply text search to string-like columns
-                        if str(col.type).startswith(('VARCHAR', 'TEXT', 'CHAR')):
-                            search_conditions.append(col.cast(String).ilike(f'%{search}%'))
-
-                    if search_conditions:
-                        search_filter = or_(*search_conditions)
-                        query = query.where(search_filter)
-                        count_query = select(func.count()).select_from(table).where(search_filter)
-            else:
-                # For very short searches, use traditional ILIKE
-                search_conditions = []
-                for col in table.columns:
-                    # Only apply text search to string-like columns
-                    if str(col.type).startswith(('VARCHAR', 'TEXT', 'CHAR')):
-                        search_conditions.append(col.cast(String).ilike(f'%{search}%'))
-
-                if search_conditions:
-                    search_filter = or_(*search_conditions)
-                    query = query.where(search_filter)
-                    count_query = select(func.count()).select_from(table).where(search_filter)
+            if search_conditions:
+                search_filter = or_(*search_conditions)
+                query = query.where(search_filter)
+                # When searching, we need a count for pagination
+                count_query = select(func.count()).select_from(table).where(search_filter)
 
         # Get count if first page or searching
         if count_query is not None or page == 1:
@@ -209,14 +166,9 @@ def get_direct_table_data(
 
         # Cache the result
         result = (data, total)
-        if REDIS_AVAILABLE:
-            try:
-                # Cache for 5 minutes, or less if searching (search results may change more frequently)
-                ttl = 60 if search else 300
-                import pickle
-                redis_client.setex(cache_key, ttl, pickle.dumps(result))
-            except Exception as e:
-                print(f"Cache store error: {str(e)}")
+        # Cache for 5 minutes, or less if searching (search results may change more frequently)
+        ttl = 60 if search else 300
+        memory_cache.set(cache_key, result, ttl)
 
         elapsed = time.time() - start_time
         print(f"Query executed in {elapsed:.2f}s, returned {len(data)} rows of {total} total")
@@ -236,20 +188,19 @@ def update_direct_table_row(db: Session, table_name: str, primary_key_col: str, 
     start_time = time.time()
 
     # Invalidate any related caches for this table
-    if REDIS_AVAILABLE:
-        try:
-            # Delete all cache keys related to this table
-            pattern = f"taitur:direct_data:{table_name}_*"
-            keys = redis_client.keys(pattern)
-            if keys:
-                redis_client.delete(*keys)
-                print(f"Cleared {len(keys)} cache entries for table {table_name}")
+    try:
+        # Delete all cache keys related to this table
+        pattern = f"taitur:direct_data:{table_name}_*"
+        keys = memory_cache.keys(pattern)
+        for key in keys:
+            memory_cache.delete(key)
+        print(f"Cleared {len(keys)} cache entries for table {table_name}")
 
-            # Also clear the cache for the specific row
-            row_key = f"taitur:row:{table_name}:{row_id}"
-            redis_client.delete(row_key)
-        except Exception as e:
-            print(f"Cache invalidation error: {str(e)}")
+        # Also clear the cache for the specific row
+        row_key = f"taitur:row:{table_name}:{row_id}"
+        memory_cache.delete(row_key)
+    except Exception as e:
+        print(f"Cache invalidation error: {str(e)}")
 
     try:
         # Create dynamic table object
@@ -301,14 +252,9 @@ def get_table_stats(db: Session, table_name: str) -> Dict[str, Any]:
     cache_key = f"taitur:table_stats:{table_name}"
 
     # Try to get from cache
-    if REDIS_AVAILABLE:
-        try:
-            cached_data = redis_client.get(cache_key)
-            if cached_data:
-                import pickle
-                return pickle.loads(cached_data)
-        except Exception as e:
-            print(f"Cache error: {str(e)}")
+    cached_data = memory_cache.get(cache_key)
+    if cached_data:
+        return cached_data
 
     try:
         # Create dynamic table object
@@ -344,12 +290,7 @@ def get_table_stats(db: Session, table_name: str) -> Dict[str, Any]:
         }
 
         # Cache the result (longer TTL since table stats don't change often)
-        if REDIS_AVAILABLE:
-            try:
-                import pickle
-                redis_client.setex(cache_key, 3600, pickle.dumps(stats))  # Cache for 1 hour
-            except Exception as e:
-                print(f"Cache store error: {str(e)}")
+        memory_cache.set(cache_key, stats, 3600)  # Cache for 1 hour
 
         return stats
 
