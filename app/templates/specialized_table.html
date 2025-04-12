@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}WebApp{% endblock %}
+{% block title %}{{ table_name }} - Data Viewer{% endblock %}
 
 {% block head %}
 <style>
@@ -96,21 +96,22 @@
         background-color: rgba(255, 255, 0, 0.4);
         border-radius: 2px;
         padding: 0 2px;
+        transition: background-color 0.3s;
     }
 
     /* Tooltip for search shortcuts */
     .search-tooltip {
         position: absolute;
         top: 40px;
-        left: 0;
+        right: 0;
         background-color: #fff;
         border: 1px solid #ddd;
         border-radius: 4px;
-        padding: 8px 12px;
+        padding: 8px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         z-index: 1000;
         display: none;
-        width: 300px;
+        width: 250px;
         font-size: 0.85rem;
     }
 
@@ -152,9 +153,29 @@
         background-color: #ffc107;
         color: #000;
         font-weight: bold;
-        border-radius: 2px;
-        padding: 0 2px;
+        border-radius: 3px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
         outline: 2px solid #fd7e14;
+        position: relative;
+        z-index: 5;
+    }
+
+    .search-counter {
+        min-width: 46px;
+        text-align: center;
+        font-weight: bold;
+        transition: color 0.3s;
+    }
+
+    .search-counter.text-primary {
+        color: #0d6efd !important;
+    }
+
+    .advanced-search input.searching {
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>');
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 16px;
     }
 
     .active-view {
@@ -211,18 +232,200 @@
         align-items: center;
         z-index: 1000;
     }
+
+    /* Improved keyboard navigation indicator */
+    #data-table:focus {
+        outline: 2px solid rgba(13, 110, 253, 0.5);
+        outline-offset: -2px;
+    }
+
+    /* Smoother animation for result navigation */
+    #data-table tbody td {
+        transition: background-color 0.2s;
+    }
+
+    /* Improve scrolling behavior */
+    .dataTables_scrollBody {
+        scroll-behavior: smooth;
+    }
+
+    /* Progress bar for search */
+    .progress-bar-search {
+        height: 3px;
+        width: 0%;
+        background-color: #0d6efd;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1100;
+        transition: width 0.3s;
+        display: none;
+    }
+
+    .search-filter-menu {
+        width: 320px !important;
+        font-size: 0.9rem;
+    }
+
+    .column-search-options {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 10px;
+    }
+
+    .column-search-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+
+    .column-search-item label {
+        margin-bottom: 0;
+        margin-left: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.85rem;
+    }
+
+    .search-help {
+        margin-bottom: 0;
+        padding-left: 0;
+    }
+
+    .search-help li {
+        margin-bottom: 2px;
+        font-size: 0.8rem;
+    }
+
+    .search-help code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        color: #d63384;
+        font-size: 0.8rem;
+    }
+
+    .search-tag {
+        display: inline-block;
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        margin-right: 4px;
+        margin-bottom: 4px;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+
+    .search-tag:hover {
+        background-color: #dee2e6;
+    }
+
+    .search-tag .remove-tag {
+        margin-left: 4px;
+        cursor: pointer;
+    }
+
+    .search-tag.column-tag {
+        background-color: #cfe2ff;
+        color: #084298;
+    }
+
+    .search-tag.phrase-tag {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+
+    .search-tag.exclude-tag {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+
+    .search-highlight-exact {
+        background-color: rgba(255, 193, 7, 0.5);
+        font-weight: bold;
+        border-radius: 2px;
+        padding: 0 2px;
+    }
+
+    .search-options-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 15px;
+        height: 15px;
+        background-color: #0d6efd;
+        border-radius: 50%;
+        font-size: 9px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        display: none;
+    }
+
+    .has-active-filters .search-options-badge {
+        display: flex;
+    }
+
+    .search-filter-btn {
+        position: relative;
+    }
+
+    .highlight-row {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+        transition: background-color 0.5s;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content-wrapper">
     <div class="card shadow">
+        <div class="progress-bar-search" id="search-progress"></div>
         <div class="toolbar">
             <div class="row align-items-center">
                 <div class="col">
                     <div class="input-group advanced-search">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle search-filter-btn" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-funnel"></i>
+                            </button>
+                            <div class="dropdown-menu p-3 search-filter-menu" style="width: 320px;">
+                                <h6 class="mb-2">Advanced Search Options</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small">Search in columns:</label>
+                                    <div id="column-search-options" class="column-search-options">
+                                        <!-- Will be populated dynamically -->
+                                        <div class="placeholder-text text-muted small">Loading columns...</div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small">Search help:</label>
+                                    <ul class="search-help small list-unstyled">
+                                        <li><code>column:value</code> - Search specific column</li>
+                                        <li><code>"exact phrase"</code> - Match exact phrase</li>
+                                        <li><code>-word</code> - Exclude results with word</li>
+                                    </ul>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-sm btn-outline-secondary" id="clear-search-filters">Clear
+                                        Filters
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" id="apply-search-filters">Apply</button>
+                                </div>
+                            </div>
+                        </div>
                         <input type="text" id="advanced-search-input" class="form-control"
-                               placeholder="Type to search all fields...">
+                               placeholder="Search data (syntax: column:value, &quot;exact phrase&quot;, -exclude)"
+                               autocomplete="off"
+                               aria-label="Search">
                         <button class="btn btn-outline-primary" type="button" id="search-btn">
                             <i class="bi bi-search"></i>
                         </button>
@@ -232,7 +435,20 @@
                         <button class="btn btn-outline-secondary" type="button" id="next-result" disabled>
                             <i class="bi bi-arrow-down"></i>
                         </button>
-                        <span class="input-group-text" id="search-count">0/0</span>
+                        <span class="input-group-text search-counter" id="search-count">0/0</span>
+                        <div class="search-tooltip">
+                            <p class="mb-1"><strong>Advanced Search:</strong></p>
+                            <ul class="mb-0 ps-3">
+                                <li><code>column:value</code> - Search in specific column</li>
+                                <li><code>"exact phrase"</code> - Match exact phrase</li>
+                                <li><code>-exclude</code> - Exclude results with word</li>
+                                <li>F3/Shift+F3 - Navigate results</li>
+                                <li>Ctrl+F - Focus search</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="search-suggestions" id="search-suggestions">
+                        <!-- Search history will be populated here -->
                     </div>
                 </div>
                 <div class="col-auto d-flex flex-wrap">
@@ -300,7 +516,7 @@
                 </div>
             </div>
             <div class="table-container">
-                <table id="data-table" class="table table-striped table-bordered w-100">
+                <table id="data-table" class="table table-striped table-bordered w-100" tabindex="0">
                     <thead>
                     <tr id="table-header">
                         <th>Loading...</th>
@@ -415,6 +631,9 @@
     ];
     let isTableInitializing = false;
     let customSearchFunction = null;
+    let searchResults = [];
+    let currentResultIndex = -1;
+    let searchHistory = [];
 
     // Helper function to show errors
     function showError(message) {
@@ -450,6 +669,20 @@
     // Helper function to escape regex special characters
     function escapeRegExp(string) {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Function to disable navigation buttons
+    function disableNavButtons() {
+        const prevBtn = document.getElementById('prev-result');
+        const nextBtn = document.getElementById('next-result');
+        const searchCount = document.getElementById('search-count');
+        const searchInput = document.getElementById('advanced-search-input');
+
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        searchCount.textContent = '0/0';
+        searchCount.classList.remove('text-primary');
+        searchInput.classList.remove('border-primary');
     }
 
     // Optimize column visibility for performance
@@ -631,7 +864,7 @@
             // Recreate the table element to avoid any legacy issues
             const tableContainer = document.querySelector('.table-container');
             tableContainer.innerHTML = `
-            <table id="data-table" class="table table-striped table-bordered w-100">
+            <table id="data-table" class="table table-striped table-bordered w-100" tabindex="0">
                 <thead>
                     <tr>
                     ${columnDefs.map(col => `<th>${col.title}</th>`).join('')}
@@ -688,23 +921,62 @@
                     smart: true,
                     regex: false
                 },
+                let searchResults = [];
+                let currentResultIndex = -1;
+                let searchHistory = [];
+
+// Then enhance the initialization to be more robust with error handling
                 initComplete: function () {
-                    // This ensures all initialization is complete
-                    toggleLoading(false);
-                    isTableInitializing = false;
+                    try {
+                        // This ensures all initialization is complete
+                        toggleLoading(false);
+                        isTableInitializing = false;
 
-                    // Lazy load visible rows for better performance
-                    setTimeout(() => {
-                        if (this.scroller) {
-                            this.scroller.measure();
+                        // Lazy load visible rows for better performance
+                        setTimeout(() => {
+                            if (this.scroller) {
+                                try {
+                                    this.scroller.measure();
+                                } catch (e) {
+                                    console.warn("Error measuring scroller:", e);
+                                }
+                            }
+                        }, 50);
+
+                        // Initialize features in a controlled sequence with error handling
+                        console.log("Initializing advanced search features...");
+
+                        // Step 1: Set up keyboard navigation
+                        try {
+                            setupKeyboardNavigation();
+                            console.log("Keyboard navigation initialized");
+                        } catch (e) {
+                            console.error("Error setting up keyboard navigation:", e);
                         }
-                    }, 50);
 
-                    // Initialize advanced search
-                    setupAdvancedSearch();
+                        // Step 2: Set up search history
+                        try {
+                            setupSearchHistory();
+                            console.log("Search history initialized");
+                        } catch (e) {
+                            console.error("Error setting up search history:", e);
+                        }
 
-                    // Add keyboard shortcuts for navigation
-                    setupKeyboardNavigation();
+                        // Step 3: Set up advanced search (this should come last as it might depend on the others)
+                        try {
+                            setupAdvancedSearch();
+                            console.log("Advanced search initialized");
+                        } catch (e) {
+                            console.error("Error setting up advanced search:", e);
+                        }
+
+                        console.log("All search features initialized successfully");
+                    } catch (error) {
+                        console.error("Error during table initialization:", error);
+                        // Still make sure we turn off loading indicator even if there's an error
+                        toggleLoading(false);
+                        isTableInitializing = false;
+                    }
                 }
             });
 
@@ -721,11 +993,31 @@
                 // Show loading indicator for longer searches
                 if (value && value.length > 2) {
                     toggleLoading(true);
+
+                    // Show progress bar
+                    const progressBar = document.getElementById('search-progress');
+                    progressBar.style.display = 'block';
+                    progressBar.style.width = '0%';
+
+                    // Animate progress
+                    setTimeout(() => {
+                        progressBar.style.width = '70%';
+                    }, 50);
                 }
 
                 // Throttle search requests
                 searchThrottleTimeout = setTimeout(() => {
                     originalSearch.call(dataTable, value, regex, smart, caseInsen).draw();
+
+                    // When search completes, hide progress bar with animation
+                    setTimeout(() => {
+                        const progressBar = document.getElementById('search-progress');
+                        progressBar.style.width = '100%';
+                        setTimeout(() => {
+                            progressBar.style.width = '0%';
+                            progressBar.style.display = 'none';
+                        }, 300);
+                    }, 100);
                 }, 350);
 
                 return this;
@@ -755,7 +1047,7 @@
             }
 
             // Ctrl+F to focus search
-            if (e.ctrlKey && e.key === 'f') {
+            if ((e.ctrlKey && e.key === 'f') || e.key === '/') {
                 e.preventDefault();
                 document.getElementById('advanced-search-input').focus();
             }
@@ -770,8 +1062,427 @@
                         const parent = $(this).parent();
                         parent.text($(this).text());
                     });
+                    disableNavButtons();
                 }
             }
+
+            // Handle search result navigation (F3, Shift+F3)
+            if (searchResults && searchResults.length > 0) {
+                // F3 or Ctrl+G for next result
+                if (e.key === 'F3' || (e.ctrlKey && e.key === 'g')) {
+                    e.preventDefault();
+                    if (currentResultIndex < searchResults.length - 1) {
+                        navigateToResult(currentResultIndex + 1);
+                    } else {
+                        // Wrap around to first result
+                        navigateToResult(0);
+                    }
+                }
+
+                // Shift+F3 or Ctrl+Shift+G for previous result
+                if ((e.shiftKey && e.key === 'F3') || (e.ctrlKey && e.shiftKey && e.key === 'g')) {
+                    e.preventDefault();
+                    if (currentResultIndex > 0) {
+                        navigateToResult(currentResultIndex - 1);
+                    } else {
+                        // Wrap around to last result
+                        navigateToResult(searchResults.length - 1);
+                    }
+                }
+            }
+        });
+
+        // Make table keyboard navigable
+        const dataTable = document.getElementById('data-table');
+
+        // Add focus styles to show when table is focused
+        dataTable.addEventListener('focus', function () {
+            this.classList.add('table-focus');
+        });
+
+        dataTable.addEventListener('blur', function () {
+            this.classList.remove('table-focus');
+        });
+    }
+
+    function setupSearchHistory() {
+        const searchInput = document.getElementById('advanced-search-input');
+        const suggestionsContainer = document.getElementById('search-suggestions');
+
+        // Show history when input is focused
+        searchInput.addEventListener('focus', function () {
+            if (searchHistory.length > 0 && !searchInput.value) {
+                showSearchHistory();
+            }
+        });
+
+        // Hide suggestions when clicking elsewhere
+        document.addEventListener('click', function (event) {
+            if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+
+        // Show search history suggestions
+        function showSearchHistory() {
+            if (searchHistory.length === 0) return;
+
+            suggestionsContainer.innerHTML = '';
+
+            // Add recent searches header
+            const header = document.createElement('div');
+            header.className = 'p-2 text-muted small fw-bold border-bottom';
+            header.textContent = 'Recent Searches';
+            suggestionsContainer.appendChild(header);
+
+            // Add search history items
+            searchHistory.forEach(term => {
+                const item = document.createElement('div');
+                item.className = 'p-2 search-suggestion-item';
+
+                // Parse and format the search query to show its components
+                const parsedQuery = parseSearchQuery(term);
+
+                // Create formatted display with different styling for different parts
+                let displayHTML = '';
+
+                // Column filters
+                parsedQuery.columnFilters.forEach(filter => {
+                    displayHTML += `<span class="search-tag column-tag">${filter.column}:${filter.value}</span>`;
+                });
+
+                // Exact phrases
+                parsedQuery.exactPhrases.forEach(phrase => {
+                    displayHTML += `<span class="search-tag phrase-tag">"${phrase}"</span>`;
+                });
+
+                // Exclude terms
+                parsedQuery.excludeTerms.forEach(term => {
+                    displayHTML += `<span class="search-tag exclude-tag">-${term}</span>`;
+                });
+
+                // Regular terms
+                parsedQuery.terms.forEach(term => {
+                    displayHTML += `<span class="search-tag">${term}</span>`;
+                });
+
+                // If empty after parsing, just show the raw term
+                if (!displayHTML) {
+                    displayHTML = `<span>${term}</span>`;
+                }
+
+                item.innerHTML = displayHTML;
+
+                item.addEventListener('click', function () {
+                    searchInput.value = term;
+                    suggestionsContainer.style.display = 'none';
+                    performSearch();
+                });
+                suggestionsContainer.appendChild(item);
+            });
+
+            // Add clear history option
+            const clearHistoryItem = document.createElement('div');
+            clearHistoryItem.className = 'p-2 search-suggestion-item text-muted border-top';
+            clearHistoryItem.innerHTML = '<i class="bi bi-trash"></i> Clear search history';
+            clearHistoryItem.addEventListener('click', function () {
+                searchHistory = [];
+                localStorage.removeItem('taitur_search_history');
+                suggestionsContainer.style.display = 'none';
+            });
+            suggestionsContainer.appendChild(clearHistoryItem);
+
+            suggestionsContainer.style.display = 'block';
+        }
+    }
+
+    // Add search to history
+    function addToSearchHistory(query) {
+        if (!query || query.length < 2) return;
+
+        // Remove if already exists
+        const index = searchHistory.indexOf(query);
+        if (index > -1) {
+            searchHistory.splice(index, 1);
+        }
+
+        // Add to front of array
+        searchHistory.unshift(query);
+
+        // Limit to 10 entries
+        if (searchHistory.length > 10) {
+            searchHistory.pop();
+        }
+
+        // Save to localStorage
+        try {
+            localStorage.setItem('taitur_search_history', JSON.stringify(searchHistory));
+        } catch (e) {
+            console.error("Could not save search history", e);
+        }
+    }
+
+    // Function to scroll to and highlight the current result
+    function navigateToResult(index, animate = true) {
+        if (index < 0 || index >= searchResults.length) return;
+
+        // Remove active highlight from previous result
+        $('.search-highlight.active').removeClass('active');
+
+        currentResultIndex = index;
+        const result = searchResults[index];
+
+        // Scroll to the cell
+        const cellSelector = `#data-table tbody tr:nth-child(${result.rowIndex + 1}) td:nth-child(${result.colIndex + 1})`;
+        const cell = $(cellSelector);
+
+        if (cell.length > 0) {
+            // Find the highlight within the cell and make it active
+            const highlight = cell.find('.search-highlight');
+            highlight.addClass('active');
+
+            // Scroll the row into view with a smooth effect that positions it in the middle
+            if (animate) {
+                // Using scrollIntoView with 'center' alignment
+                cell[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'center'
+                });
+
+                // Add a brief flash animation to make it easier to find
+                highlight.css('transition', 'background-color 0.3s');
+                highlight.css('background-color', '#ffc107');
+                setTimeout(() => {
+                    highlight.css('background-color', '');
+                }, 300);
+            } else {
+                cell[0].scrollIntoView({
+                    block: 'center',
+                    inline: 'center'
+                });
+            }
+        }
+
+        // Update navigation buttons and counter
+        updateResultCountDisplay();
+    }
+
+    // Function to update navigation buttons and result count display
+    function updateResultCountDisplay() {
+        const searchCount = document.getElementById('search-count');
+        const prevBtn = document.getElementById('prev-result');
+        const nextBtn = document.getElementById('next-result');
+        const searchInput = document.getElementById('advanced-search-input');
+
+        if (searchResults.length > 0) {
+            searchCount.textContent = `${currentResultIndex + 1}/${searchResults.length}`;
+            prevBtn.disabled = false;
+            nextBtn.disabled = false;
+
+            // Add visual indicator for search state
+            searchCount.classList.add('text-primary');
+            searchInput.classList.add('border-primary');
+        } else {
+            searchCount.textContent = '0/0';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+
+            // Remove visual indicators
+            searchCount.classList.remove('text-primary');
+            searchInput.classList.remove('border-primary');
+        }
+    }
+
+    function parseSearchQuery(query) {
+        if (!query) return {terms: [], columnFilters: [], exactPhrases: [], excludeTerms: []};
+
+        const result = {
+            terms: [],
+            columnFilters: [],
+            exactPhrases: [],
+            excludeTerms: []
+        };
+
+        // Regular expression for column:value pattern
+        const colRegex = /(\w+):(([^\s"]+)|("([^"]*)"))/g;
+        let match;
+
+        // Extract column filters
+        while ((match = colRegex.exec(query)) !== null) {
+            const columnName = match[1];
+            // Handle both quoted and unquoted values
+            const value = match[5] || match[3]; // match[5] for quoted values, match[3] for unquoted
+
+            result.columnFilters.push({column: columnName, value: value});
+            // Remove from original query so we don't match it again
+            query = query.replace(match[0], ' ');
+        }
+
+        // Extract exact phrases (in quotes)
+        const phraseRegex = /"([^"]*)"/g;
+        while ((match = phraseRegex.exec(query)) !== null) {
+            if (match[1].trim()) {
+                result.exactPhrases.push(match[1]);
+                // Remove from original query
+                query = query.replace(match[0], ' ');
+            }
+        }
+
+        // Extract exclude terms (prefixed with -)
+        const excludeRegex = /-(\w+)/g;
+        while ((match = excludeRegex.exec(query)) !== null) {
+            if (match[1].trim()) {
+                result.excludeTerms.push(match[1]);
+                // Remove from original query
+                query = query.replace(match[0], ' ');
+            }
+        }
+
+        // Remaining terms
+        const remainingTerms = query.split(/\s+/).filter(term => term.trim());
+        result.terms = remainingTerms;
+
+        return result;
+    }
+
+    // Build search query from components
+    function buildSearchQuery(components) {
+        let query = '';
+
+        // Add column filters
+        if (components.columnFilters && components.columnFilters.length) {
+            components.columnFilters.forEach(filter => {
+                // Quote the value if it contains spaces
+                const value = filter.value.includes(' ') ? `"${filter.value}"` : filter.value;
+                query += `${filter.column}:${value} `;
+            });
+        }
+
+        // Add exact phrases
+        if (components.exactPhrases && components.exactPhrases.length) {
+            components.exactPhrases.forEach(phrase => {
+                query += `"${phrase}" `;
+            });
+        }
+
+        // Add exclude terms
+        if (components.excludeTerms && components.excludeTerms.length) {
+            components.excludeTerms.forEach(term => {
+                query += `-${term} `;
+            });
+        }
+
+        // Add regular terms
+        if (components.terms && components.terms.length) {
+            components.terms.forEach(term => {
+                query += `${term} `;
+            });
+        }
+
+        return query.trim();
+    }
+
+    // Update search filter UI
+    function updateSearchFilterUI() {
+        // Populate column search options if empty
+        const columnSearchOptions = document.getElementById('column-search-options');
+        if (columnSearchOptions.children.length <= 1) {
+            // Clear loading placeholder
+            columnSearchOptions.innerHTML = '';
+
+            // Add "All Columns" option at the top
+            const allOption = document.createElement('div');
+            allOption.className = 'column-search-item';
+            allOption.innerHTML = `
+            <input type="checkbox" class="form-check-input" id="search-column-all" data-column="all" checked>
+            <label for="search-column-all" class="form-check-label">All Columns</label>
+        `;
+            columnSearchOptions.appendChild(allOption);
+
+            // Add individual column options
+            tableColumns.forEach(col => {
+                const option = document.createElement('div');
+                option.className = 'column-search-item';
+                option.innerHTML = `
+                <input type="checkbox" class="form-check-input search-column-option"
+                       id="search-column-${col.name}" data-column="${col.name}" checked>
+                <label for="search-column-${col.name}" class="form-check-label">${col.name}</label>
+            `;
+                columnSearchOptions.appendChild(option);
+            });
+
+            // Handle "All Columns" checkbox
+            document.getElementById('search-column-all').addEventListener('change', function () {
+                const checked = this.checked;
+                document.querySelectorAll('.search-column-option').forEach(checkbox => {
+                    checkbox.checked = checked;
+                });
+            });
+
+            // Handle individual column checkboxes
+            document.querySelectorAll('.search-column-option').forEach(checkbox => {
+                checkbox.addEventListener('change', function () {
+                    // If any individual checkbox is unchecked, uncheck "All Columns" too
+                    if (!this.checked) {
+                        document.getElementById('search-column-all').checked = false;
+                    }
+
+                    // If all individual checkboxes are checked, check "All Columns" too
+                    const allChecked = Array.from(document.querySelectorAll('.search-column-option'))
+                        .every(cb => cb.checked);
+                    if (allChecked) {
+                        document.getElementById('search-column-all').checked = true;
+                    }
+                });
+            });
+        }
+
+        // Handle apply button
+        document.getElementById('apply-search-filters').addEventListener('click', function () {
+            // Get selected columns
+            const selectedColumns = Array.from(document.querySelectorAll('.search-column-option:checked'))
+                .map(cb => cb.dataset.column);
+
+            // Check if "All Columns" is selected
+            const allColumnsSelected = document.getElementById('search-column-all').checked;
+
+            // Parse current search query
+            const searchInput = document.getElementById('advanced-search-input');
+            const currentQuery = parseSearchQuery(searchInput.value);
+
+            // Build a new query with selected column filters if not all columns selected
+            if (!allColumnsSelected && selectedColumns.length > 0) {
+                // Create a visual indicator that filters are active
+                document.querySelector('.search-filter-btn').classList.add('has-active-filters');
+            } else {
+                document.querySelector('.search-filter-btn').classList.remove('has-active-filters');
+            }
+
+            // Close dropdown
+            const dropdown = bootstrap.Dropdown.getInstance(document.querySelector('.search-filter-btn'));
+            if (dropdown) dropdown.hide();
+
+            // Perform the search
+            performSearch();
+        });
+
+        // Handle clear filters button
+        document.getElementById('clear-search-filters').addEventListener('click', function () {
+            // Check all column options
+            document.querySelectorAll('.search-column-option, #search-column-all').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+
+            // Remove filter indicator
+            document.querySelector('.search-filter-btn').classList.remove('has-active-filters');
+
+            // Close dropdown
+            const dropdown = bootstrap.Dropdown.getInstance(document.querySelector('.search-filter-btn'));
+            if (dropdown) dropdown.hide();
+
+            // Perform search without column filters
+            performSearch();
         });
     }
 
@@ -783,31 +1494,45 @@
         const nextBtn = document.getElementById('next-result');
         const searchCount = document.getElementById('search-count');
 
+        // Initialize search filter UI
+        updateSearchFilterUI();
+
         // Declare variables for search functionality
         let searchTimeout = null;
         let searchResults = [];
         let currentResultIndex = -1;
         let lastSearchQuery = '';
+        let isSearching = false;
+        let searchHistory = [];
+        let activeFilters = [];
 
         // Function to update navigation buttons and result count display
         function updateResultCountDisplay() {
             if (searchResults.length > 0) {
                 searchCount.textContent = `${currentResultIndex + 1}/${searchResults.length}`;
-                prevBtn.disabled = currentResultIndex <= 0;
-                nextBtn.disabled = currentResultIndex >= searchResults.length - 1;
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+
+                // Add visual indicator for search state
+                searchCount.classList.add('text-primary');
+                searchInput.classList.add('border-primary');
             } else {
                 searchCount.textContent = '0/0';
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
+
+                // Remove visual indicators
+                searchCount.classList.remove('text-primary');
+                searchInput.classList.remove('border-primary');
             }
         }
 
         // Function to scroll to and highlight the current result
-        function navigateToResult(index) {
+        function navigateToResult(index, animate = true) {
             if (index < 0 || index >= searchResults.length) return;
 
             // Remove active highlight from previous result
-            $('.search-highlight.active').removeClass('active');
+            $('.search-highlight.active, .search-highlight-exact.active').removeClass('active');
 
             currentResultIndex = index;
             const result = searchResults[index];
@@ -818,13 +1543,35 @@
 
             if (cell.length > 0) {
                 // Find the highlight within the cell and make it active
-                cell.find('.search-highlight').addClass('active');
+                const highlight = cell.find('.search-highlight, .search-highlight-exact').eq(result.matchIndex || 0);
+                highlight.addClass('active');
 
-                // Scroll the row into view with a smooth effect
-                cell[0].scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
+                // Add row highlighting to make it easier to see the context
+                const row = cell.closest('tr');
+                row.addClass('highlight-row');
+                setTimeout(() => row.removeClass('highlight-row'), 2000);
+
+                // Scroll the row into view with a smooth effect that positions it in the middle
+                if (animate) {
+                    // Using scrollIntoView with 'center' alignment
+                    cell[0].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center'
+                    });
+
+                    // Add a brief flash animation to make it easier to find
+                    highlight.css('transition', 'background-color 0.3s');
+                    highlight.css('background-color', '#ffc107');
+                    setTimeout(() => {
+                        highlight.css('background-color', '');
+                    }, 300);
+                } else {
+                    cell[0].scrollIntoView({
+                        block: 'center',
+                        inline: 'center'
+                    });
+                }
             }
 
             // Update navigation buttons and counter
@@ -836,55 +1583,199 @@
             prevBtn.disabled = true;
             nextBtn.disabled = true;
             searchCount.textContent = '0/0';
+            searchCount.classList.remove('text-primary');
+            searchInput.classList.remove('border-primary');
         }
 
-        // Client-side search on loaded data (faster for smaller datasets)
+        // Improved client-side search on loaded data
         function clientSideSearch(query) {
             if (!query) return;
+
+            console.time('Client-side search');
+
+            // Parse the search query for advanced components
+            const parsedQuery = parseSearchQuery(query);
+            console.log("Parsed query:", parsedQuery);
 
             // Reset search results
             searchResults = [];
             currentResultIndex = -1;
 
-            // Get all visible cells
-            $('#data-table tbody td').each(function (index) {
-                // Skip the actions column (last column)
-                if (index % (visibleColumns.length + 1) === visibleColumns.length) return;
+            // First clear any existing highlights
+            $('#data-table tbody td span.search-highlight, #data-table tbody td span.search-highlight-exact').each(function () {
+                const parent = $(this).parent();
+                parent.text($(this).text());
+            });
 
-                const cell = $(this);
-                const cellText = cell.text();
+            // Get all visible rows and cells
+            const visibleRows = $('#data-table tbody tr:visible');
 
-                // Skip cells with no text or with input elements (being edited)
-                if (!cellText || cell.find('input, select, textarea').length > 0) return;
+            // Get selected columns for filtering
+            const selectedColumns = Array.from(document.querySelectorAll('.search-column-option:checked'))
+                .map(cb => cb.dataset.column);
+            const allColumnsSelected = document.getElementById('search-column-all')?.checked || true;
 
-                // Check if the cell contains the search term (case-insensitive)
-                const cellTextLower = cellText.toLowerCase();
-                const queryLower = query.toLowerCase();
+            // Process all rows
+            visibleRows.each(function (rowIndex) {
+                const row = $(this);
 
-                if (cellTextLower.includes(queryLower)) {
-                    // Calculate row and column index
-                    const colIndex = index % (visibleColumns.length + 1);
-                    const rowIndex = Math.floor(index / (visibleColumns.length + 1));
+                // Process cells in this row
+                row.find('td').each(function (colIndex) {
+                    // Skip the actions column (last column)
+                    if (colIndex >= visibleColumns.length) return;
 
-                    // Add to search results
-                    searchResults.push({
-                        cell: cell,
-                        row: cell.closest('tr'),
-                        colIndex: colIndex,
-                        rowIndex: rowIndex,
-                        textIndex: cellTextLower.indexOf(queryLower)
-                    });
+                    const cell = $(this);
+                    const cellText = cell.text();
+                    const columnName = visibleColumns[colIndex].name;
 
-                    // Highlight the matching text
-                    const highlightedText = highlightText(cellText, query);
-                    if (cell.html() !== highlightedText) {
-                        cell.html(highlightedText);
+                    // Skip cells with no text or with input elements (being edited)
+                    if (!cellText || cell.find('input, select, textarea').length > 0) return;
+
+                    // Skip if this column is not selected for searching
+                    if (!allColumnsSelected && !selectedColumns.includes(columnName)) return;
+
+                    // Check for column-specific filters
+                    if (parsedQuery.columnFilters.length > 0) {
+                        const columnFilters = parsedQuery.columnFilters.filter(f => f.column.toLowerCase() === columnName.toLowerCase());
+                        if (columnFilters.length > 0) {
+                            // This cell has column-specific filters
+                            columnFilters.forEach(filter => {
+                                const cellTextLower = cellText.toLowerCase();
+                                const filterValueLower = filter.value.toLowerCase();
+
+                                if (cellTextLower.includes(filterValueLower)) {
+                                    searchResults.push({
+                                        cell: cell,
+                                        row: row,
+                                        colIndex: colIndex,
+                                        rowIndex: rowIndex,
+                                        textIndex: cellTextLower.indexOf(filterValueLower),
+                                        matchType: 'column',
+                                        matchValue: filter.value
+                                    });
+
+                                    // Highlight with special class for column filters
+                                    const highlightedText = highlightExactMatch(cellText, filter.value);
+                                    cell.html(highlightedText);
+                                }
+                            });
+                        }
                     }
+
+                    // Check for exact phrases
+                    if (parsedQuery.exactPhrases.length > 0) {
+                        const cellTextLower = cellText.toLowerCase();
+
+                        parsedQuery.exactPhrases.forEach((phrase, phraseIndex) => {
+                            const phraseLower = phrase.toLowerCase();
+                            if (cellTextLower.includes(phraseLower)) {
+                                searchResults.push({
+                                    cell: cell,
+                                    row: row,
+                                    colIndex: colIndex,
+                                    rowIndex: rowIndex,
+                                    textIndex: cellTextLower.indexOf(phraseLower),
+                                    matchType: 'exact',
+                                    matchValue: phrase,
+                                    matchIndex: phraseIndex
+                                });
+
+                                // Highlight with special class for exact matches
+                                const highlightedText = highlightExactMatch(cellText, phrase);
+                                cell.html(highlightedText);
+                            }
+                        });
+                    }
+
+                    // Skip cells that match exclude terms
+                    let shouldExclude = false;
+                    if (parsedQuery.excludeTerms.length > 0) {
+                        const cellTextLower = cellText.toLowerCase();
+                        shouldExclude = parsedQuery.excludeTerms.some(term =>
+                            cellTextLower.includes(term.toLowerCase())
+                        );
+
+                        if (shouldExclude) {
+                            return; // Skip this cell
+                        }
+                    }
+
+                    // Check for regular search terms
+                    if (parsedQuery.terms.length > 0) {
+                        const cellTextLower = cellText.toLowerCase();
+
+                        parsedQuery.terms.forEach((term, termIndex) => {
+                            const termLower = term.toLowerCase();
+                            if (cellTextLower.includes(termLower)) {
+                                searchResults.push({
+                                    cell: cell,
+                                    row: row,
+                                    colIndex: colIndex,
+                                    rowIndex: rowIndex,
+                                    textIndex: cellTextLower.indexOf(termLower),
+                                    matchType: 'term',
+                                    matchValue: term,
+                                    matchIndex: termIndex
+                                });
+
+                                // Regular highlight for simple terms
+                                const highlightedText = highlightText(cellText, term);
+                                cell.html(highlightedText);
+                            }
+                        });
+                    }
+
+                    // If no specific search components, check the entire original query
+                    if (parsedQuery.terms.length === 0 &&
+                        parsedQuery.columnFilters.length === 0 &&
+                        parsedQuery.exactPhrases.length === 0 &&
+                        parsedQuery.excludeTerms.length === 0) {
+
+                        const cellTextLower = cellText.toLowerCase();
+                        const queryLower = query.toLowerCase();
+
+                        if (cellTextLower.includes(queryLower)) {
+                            searchResults.push({
+                                cell: cell,
+                                row: row,
+                                colIndex: colIndex,
+                                rowIndex: rowIndex,
+                                textIndex: cellTextLower.indexOf(queryLower),
+                                matchType: 'simple',
+                                matchValue: query
+                            });
+
+                            // Regular highlight for simple query
+                            const highlightedText = highlightText(cellText, query);
+                            cell.html(highlightedText);
+                        }
+                    }
+                });
+            });
+
+            // Sort results by row, then by column, then by text index
+            searchResults.sort((a, b) => {
+                if (a.rowIndex !== b.rowIndex) return a.rowIndex - b.rowIndex;
+                if (a.colIndex !== b.colIndex) return a.colIndex - b.colIndex;
+                return a.textIndex - b.textIndex;
+            });
+
+            // Remove duplicates (same cell, same match type and value)
+            const uniqueResults = [];
+            const seen = new Set();
+
+            searchResults.forEach(result => {
+                const key = `${result.rowIndex}:${result.colIndex}:${result.matchType}:${result.matchValue}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueResults.push(result);
                 }
             });
 
-            // Sort results by text index (to prioritize matches at beginning of text)
-            searchResults.sort((a, b) => a.textIndex - b.textIndex);
+            searchResults = uniqueResults;
+
+            console.timeEnd('Client-side search');
+            console.log(`Found ${searchResults.length} results for "${query}"`);
 
             // Update UI
             updateResultCountDisplay();
@@ -893,9 +1784,21 @@
             if (searchResults.length > 0) {
                 navigateToResult(0);
             }
+
+            // Add to search history
+            addToSearchHistory(query);
         }
 
-        // Helper function to highlight text
+        // Helper function to highlight exact matches
+        function highlightExactMatch(text, query) {
+            if (!query) return text;
+
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
+            return text.replace(regex, '<span class="search-highlight-exact">$1</span>');
+        }
+
+        // Helper function to highlight regular text
         function highlightText(text, query) {
             if (!query) return text;
 
@@ -909,7 +1812,7 @@
             const query = searchInput.value.trim();
 
             // Clear existing highlights
-            $('#data-table tbody td span.search-highlight').each(function () {
+            $('#data-table tbody td span.search-highlight, #data-table tbody td span.search-highlight-exact').each(function () {
                 const parent = $(this).parent();
                 parent.text($(this).text());
             });
@@ -922,8 +1825,13 @@
             if (!query) {
                 // Clear search if query is empty
                 dataTable.search('').draw();
+                // Reset filter indicator
+                document.querySelector('.search-filter-btn').classList.remove('has-active-filters');
                 return;
             }
+
+            // Set searching flag
+            isSearching = true;
 
             // First try client-side search on currently loaded data
             clientSideSearch(query);
@@ -931,22 +1839,80 @@
             // If no results found or fewer than expected, do server-side search
             if (searchResults.length === 0) {
                 toggleLoading(true);
+                searchInput.classList.add('searching');
+
+                // Show progress indicator
+                const progressBar = document.getElementById('search-progress');
+                progressBar.style.width = '0%';
+                progressBar.style.display = 'block';
+
+                // Animate progress
+                setTimeout(() => {
+                    progressBar.style.width = '70%';
+                }, 50);
 
                 // Apply the search to the DataTable (server-side)
                 dataTable.search(query).draw();
 
                 // Setup a listener for when data is reloaded
-                dataTable.on('draw.dt', function () {
+                dataTable.one('draw.dt', function () {
                     toggleLoading(false);
+                    searchInput.classList.remove('searching');
 
-                    // Only run this once
-                    dataTable.off('draw.dt');
+                    // Complete progress indicator
+                    progressBar.style.width = '100%';
+                    setTimeout(() => {
+                        progressBar.style.width = '0%';
+                        progressBar.style.display = 'none';
+                    }, 300);
 
                     // Perform client-side search again on new data
                     setTimeout(() => {
                         clientSideSearch(query);
+                        isSearching = false;
                     }, 100);
                 });
+            } else {
+                isSearching = false;
+            }
+        }
+
+        // Add search to history
+        function addToSearchHistory(query) {
+            if (!query || query.length < 2) return;
+
+            // Remove if already exists
+            const index = searchHistory.indexOf(query);
+            if (index > -1) {
+                searchHistory.splice(index, 1);
+            }
+
+            // Add to front of array
+            searchHistory.unshift(query);
+
+            // Limit to 10 entries
+            if (searchHistory.length > 10) {
+                searchHistory.pop();
+            }
+
+            // Save to localStorage
+            try {
+                localStorage.setItem('taitur_search_history', JSON.stringify(searchHistory));
+            } catch (e) {
+                console.error("Could not save search history", e);
+            }
+        }
+
+        // Load search history
+        function loadSearchHistory() {
+            try {
+                const saved = localStorage.getItem('taitur_search_history');
+                if (saved) {
+                    searchHistory = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error("Could not load search history", e);
+                searchHistory = [];
             }
         }
 
@@ -956,30 +1922,59 @@
         });
 
         searchInput.addEventListener('keydown', function (e) {
+            // Enter to search
             if (e.key === 'Enter') {
                 e.preventDefault();
                 performSearch();
             }
+
+            // Up/down arrows for result navigation when results exist
+            if (searchResults.length > 0) {
+                if (e.key === 'ArrowDown' && !e.ctrlKey) {
+                    e.preventDefault();
+                    if (currentResultIndex < searchResults.length - 1) {
+                        navigateToResult(currentResultIndex + 1);
+                    } else {
+                        // Wrap around to first result
+                        navigateToResult(0);
+                    }
+                } else if (e.key === 'ArrowUp' && !e.ctrlKey) {
+                    e.preventDefault();
+                    if (currentResultIndex > 0) {
+                        navigateToResult(currentResultIndex - 1);
+                    } else {
+                        // Wrap around to last result
+                        navigateToResult(searchResults.length - 1);
+                    }
+                }
+            }
         });
 
-        // Debounced input handler
+        // Debounced input handler for incremental search
         searchInput.addEventListener('input', function () {
+            const query = searchInput.value.trim();
+
+            // Immediately clear search if query is empty
+            if (!query) {
+                $('#data-table tbody td span.search-highlight, #data-table tbody td span.search-highlight-exact').each(function () {
+                    const parent = $(this).parent();
+                    parent.text($(this).text());
+                });
+                disableNavButtons();
+                dataTable.search('').draw();
+                document.querySelector('.search-filter-btn').classList.remove('has-active-filters');
+                return;
+            }
+
+            // Debounce search to avoid too many queries
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
             }
 
             searchTimeout = setTimeout(() => {
-                // For quick typing, use client-side search with a delay
-                const query = searchInput.value.trim();
-                if (query.length >= 2) {
+                if (query.length >= 2 && query !== lastSearchQuery) {
+                    lastSearchQuery = query;
                     performSearch();
-                } else if (!query) {
-                    // Clear search if empty
-                    $('#data-table tbody td span.search-highlight').each(function () {
-                        const parent = $(this).parent();
-                        parent.text($(this).text());
-                    });
-                    disableNavButtons();
                 }
             }, 300);
         });
@@ -988,42 +1983,23 @@
         nextBtn.addEventListener('click', function () {
             if (currentResultIndex < searchResults.length - 1) {
                 navigateToResult(currentResultIndex + 1);
+            } else {
+                // Wrap around to first result
+                navigateToResult(0);
             }
         });
 
         prevBtn.addEventListener('click', function () {
             if (currentResultIndex > 0) {
                 navigateToResult(currentResultIndex - 1);
+            } else {
+                // Wrap around to last result
+                navigateToResult(searchResults.length - 1);
             }
         });
 
-        // Keyboard shortcuts for navigation
-        document.addEventListener('keydown', function (e) {
-            // Only handle if we have search results
-            if (searchResults.length === 0) return;
-
-            // F3 or Ctrl+G for next
-            if (e.key === 'F3' || (e.ctrlKey && e.key === 'g')) {
-                e.preventDefault();
-                if (currentResultIndex < searchResults.length - 1) {
-                    navigateToResult(currentResultIndex + 1);
-                } else {
-                    // Wrap around to first result
-                    navigateToResult(0);
-                }
-            }
-
-            // Shift+F3 or Ctrl+Shift+G for previous
-            if ((e.shiftKey && e.key === 'F3') || (e.ctrlKey && e.shiftKey && e.key === 'g')) {
-                e.preventDefault();
-                if (currentResultIndex > 0) {
-                    navigateToResult(currentResultIndex - 1);
-                } else {
-                    // Wrap around to last result
-                    navigateToResult(searchResults.length - 1);
-                }
-            }
-        });
+        // Load search history on init
+        loadSearchHistory();
     }
 
     // Attach event handlers for edit/save/cancel buttons and other interactions
@@ -1356,13 +2332,13 @@
                     }).join('\n');
 
                     content = header + '\n' + rows;
-                    filename = `taitur_data_${new Date().toISOString().slice(0, 10)}.csv`;
+                    filename = `${table_name}_data_${new Date().toISOString().slice(0, 10)}.csv`;
                     type = 'text/csv';
                     break;
 
                 case 'json':
                     content = JSON.stringify(exportData, null, 2);
-                    filename = `taitur_data_${new Date().toISOString().slice(0, 10)}.json`;
+                    filename = `${table_name}_data_${new Date().toISOString().slice(0, 10)}.json`;
                     type = 'application/json';
                     break;
 
@@ -1404,7 +2380,7 @@
                                 <x:ExcelWorkbook>
                                     <x:ExcelWorksheets>
                                         <x:ExcelWorksheet>
-                                            <x:Name>Taitur Data</x:Name>
+                                            <x:Name>${table_name} Data</x:Name>
                                             <x:WorksheetOptions>
                                                 <x:DisplayGridlines/>
                                             </x:WorksheetOptions>
@@ -1430,7 +2406,7 @@
                         </body>
                         </html>
                     `;
-                    filename = `taitur_data_${new Date().toISOString().slice(0, 10)}.xls`;
+                    filename = `${table_name}_data_${new Date().toISOString().slice(0, 10)}.xls`;
                     type = 'application/vnd.ms-excel';
                     break;
 

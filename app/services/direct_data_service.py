@@ -1,16 +1,47 @@
-# app/services/direct_data_service.py
+# app/services/direct_data_service.py - Enhanced search functionality
 from sqlalchemy import text, Table, MetaData, select, func, inspect, column, desc, asc, or_, and_, cast, String
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Tuple, Optional
 import json
 import traceback
 import time
+import re
 from app.database import memory_cache
 import concurrent.futures
 import threading
 
 # Thread-local storage for connection handling
 _thread_local = threading.local()
+
+
+def parse_search_query(search_term):
+    """Parse advanced search syntax like column:value, "exact phrase", -exclude"""
+    if not search_term:
+        return [], [], []
+
+    # Extract column-specific searches (format: column:value)
+    column_specific = re.findall(r'(\w+):([^\s"]+|"[^"]*")', search_term)
+
+    # Extract quoted phrases (exact matches)
+    exact_phrases = re.findall(r'"([^"]*)"', search_term)
+
+    # Extract exclude terms (prefixed with -)
+    exclude_terms = re.findall(r'-(\w+)', search_term)
+
+    # Remove the special syntax parts from the search string so we don't search for them twice
+    for col, val in column_specific:
+        search_term = search_term.replace(f"{col}:{val}", " ")
+
+    for phrase in exact_phrases:
+        search_term = search_term.replace(f'"{phrase}"', " ")
+
+    for term in exclude_terms:
+        search_term = search_term.replace(f'-{term}', " ")
+
+    # Extract remaining regular terms
+    regular_terms = [term for term in search_term.split() if term.strip()]
+
+    return column_specific, exact_phrases, exclude_terms, regular_terms
 
 
 def get_direct_table_data(
@@ -23,7 +54,7 @@ def get_direct_table_data(
         sort_desc: bool = False
 ) -> Tuple[List[Dict[str, Any]], int]:
     """
-    Query data directly from an existing PostgreSQL table with optimized performance.
+    Query data directly from an existing PostgreSQL table with advanced search capabilities.
     Returns tuple of (data, total_count)
     """
     start_time = time.time()
@@ -59,35 +90,130 @@ def get_direct_table_data(
         count_query = None
         total = 0
 
-        # Apply search using optimized approach for Windows compatibility
+        # Apply search with advanced capabilities
         if search and search.strip():
-            # Improved search approach
-            search_conditions = []
+            # Parse the search query for advanced syntax
+            column_specific, exact_phrases, exclude_terms, regular_terms = parse_search_query(search.strip())
 
-            # For text columns, use ILIKE for case-insensitive search
-            for col in table.columns:
-                col_type = str(col.type).lower()
-                if any(t in col_type for t in ('varchar', 'text', 'char')):
-                    search_conditions.append(col.cast(String).ilike(f'%{search}%'))
+            all_conditions = []
 
-            # Add numeric and other type searches if needed
-            # This helps when searching for numeric values as strings
-            for col in table.columns:
-                col_type = str(col.type).lower()
-                if any(t in col_type for t in ('int', 'float', 'numeric', 'decimal')):
-                    try:
-                        # Try to convert search term to number for numeric columns
-                        if search.isdigit():
-                            search_conditions.append(col == int(search))
-                        elif search.replace('.', '', 1).isdigit():
-                            search_conditions.append(col == float(search))
-                    except (ValueError, TypeError):
-                        pass
+            # Handle column-specific searches
+            for col_name, value in column_specific:
+                # Find the actual column object
+                target_col = next((c for c in table.columns if c.name.lower() == col_name.lower()), None)
+                if target_col:
+                    # Remove quotes if present
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
 
-            if search_conditions:
-                search_filter = or_(*search_conditions)
+                    # Handle different column types differently
+                    col_type = str(target_col.type).lower()
+                    if any(t in col_type for t in ('varchar', 'text', 'char')):
+                        all_conditions.append(target_col.cast(String).ilike(f'%{value}%'))
+                    elif any(t in col_type for t in ('int', 'numeric', 'float')):
+                        try:
+                            if '.' in value:
+                                all_conditions.append(target_col == float(value))
+                            else:
+                                all_conditions.append(target_col == int(value))
+                        except ValueError:
+                            # If conversion fails, just do a text search
+                            all_conditions.append(target_col.cast(String).ilike(f'%{value}%'))
+                    elif any(t in col_type for t in ('date', 'timestamp')):
+                        # Try to match date patterns
+                        all_conditions.append(target_col.cast(String).ilike(f'%{value}%'))
+                    else:
+                        # Default fallback to string search
+                        all_conditions.append(target_col.cast(String).ilike(f'%{value}%'))
+
+            # Handle exact phrases (must match the phrase exactly)
+            for phrase in exact_phrases:
+                phrase_conditions = []
+                for col in table.columns:
+                    col_type = str(col.type).lower()
+                    if any(t in col_type for t in ('varchar', 'text', 'char')):
+                        phrase_conditions.append(col.cast(String).ilike(f'%{phrase}%'))
+
+                if phrase_conditions:
+                    all_conditions.append(or_(*phrase_conditions))
+
+            # Handle exclusion terms (results must NOT contain these terms)
+            exclude_conditions = []
+            for term in exclude_terms:
+                term_conditions = []
+                for col in table.columns:
+                    col_type = str(col.type).lower()
+                    if any(t in col_type for t in ('varchar', 'text', 'char')):
+                        term_conditions.append(col.cast(String).ilike(f'%{term}%'))
+
+                if term_conditions:
+                    # Negate the OR condition to create a NOT condition
+                    exclude_conditions.append(~or_(*term_conditions))
+
+            # Handle regular search terms
+            for term in regular_terms:
+                term_conditions = []
+
+                # Search across all text columns
+                for col in table.columns:
+                    col_type = str(col.type).lower()
+                    col_name = col.name.lower()
+
+                    # Prioritize common search fields
+                    is_priority_field = any(key in col_name for key in
+                                            ['id', 'name', 'code', 'võlgnik', 'toimiku', 'nr', 'status', 'staatus'])
+
+                    if any(t in col_type for t in ('varchar', 'text', 'char')):
+                        # Exact match (highest priority)
+                        if is_priority_field:
+                            term_conditions.append(col.cast(String) == term)
+
+                        # Word boundary search
+                        term_conditions.append(col.cast(String).ilike(f'{term}%'))
+                        term_conditions.append(col.cast(String).ilike(f'% {term}%'))
+
+                        # Contains the search term
+                        term_conditions.append(col.cast(String).ilike(f'%{term}%'))
+
+                # Also search in numeric and date columns
+                for col in table.columns:
+                    col_type = str(col.type).lower()
+
+                    # For numeric columns
+                    if any(t in col_type for t in ('int', 'float', 'numeric', 'decimal')) and term.replace('.', '',
+                                                                                                           1).isdigit():
+                        try:
+                            if '.' in term:
+                                term_conditions.append(col == float(term))
+                            else:
+                                term_conditions.append(col == int(term))
+                        except (ValueError, TypeError):
+                            pass
+
+                    # For date columns, look for year numbers
+                    if any(t in col_type for t in ('date', 'timestamp')) and term.isdigit() and len(term) == 4:
+                        term_conditions.append(cast(func.extract('year', col), String) == term)
+
+                if term_conditions:
+                    all_conditions.append(or_(*term_conditions))
+
+            # Combine all search conditions
+            if all_conditions or exclude_conditions:
+                final_conditions = []
+
+                # Add all positive search conditions
+                if all_conditions:
+                    final_conditions.append(and_(*all_conditions))
+
+                # Add all exclusion conditions
+                if exclude_conditions:
+                    final_conditions.extend(exclude_conditions)
+
+                # Apply the combined filter
+                search_filter = and_(*final_conditions)
                 query = query.where(search_filter)
-                # When searching, we need a count for pagination
+
+                # Create the count query
                 count_query = select(func.count()).select_from(table).where(search_filter)
 
         # Get count if first page or searching
@@ -100,7 +226,7 @@ def get_direct_table_data(
                 # Use connection timeout to avoid blocking on large tables
                 with db.execute(count_query.execution_options(
                         stream_results=True,
-                        timeout=5
+                        timeout=10
                 )) as result:
                     total = result.scalar() or 0
             except Exception as e:
@@ -182,6 +308,8 @@ def get_direct_table_data(
         return [], 0
 
 
+# Add this function to your direct_data_service.py file
+
 def update_direct_table_row(db: Session, table_name: str, primary_key_col: str, row_id: Any,
                             row_data: Dict[str, Any]) -> bool:
     """Update a row directly in an existing PostgreSQL table with optimized performance"""
@@ -246,6 +374,7 @@ def update_direct_table_row(db: Session, table_name: str, primary_key_col: str, 
         db.rollback()
         return False
 
+# Add this function to your direct_data_service.py file
 
 def get_table_stats(db: Session, table_name: str) -> Dict[str, Any]:
     """Get statistics about the table to improve search and display"""
