@@ -1,3 +1,4 @@
+# app/main.py (partial, showing the updated startup section)
 from fastapi import FastAPI, Request, Depends, Response, Cookie, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,14 +11,17 @@ import os
 import logging
 from jose import jwt, JWTError
 from typing import Optional
+from datetime import datetime
 
 from app.core.config import settings
-from app.core.db import get_db, init_db, sync_engine
-from app.core.security import ALGORITHM, get_password_hash
+from app.core.db import get_db, init_db
+from app.core.user_db import init_user_db
+from app.core.security import (
+    ALGORITHM, get_password_hash, extract_token_from_request, verify_token
+)
 from app.core.cache import init_redis_pool
 from app.api.v1.endpoints import table
 from app.api.v1.endpoints.auth import router as auth_router
-from app.models.user import User, Base as UserBase
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -54,24 +58,26 @@ async def auth_middleware(request: Request, call_next):
     # Public paths that don't require authentication
     public_paths = [
         "/auth/login",
+        "/auth/refresh",
+        "/auth/reset-password",
         "/static/",
         "/favicon.ico",
-        "/sw.js"
+        "/sw.js",
+        "/manifest.json"
     ]
 
     # Check if the path is public
-    if any(request.url.path.startswith(path) for path in public_paths):
-        return await call_next(request)
+    for path in public_paths:
+        if request.url.path.startswith(path):
+            return await call_next(request)
 
     # Pass the request to the next middleware without checking auth
     # We'll let the authentication be handled by the admin route directly
     if request.url.path == "/auth/admin":
         return await call_next(request)
 
-    # Check for token in cookie
-    token = request.cookies.get("access_token")
-    if token and token.startswith("Bearer "):
-        token = token.replace("Bearer ", "")
+    # Check for token
+    token = extract_token_from_request(request)
 
     # If no token, redirect to login
     if not token:
@@ -79,34 +85,45 @@ async def auth_middleware(request: Request, call_next):
 
     # Verify token
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username is None:
-            return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-    except JWTError:
-        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+        # Use the verify_token function from security.py
+        payload = await verify_token(token)
 
-    # Continue with the request
-    return await call_next(request)
+        # Continue with the request
+        return await call_next(request)
+
+    except HTTPException:
+        # Token is invalid, redirect to login
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    except Exception as e:
+        logger.error(f"Auth middleware error: {str(e)}")
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.get("/")
-async def index(request: Request, db: AsyncSession = Depends(get_db)):
+async def index(request: Request):
     """Render the main page with the data table"""
-    # Get current user from token
-    token = request.cookies.get("access_token")
-    if token and token.startswith("Bearer "):
-        token = token.replace("Bearer ", "")
-
+    # Get token from request
+    token = extract_token_from_request(request)
     current_user = None
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username:
-            result = await db.execute(select(User).where(User.username == username))
-            current_user = result.scalars().first()
-    except JWTError:
-        pass
+
+    if token:
+        try:
+            # Verify token and get username
+            payload = await verify_token(token)
+            username = payload.get("sub")
+
+            # Get user from database
+            from app.models.user import User
+            from app.core.user_db import SessionLocal
+
+            db = SessionLocal()
+            try:
+                current_user = db.query(User).filter(User.username == username).first()
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"Error getting current user: {str(e)}")
 
     return templates.TemplateResponse(
         "index.html",
@@ -126,39 +143,27 @@ async def service_worker():
     return FileResponse("app/static/sw.js")
 
 
-# Create admin user if it doesn't exist
-def create_admin_user():
-    # Create tables if they don't exist
-    UserBase.metadata.create_all(sync_engine)
-
-    # Check if admin user exists
-    with sync_engine.connect() as conn:
-        result = conn.execute(select(User).where(User.username == settings.ADMIN_USERNAME))
-        user = result.fetchone()
-
-        if not user:
-            # Create admin user
-            hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
-            stmt = User.__table__.insert().values(
-                username=settings.ADMIN_USERNAME,
-                hashed_password=hashed_password,
-                is_active=True,
-                is_admin=True
-            )
-            conn.execute(stmt)
-            conn.commit()
-            logger.info(f"Admin user '{settings.ADMIN_USERNAME}' created")
-
-
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and Redis connections on startup"""
-    # Create admin user
-    create_admin_user()
+    # Initialize user database (SQLite)
+    try:
+        # Call only once to prevent multiple initialization
+        init_user_db()
+    except Exception as e:
+        logger.error(f"Error initializing user DB: {str(e)}")
 
-    # Initialize database
-    await init_db()
-    await init_redis_pool()
+    # Initialize main database for table data
+    try:
+        await init_db()
+    except Exception as e:
+        logger.error(f"Error initializing main DB: {str(e)}")
+
+    # Initialize Redis
+    try:
+        await init_redis_pool()
+    except Exception as e:
+        logger.error(f"Error initializing Redis: {str(e)}")
 
     logger.info("Application startup complete")
 
