@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import Optional, Dict, Any, List
 import logging
+from app.core.cache import get_cache, set_cache, compute_cache_key
 
 from app.core.db import get_db
 from app.models.table import BigTable
@@ -26,6 +27,20 @@ async def get_table_data(
     Get all table data at once with optional filtering and sorting
     """
     try:
+        # Create a cache key from the parameters
+        cache_params = {
+            "search": search or "",
+            "sort": sort or "",
+            "sort_dir": sort_dir or ""
+        }
+        cache_key = await compute_cache_key(cache_params)
+
+        # Try to get from cache
+        cached_data = await get_cache(f"table_data:{cache_key}")
+        if cached_data:
+            logger.info("Returning cached data")
+            return cached_data
+
         # Build query to get all data
         sql = f'SELECT * FROM "{BigTable.name}"'
 
@@ -77,10 +92,15 @@ async def get_table_data(
                     row_dict[str(key)] = value
             data.append(row_dict)
 
-        logger.info(f"Returning all {len(data)} rows in a single response")
+        logger.info(f"Returning {len(data)} rows in a single response")
 
         # Create response
-        return {"data": data}
+        response_data = {"data": data}
+
+        # Cache the result (1 hour TTL)
+        await set_cache(f"table_data:{cache_key}", response_data, expire=3600)
+
+        return response_data
 
     except Exception as e:
         logger.exception(f"Error getting table data: {str(e)}")
@@ -95,6 +115,12 @@ async def get_columns(
     Get table columns metadata for frontend
     """
     try:
+        # Try to get from cache
+        cached_columns = await get_cache("table_columns")
+        if cached_columns:
+            logger.info("Returning cached columns")
+            return cached_columns
+
         # Get column information directly from information_schema
         sql = f"""
             SELECT 
@@ -125,7 +151,11 @@ async def get_columns(
 
         logger.info(f"Returning {len(columns)} columns")
 
-        return {"columns": columns}
+        # Create response and cache it (24 hour TTL for schema info)
+        response_data = {"columns": columns}
+        await set_cache("table_columns", response_data, expire=86400)
+
+        return response_data
 
     except Exception as e:
         logger.exception(f"Error getting columns: {str(e)}")
