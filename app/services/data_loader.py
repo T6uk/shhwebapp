@@ -32,7 +32,7 @@ async def load_table_data(
 
     # Get pagination parameters
     page = params.get("page", 1)
-    size = params.get("size", 100)
+    size = params.get("size", 1000)
     sort = params.get("sort")
     sort_dir = params.get("sort_dir", "asc")
     search = params.get("search")

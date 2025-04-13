@@ -1,12 +1,21 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+import secrets
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     PROJECT_NAME: str = "Big Table App"
     API_V1_STR: str = "/api/v1"
+
+    # Security
+    SECRET_KEY: str = secrets.token_urlsafe(32)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
+
+    # Default admin account
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "1234"  # Change this to a secure password
 
     # PostgreSQL settings
     POSTGRES_USER: str = "postgres"

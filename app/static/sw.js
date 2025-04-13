@@ -1,21 +1,47 @@
+// app/static/sw.js (updated)
 // Service Worker for caching and offline access
-const CACHE_NAME = 'big-table-app-v1';
-const ASSETS = [
+const CACHE_NAME = 'big-table-app-v2';
+const STATIC_CACHE = 'big-table-static-v2';
+const API_CACHE = 'big-table-api-v2';
+
+// Static assets to cache on install
+const STATIC_ASSETS = [
   '/',
+  '/static/css/styles.css',
+  '/static/js/app.js',
   '/static/manifest.json',
   '/static/icons/icon-192x192.png',
   '/static/icons/icon-512x512.png',
-  // Add other static assets here
+  '/static/icons/favicon.ico',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+  'https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-grid.css',
+  'https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-theme-alpine.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+];
+
+// JavaScript files to cache but check for updates
+const JS_ASSETS = [
+  'https://code.jquery.com/jquery-3.7.1.min.js',
+  'https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/dist/ag-grid-community.min.js',
+  'https://cdn.tailwindcss.com'
 ];
 
 // Install event - cache essential assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(ASSETS);
+    Promise.all([
+      // Cache static assets
+      caches.open(STATIC_CACHE).then((cache) => {
+        console.log('Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
+      }),
+      // Cache JS assets
+      caches.open(API_CACHE).then((cache) => {
+        console.log('Caching JS assets');
+        return cache.addAll(JS_ASSETS);
       })
+    ])
+    .then(() => self.skipWaiting()) // Force waiting service worker to activate
   );
 });
 
@@ -24,54 +50,125 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
-        if (key !== CACHE_NAME) {
+        if (![STATIC_CACHE, API_CACHE].includes(key)) {
+          console.log('Deleting old cache', key);
           return caches.delete(key);
         }
       }));
     })
+    .then(() => self.clients.claim()) // Take control of all clients
   );
-  return self.clients.claim();
 });
 
-// Fetch event - serve from cache or network
+// Fetch event - stale-while-revalidate strategy
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Try to get the resource from cache
-        if (response) {
-          return response;
-        }
+  const url = new URL(event.request.url);
 
-        // Clone the request for the fetch call
-        const fetchRequest = event.request.clone();
-
-        // Try fetching from network, and cache the result if successful
-        return fetch(fetchRequest).then((response) => {
-          // Check if response is valid
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response for caching
-          const responseToCache = response.clone();
-
-          // Cache the fetched resource
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              // Skip caching API requests that have query parameters
-              if (!event.request.url.includes('/api/v1/table/data?')) {
-                cache.put(event.request, responseToCache);
-              }
-            });
-
-          return response;
-        });
-      })
-      .catch(() => {
-        // If both cache and network fail, return a fallback or an error
-        // For API endpoints, we may want to show cached data with a "stale" indicator
-        return caches.match('/');
-      })
-  );
+  // Different caching strategies based on request type
+  if (event.request.method === 'GET') {
+    // Handle API requests
+    if (url.pathname.startsWith('/api/')) {
+      // Network-first approach for API calls
+      event.respondWith(networkFirst(event.request));
+    }
+    // Handle static assets
+    else if (
+      url.pathname.startsWith('/static/') ||
+      STATIC_ASSETS.includes(url.pathname) ||
+      JS_ASSETS.includes(event.request.url)
+    ) {
+      // Cache-first approach for static assets
+      event.respondWith(cacheFirst(event.request));
+    }
+    // Handle other requests
+    else {
+      // Stale-while-revalidate for everything else
+      event.respondWith(staleWhileRevalidate(event.request));
+    }
+  }
 });
+
+// Network-first strategy for API requests
+async function networkFirst(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+    const cache = await caches.open(API_CACHE);
+
+    // Only cache successful responses and non-data API requests
+    if (networkResponse.ok && !request.url.includes('/api/v1/table/data?')) {
+      // Clone the response before using it
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch (error) {
+    // If network fails, try cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // If cache fails too, return a fallback or error
+    return new Response(JSON.stringify({ error: 'Network request failed and no cache available' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Cache-first strategy for static assets
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    // Return cached response but update cache in background
+    updateCache(request);
+    return cachedResponse;
+  }
+
+  // If not in cache, get from network and cache
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    // If both cache and network fail, return a fallback
+    return caches.match('/');
+  }
+}
+
+// Stale-while-revalidate strategy
+async function staleWhileRevalidate(request) {
+  const cachedResponse = await caches.match(request);
+
+  const fetchPromise = fetch(request).then(async (networkResponse) => {
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  }).catch(() => {
+    // If fetch fails, we already have cachedResponse or null
+    return cachedResponse || caches.match('/');
+  });
+
+  // Return the cached response immediately, or wait for the network if necessary
+  return cachedResponse || fetchPromise;
+}
+
+// Helper function to update cache in the background
+async function updateCache(request) {
+  try {
+    const cache = await caches.open(STATIC_CACHE);
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      await cache.put(request, networkResponse);
+    }
+  } catch (error) {
+    // Silently fail on background updates
+    console.log('Background cache update failed:', error);
+  }
+}
