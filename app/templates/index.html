@@ -3,13 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <link rel="manifest" href="../static/manifest.json">
-    <meta name="theme-color" content="#0072CE">
-    <link rel="apple-touch-icon" href="../static/icons/icon-192x192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <title>Suur Andmetabel</title>
 
     <!-- Inter font - modern, clean typography -->
@@ -37,12 +30,20 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <!-- Tabulator CSS and JS -->
-    <link href="https://cdn.jsdelivr.net/npm/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+    <!-- AG Grid CSS and JS (replacing Tabulator) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-theme-alpine.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/dist/ag-grid-community.min.js"></script>
 
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PWA support -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0072CE">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
         body {
@@ -66,61 +67,44 @@
             max-width: 100%;
         }
 
-        .tabulator {
-            font-family: 'Inter', sans-serif;
-            border-radius: 0.75rem;
-            border: 1px solid #e5e7eb;
-            background-color: white;
+        /* AG Grid customizations to match your theme */
+        .ag-theme-alpine {
+            --ag-foreground-color: #1f2937;
+            --ag-background-color: white;
+            --ag-header-background-color: #f3f4f6;
+            --ag-odd-row-background-color: #f9fafb;
+            --ag-row-hover-color: #e6f0f9;
+            --ag-border-color: #e5e7eb;
+            --ag-font-family: 'Inter', sans-serif;
+            --ag-font-size: 14px;
+            --ag-header-column-separator-display: block;
+            --ag-header-column-separator-height: 100%;
+            --ag-header-column-separator-width: 1px;
+            --ag-header-column-separator-color: #e5e7eb;
+        }
+
+        /* Dark mode support */
+        .dark-mode .ag-theme-alpine {
+            --ag-foreground-color: #e5e7eb;
+            --ag-background-color: #1f2937;
+            --ag-header-background-color: #111827;
+            --ag-odd-row-background-color: #374151;
+            --ag-row-hover-color: #4B5563;
+            --ag-border-color: #4B5563;
+        }
+
+        /* Add fixed height to ensure grid fills available space */
+        #data-table {
+            height: 100%;
             width: 100%;
-            flex-grow: 1;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
-        /* Change header styling to have black text */
-        .tabulator-header {
-            background-color: #f3f4f6;
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
-            font-weight: 600;
-            color: #111827; /* Black text */
-            padding: 0.25rem 0;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .tabulator-col {
-            background-color: #f3f4f6;
-            color: #111827; /* Black text */
-            padding: 0.75rem 1rem;
-            border-right: 1px solid #e5e7eb;
-            text-align: left;
-        }
-
-        .tabulator-col-title {
-            font-weight: 600;
-            padding: 0.25rem 0;
-            color: #111827; /* Ensure black text */
-        }
-
-        .tabulator-col-sorter {
-            color: #111827; /* Black sort indicators */
-        }
-
-        .tabulator-row {
-            border-bottom: 1px solid #f0f0f0;
-            transition: all 0.15s ease;
-        }
-
-        .tabulator-row.tabulator-row-even {
-            background-color: #f9fafb;
-        }
-
-        .tabulator-row:hover {
-            background-color: #e6f0f9;
-        }
-
-        .tabulator-cell {
-            padding: 0.75rem 1rem;
-            border-right: 1px solid #f0f0f0;
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            max-width: 100%;
         }
 
         #table-container {
@@ -131,6 +115,17 @@
             border-radius: 0.75rem;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
             margin-top: 0.75rem;
+        }
+
+        /* Modern card styling */
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            overflow: visible; /* Changed from hidden to allow dropdowns to be visible */
+            transition: box-shadow 0.2s ease;
+            border: 1px solid #f0f0f0;
+            position: relative; /* Added to ensure proper context for dropdown positioning */
         }
 
         /* Buttons and form elements */
@@ -207,17 +202,6 @@
 
         .input-icon ~ .input-control {
             padding-left: 2.5rem;
-        }
-
-        /* Modern card styling */
-        .card {
-            background-color: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            overflow: visible; /* Changed from hidden to allow dropdowns to be visible */
-            transition: box-shadow 0.2s ease;
-            border: 1px solid #f0f0f0;
-            position: relative; /* Added to ensure proper context for dropdown positioning */
         }
 
         /* Top app bar */
@@ -552,20 +536,12 @@
 
         /* Animations */
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            to { transform: rotate(360deg); }
         }
 
         @keyframes fadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(-5px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            0% { opacity: 0; transform: translateY(-5px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
 
         /* Responsive adjustments */
@@ -640,15 +616,6 @@
             .btn {
                 padding: 0.375rem 0.75rem;
             }
-
-            /* Adjust table headers for mobile */
-            .tabulator-col {
-                padding: 0.5rem 0.75rem;
-            }
-
-            .card {
-                padding: 0.75rem !important;
-            }
         }
 
         /* Small screens */
@@ -672,14 +639,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .tabulator-col {
-                padding: 0.375rem 0.5rem;
-            }
-
-            .tabulator-cell {
-                padding: 0.5rem 0.5rem;
-            }
-
             #column-checkboxes {
                 grid-template-columns: 1fr;
             }
@@ -687,590 +646,704 @@
     </style>
 </head>
 <body>
-<div class="container mx-auto px-2 py-2">
-    <!-- App Bar -->
-    <div class="app-bar">
-    </div>
+    <div class="container mx-auto px-2 py-2">
+        <!-- App Bar -->
+        <div class="app-bar">
+        </div>
 
-    <!-- Main Toolbar -->
-    <div class="card p-3 mb-2">
-        <div class="toolbar">
-            <!-- Left section: search and main actions -->
-            <div class="toolbar-section">
-                <!-- Search bar -->
-                <div class="search-bar">
-                    <div class="input-group flex-1">
-                        <i class="input-icon fas fa-search"></i>
-                        <input type="text" id="search-input" class="input-control" placeholder="Otsi...">
+        <!-- Main Toolbar -->
+        <div class="card p-3 mb-2">
+            <div class="toolbar">
+                <!-- Left section: search and main actions -->
+                <div class="toolbar-section">
+                    <!-- Search bar -->
+                    <div class="search-bar">
+                        <div class="input-group flex-1">
+                            <i class="input-icon fas fa-search"></i>
+                            <input type="text" id="search-input" class="input-control" placeholder="Otsi...">
+                        </div>
+                        <button id="search-button" class="btn btn-primary">
+                            <span class="hidden sm:inline">Otsi</span>
+                            <i class="fas fa-search sm:hidden"></i>
+                        </button>
+                        <button id="reset-button" class="btn btn-secondary">
+                            <span class="hidden sm:inline">Lähtesta</span>
+                            <i class="fas fa-times sm:hidden"></i>
+                        </button>
                     </div>
-                    <button id="search-button" class="btn btn-primary">
-                        <span class="hidden sm:inline">Otsi</span>
-                        <i class="fas fa-search sm:hidden"></i>
-                    </button>
-                    <button id="reset-button" class="btn btn-secondary">
-                        <span class="hidden sm:inline">Lähtesta</span>
-                        <i class="fas fa-times sm:hidden"></i>
+
+                    <!-- Quick Links Dropdown -->
+                    <div class="dropdown">
+                        <button id="links-dropdown-toggle" class="btn btn-secondary">
+                            <i class="fas fa-link mr-1.5"></i>
+                            <span class="hidden sm:inline">Kiirlingid</span>
+                        </button>
+                        <div id="links-dropdown-menu" class="dropdown-menu">
+                            <div class="dropdown-title">Veergude kiirlingid</div>
+                            <div class="quick-links-grid" id="column-quick-links">
+                                <!-- Quick links will be inserted here dynamically -->
+                                <div class="text-gray-400 text-xs italic p-2">Veergude laadimine...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter button -->
+                    <button id="filter-toggle" class="btn btn-secondary">
+                        <i class="fas fa-filter mr-1.5"></i>
+                        <span class="hidden sm:inline">Filter</span>
                     </button>
                 </div>
 
-                <!-- Quick Links Dropdown -->
-                <div class="dropdown">
-                    <button id="links-dropdown-toggle" class="btn btn-secondary">
-                        <i class="fas fa-link mr-1.5"></i>
-                        <span class="hidden sm:inline">Kiirlingid</span>
-                    </button>
-                    <div id="links-dropdown-menu" class="dropdown-menu">
-                        <div class="dropdown-title">Veergude kiirlingid</div>
-                        <div class="quick-links-grid" id="column-quick-links">
-                            <!-- Quick links will be inserted here dynamically -->
-                            <div class="text-gray-400 text-xs italic p-2">Veergude laadimine...</div>
+                <!-- Right section: tools and utilities -->
+                <div class="toolbar-section">
+                    <!-- Status chip -->
+                    <div id="status" class="status-chip"></div>
+
+                    <!-- Tools dropdown (Updated) -->
+                    <div class="dropdown">
+                        <button id="tools-dropdown-toggle" class="btn btn-secondary">
+                            <i class="fas fa-tools mr-1.5"></i>
+                            <span class="hidden sm:inline">Tööriistad</span>
+                        </button>
+                        <div id="tools-dropdown-menu" class="dropdown-menu">
+                            <div class="dropdown-title">Tööriistad</div>
+
+                            <!-- New tool buttons -->
+                            <div class="dropdown-item" id="view-file">
+                                <i class="fas fa-folder-open"></i>
+                                <span>Vaata toimikut</span>
+                            </div>
+                            <div class="dropdown-item" id="virtual-file">
+                                <i class="fas fa-folder"></i>
+                                <span>Virtuaaltoimik</span>
+                            </div>
+                            <div class="dropdown-item" id="receipts-report">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                <span>Laekumiste aruanne</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings dropdown (New) -->
+                    <div class="dropdown">
+                        <button id="settings-dropdown-toggle" class="btn btn-secondary">
+                            <i class="fas fa-cog mr-1.5"></i>
+                            <span class="hidden sm:inline">Seaded</span>
+                        </button>
+                        <div id="settings-dropdown-menu" class="dropdown-menu">
+                            <div class="dropdown-title">Tabeli seaded</div>
+
+                            <div class="dropdown-item" id="toggle-columns">
+                                <i class="fas fa-eye"></i>
+                                <span>Näita/peida veerud</span>
+                            </div>
+                            <div class="dropdown-item" id="save-column-layout">
+                                <i class="fas fa-columns"></i>
+                                <span>Salvesta veergude paigutus</span>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item" id="font-increase">
+                                <i class="fas fa-text-height"></i>
+                                <span>Suurenda teksti</span>
+                            </div>
+                            <div class="dropdown-item" id="font-decrease">
+                                <i class="fas fa-text-height fa-flip-vertical"></i>
+                                <span>Vähenda teksti</span>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item" id="toggle-dark-mode">
+                                <i class="fas fa-moon"></i>
+                                <span>Tume režiim</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Widgets dropdown -->
+                    <div class="dropdown">
+                        <button id="widgets-dropdown-toggle" class="btn btn-secondary">
+                            <i class="fas fa-puzzle-piece mr-1.5"></i>
+                            <span class="hidden sm:inline">Vidinad</span>
+                        </button>
+                        <div id="widgets-dropdown-menu" class="dropdown-menu">
+                            <div class="dropdown-title">Vidinad</div>
+
+                            <!-- Widgets menu items -->
+                            <div class="dropdown-item" id="save-view">
+                                <i class="fas fa-save"></i>
+                                <span>Salvesta vaade</span>
+                            </div>
+                            <div class="dropdown-item" id="load-view">
+                                <i class="fas fa-folder-open"></i>
+                                <span>Lae vaade</span>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item" id="toggle-compact">
+                                <i class="fas fa-compress"></i>
+                                <span>Kompaktne režiim</span>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Filter button -->
-                <button id="filter-toggle" class="btn btn-secondary">
-                    <i class="fas fa-filter mr-1.5"></i>
-                    <span class="hidden sm:inline">Filter</span>
+        <!-- Filter Panel -->
+        <div id="filter-panel" class="filter-panel">
+            <div class="filter-group-title">Kohandatud filtrid</div>
+
+            <div id="filter-container">
+                <!-- Initial filter row -->
+                <div class="filter-row" data-id="1">
+                    <select class="filter-select filter-field">
+                        <option value="">Vali veerg...</option>
+                        <!-- Column options will be added dynamically -->
+                    </select>
+
+                    <select class="filter-select filter-operator">
+                        <option value="contains">Sisaldab</option>
+                        <option value="equals">Võrdub</option>
+                        <option value="starts">Algab</option>
+                        <option value="ends">Lõpeb</option>
+                        <option value="greater">Suurem kui</option>
+                        <option value="less">Väiksem kui</option>
+                    </select>
+
+                    <input type="text" class="filter-input" placeholder="Filtri väärtus">
+
+                    <button class="filter-remove-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add filter button -->
+            <div class="mt-3 mb-2">
+                <button id="add-filter-row" class="btn btn-secondary">
+                    <i class="fas fa-plus mr-1.5"></i>
+                    <span>Lisa filtritingimus</span>
                 </button>
             </div>
 
-            <!-- Right section: tools and utilities -->
-            <div class="toolbar-section">
-                <!-- Status chip -->
-                <div id="status" class="status-chip"></div>
+            <!-- Filter actions -->
+            <div class="filter-actions">
+                <button id="apply-filters" class="btn btn-primary">
+                    <i class="fas fa-check mr-1.5"></i>
+                    <span>Rakenda filtrid</span>
+                </button>
+                <button id="clear-filters" class="btn btn-secondary">
+                    <i class="fas fa-times mr-1.5"></i>
+                    <span>Tühista filtrid</span>
+                </button>
+                <button id="save-filter" class="btn btn-secondary">
+                    <i class="fas fa-save mr-1.5"></i>
+                    <span>Salvesta filter</span>
+                </button>
+            </div>
+        </div>
 
-                <!-- Tools dropdown (Updated) -->
-                <div class="dropdown">
-                    <button id="tools-dropdown-toggle" class="btn btn-secondary">
-                        <i class="fas fa-tools mr-1.5"></i>
-                        <span class="hidden sm:inline">Tööriistad</span>
+        <!-- Table Container with AG Grid -->
+        <div id="table-container" class="card">
+            <div id="data-table" class="ag-theme-alpine"></div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay fixed inset-0 flex items-center justify-center z-50">
+            <div class="loading-card">
+                <div class="spinner mb-4"></div>
+                <p class="text-text font-medium">Laadimine...</p>
+            </div>
+        </div>
+
+        <!-- Column Visibility Modal (hidden by default) -->
+        <div id="column-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+            <div class="absolute inset-0 bg-black bg-opacity-40" id="column-modal-backdrop"></div>
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg z-10 relative">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Veergude nähtavus</h3>
+                    <button id="close-column-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
                     </button>
-                    <div id="tools-dropdown-menu" class="dropdown-menu">
-                        <div class="dropdown-title">Tööriistad</div>
+                </div>
 
-                        <!-- New tool buttons -->
-                        <div class="dropdown-item" id="view-file">
-                            <i class="fas fa-folder-open"></i>
-                            <span>Vaata toimikut</span>
-                        </div>
-                        <div class="dropdown-item" id="virtual-file">
-                            <i class="fas fa-folder"></i>
-                            <span>Virtuaaltoimik</span>
-                        </div>
-                        <div class="dropdown-item" id="receipts-report">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                            <span>Laekumiste aruanne</span>
-                        </div>
+                <div class="max-h-80 overflow-y-auto mb-4">
+                    <div id="column-checkboxes" class="grid grid-cols-2 gap-2">
+                        <!-- Column checkboxes will be added here dynamically -->
                     </div>
                 </div>
 
-                <!-- Settings dropdown (New) -->
-                <div class="dropdown">
-                    <button id="settings-dropdown-toggle" class="btn btn-secondary">
-                        <i class="fas fa-cog mr-1.5"></i>
-                        <span class="hidden sm:inline">Seaded</span>
+                <div class="flex justify-end gap-2">
+                    <button id="apply-column-changes" class="btn btn-primary">
+                        <span>Rakenda</span>
                     </button>
-                    <div id="settings-dropdown-menu" class="dropdown-menu">
-                        <div class="dropdown-title">Tabeli seaded</div>
-
-                        <div class="dropdown-item" id="toggle-columns">
-                            <i class="fas fa-eye"></i>
-                            <span>Näita/peida veerud</span>
-                        </div>
-                        <div class="dropdown-item" id="save-column-layout">
-                            <i class="fas fa-columns"></i>
-                            <span>Salvesta veergude paigutus</span>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" id="font-increase">
-                            <i class="fas fa-text-height"></i>
-                            <span>Suurenda teksti</span>
-                        </div>
-                        <div class="dropdown-item" id="font-decrease">
-                            <i class="fas fa-text-height fa-flip-vertical"></i>
-                            <span>Vähenda teksti</span>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" id="toggle-dark-mode">
-                            <i class="fas fa-moon"></i>
-                            <span>Tume režiim</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Widgets dropdown -->
-                <div class="dropdown">
-                    <button id="widgets-dropdown-toggle" class="btn btn-secondary">
-                        <i class="fas fa-puzzle-piece mr-1.5"></i>
-                        <span class="hidden sm:inline">Vidinad</span>
+                    <button id="cancel-column-changes" class="btn btn-secondary">
+                        <span>Tühista</span>
                     </button>
-                    <div id="widgets-dropdown-menu" class="dropdown-menu">
-                        <div class="dropdown-title">Vidinad</div>
-
-                        <!-- Widgets menu items -->
-                        <div class="dropdown-item" id="save-view">
-                            <i class="fas fa-save"></i>
-                            <span>Salvesta vaade</span>
-                        </div>
-                        <div class="dropdown-item" id="load-view">
-                            <i class="fas fa-folder-open"></i>
-                            <span>Lae vaade</span>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" id="toggle-compact">
-                            <i class="fas fa-compress"></i>
-                            <span>Kompaktne režiim</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Panel -->
-    <div id="filter-panel" class="filter-panel">
-        <div class="filter-group-title">Kohandatud filtrid</div>
+    <script>
+        // Global variables
+        let gridApi = null;
+        let columnDefs = [];
+        let searchTerm = '';
+        let currentFontSize = 14;
+        let isDarkMode = false;
+        let isCompactMode = false;
+        let activeFilters = [];
+        let nextFilterId = 2; // Start at 2 since we have one filter row by default
+        let columnVisibility = {}; // To track which columns are visible
 
-        <div id="filter-container">
-            <!-- Initial filter row -->
-            <div class="filter-row" data-id="1">
-                <select class="filter-select filter-field">
-                    <option value="">Vali veerg...</option>
-                    <!-- Column options will be added dynamically -->
-                </select>
-
-                <select class="filter-select filter-operator">
-                    <option value="contains">Sisaldab</option>
-                    <option value="equals">Võrdub</option>
-                    <option value="starts">Algab</option>
-                    <option value="ends">Lõpeb</option>
-                    <option value="greater">Suurem kui</option>
-                    <option value="less">Väiksem kui</option>
-                </select>
-
-                <input type="text" class="filter-input" placeholder="Filtri väärtus">
-
-                <button class="filter-remove-btn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Add filter button -->
-        <div class="mt-3 mb-2">
-            <button id="add-filter-row" class="btn btn-secondary">
-                <i class="fas fa-plus mr-1.5"></i>
-                <span>Lisa filtritingimus</span>
-            </button>
-        </div>
-
-        <!-- Filter actions -->
-        <div class="filter-actions">
-            <button id="apply-filters" class="btn btn-primary">
-                <i class="fas fa-check mr-1.5"></i>
-                <span>Rakenda filtrid</span>
-            </button>
-            <button id="clear-filters" class="btn btn-secondary">
-                <i class="fas fa-times mr-1.5"></i>
-                <span>Tühista filtrid</span>
-            </button>
-            <button id="save-filter" class="btn btn-secondary">
-                <i class="fas fa-save mr-1.5"></i>
-                <span>Salvesta filter</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Table Container -->
-    <div id="table-container" class="card">
-        <div id="data-table"></div>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay fixed inset-0 flex items-center justify-center z-50">
-        <div class="loading-card">
-            <div class="spinner mb-4"></div>
-            <p class="text-text font-medium">Laadimine...</p>
-        </div>
-    </div>
-
-    <!-- Column Visibility Modal (hidden by default) -->
-    <div id="column-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div class="absolute inset-0 bg-black bg-opacity-40" id="column-modal-backdrop"></div>
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg z-10 relative">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Veergude nähtavus</h3>
-                <button id="close-column-modal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="max-h-80 overflow-y-auto mb-4">
-                <div id="column-checkboxes" class="grid grid-cols-2 gap-2">
-                    <!-- Column checkboxes will be added here dynamically -->
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2">
-                <button id="apply-column-changes" class="btn btn-primary">
-                    <span>Rakenda</span>
-                </button>
-                <button id="cancel-column-changes" class="btn btn-secondary">
-                    <span>Tühista</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Global variables
-    let table = null;
-    let columns = [];
-    let searchTerm = '';
-    let currentFontSize = 14;
-    let isDarkMode = false;
-    let isCompactMode = false;
-    let activeFilters = [];
-    let nextFilterId = 2; // Start at 2 since we have one filter row by default
-    let columnVisibility = {}; // To track which columns are visible
-
-    // Initialize when document is ready
-    $(document).ready(function () {
-        // Set the initial table container height
-        resizeTableContainer();
-
-        // Handle window resize
-        $(window).resize(function () {
+        // Initialize when document is ready
+        $(document).ready(function() {
+            // Set the initial table container height
             resizeTableContainer();
-            if (table) {
-                table.redraw(true);
-            }
-        });
 
-        // Get columns first
-        getColumns();
+            // Handle window resize
+            $(window).resize(function() {
+                resizeTableContainer();
+                if (gridApi) {
+                    gridApi.sizeColumnsToFit();
+                }
+            });
+
+            // Get columns first
+            getColumns();
+
+            // Set up dropdown toggles
+            setupDropdowns();
+
+            // Set up event handlers
+            setupEventHandlers();
+        });
 
         // Set up dropdown toggles
-        setupDropdowns();
+        function setupDropdowns() {
+            // Toggle tools dropdown
+            $("#tools-dropdown-toggle").click(function(e) {
+                e.stopPropagation();
+                $("#tools-dropdown-menu").toggleClass("show");
+                $("#widgets-dropdown-menu, #links-dropdown-menu, #settings-dropdown-menu").removeClass("show");
+            });
 
-        // Set up event handlers
-        setupEventHandlers();
-    });
+            // Toggle widgets dropdown
+            $("#widgets-dropdown-toggle").click(function(e) {
+                e.stopPropagation();
+                $("#widgets-dropdown-menu").toggleClass("show");
+                $("#tools-dropdown-menu, #links-dropdown-menu, #settings-dropdown-menu").removeClass("show");
+            });
 
-    // Set up dropdown toggles
-    function setupDropdowns() {
-        // Toggle tools dropdown
-        $("#tools-dropdown-toggle").click(function (e) {
-            e.stopPropagation();
-            $("#tools-dropdown-menu").toggleClass("show");
-            $("#widgets-dropdown-menu, #links-dropdown-menu, #settings-dropdown-menu").removeClass("show");
-        });
+            // Toggle settings dropdown
+            $("#settings-dropdown-toggle").click(function(e) {
+                e.stopPropagation();
+                $("#settings-dropdown-menu").toggleClass("show");
+                $("#tools-dropdown-menu, #links-dropdown-menu, #widgets-dropdown-menu").removeClass("show");
+            });
 
-        // Toggle widgets dropdown
-        $("#widgets-dropdown-toggle").click(function (e) {
-            e.stopPropagation();
-            $("#widgets-dropdown-menu").toggleClass("show");
-            $("#tools-dropdown-menu, #links-dropdown-menu, #settings-dropdown-menu").removeClass("show");
-        });
+            // Toggle quick links dropdown
+            $("#links-dropdown-toggle").click(function(e) {
+                e.stopPropagation();
+                $("#links-dropdown-menu").toggleClass("show");
+                $("#tools-dropdown-menu, #widgets-dropdown-menu, #settings-dropdown-menu").removeClass("show");
+            });
 
-        // Toggle settings dropdown
-        $("#settings-dropdown-toggle").click(function (e) {
-            e.stopPropagation();
-            $("#settings-dropdown-menu").toggleClass("show");
-            $("#tools-dropdown-menu, #links-dropdown-menu, #widgets-dropdown-menu").removeClass("show");
-        });
+            // Close dropdowns when clicking outside
+            $(document).click(function() {
+                $(".dropdown-menu").removeClass("show");
+            });
 
-        // Toggle quick links dropdown
-        $("#links-dropdown-toggle").click(function (e) {
-            e.stopPropagation();
-            $("#links-dropdown-menu").toggleClass("show");
-            $("#tools-dropdown-menu, #widgets-dropdown-menu, #settings-dropdown-menu").removeClass("show");
-        });
+            // Prevent dropdown closing when clicking inside dropdown
+            $(".dropdown-menu").click(function(e) {
+                e.stopPropagation();
+            });
+        }
 
-        // Close dropdowns when clicking outside
-        $(document).click(function () {
-            $(".dropdown-menu").removeClass("show");
-        });
+        // Function to resize the table container
+        function resizeTableContainer() {
+            const windowHeight = $(window).height();
+            const headerHeight = $(".app-bar").outerHeight(true);
+            const toolbarHeight = $(".toolbar").parent().outerHeight(true);
+            const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
+            const padding = 40; // Allow for some padding
 
-        // Prevent dropdown closing when clicking inside dropdown
-        $(".dropdown-menu").click(function (e) {
-            e.stopPropagation();
-        });
-    }
+            const tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
+            $("#table-container").css("height", tableHeight + "px");
+        }
 
-    // Set up event handlers
-    function setupEventHandlers() {
-        // Search
-        $("#search-button").click(function () {
+        // Get columns from the API
+        function getColumns() {
+            $("#loading-overlay").show();
+            $("#status").text("Laadimine...");
+
+            $.ajax({
+                url: "/api/v1/table/columns",
+                method: "GET",
+                dataType: "json",
+                success: function(response) {
+                    if (response && response.columns && response.columns.length > 0) {
+                        // Process column data for AG Grid
+                        columnDefs = response.columns.map(function(col) {
+                            // Initialize as visible in our tracking
+                            columnVisibility[col.field] = true;
+
+                            return {
+                                headerName: col.title || col.field,
+                                field: col.field,
+                                sortable: true,
+                                filter: true,
+                                resizable: true,
+                                // Set minimum width to improve rendering performance
+                                minWidth: 100,
+                                // Choose appropriate filters based on data type
+                                filterParams: getFilterParams(col.type),
+                                // Add tooltips for cell values
+                                tooltipField: col.field
+                            };
+                        });
+
+                        // Generate quick links
+                        generateQuickLinks();
+
+                        // Initialize AG Grid
+                        initGrid();
+                    } else {
+                        $("#status").text("Viga: Veergude andmeid ei saadud");
+                        $("#loading-overlay").hide();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $("#status").text("Viga: " + error);
+                    $("#loading-overlay").hide();
+                }
+            });
+        }
+
+        // Get filter parameters based on column type
+        function getFilterParams(type) {
+            if (type === 'integer' || type === 'numeric' || type === 'double precision' ||
+                type === 'real' || type === 'decimal') {
+                return {
+                    filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+                    maxNumConditions: 1
+                };
+            } else if (type === 'date' || type === 'timestamp' || type === 'timestamp with time zone') {
+                return {
+                    filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+                    comparator: dateComparator,
+                    maxNumConditions: 1
+                };
+            } else {
+                return {
+                    filterOptions: ['contains', 'equals', 'startsWith', 'endsWith'],
+                    maxNumConditions: 1,
+                    suppressAndOrCondition: true
+                };
+            }
+        }
+
+        // Date comparator for filtering
+        function dateComparator(filterDate, cellValue) {
+            if (!cellValue) return -1;
+            const cellDate = new Date(cellValue);
+            if (cellDate < filterDate) return -1;
+            if (cellDate > filterDate) return 1;
+            return 0;
+        }
+
+        // Initialize AG Grid
+        function initGrid() {
+            // Create grid options
+            const gridOptions = {
+                defaultColDef: {
+                    flex: 1,
+                    minWidth: 100,
+                    resizable: true,
+                    sortable: true,
+                    filter: true
+                },
+                columnDefs: columnDefs,
+                rowModelType: 'infinite',  // Use infinite row model for virtualization
+                infiniteInitialRowCount: 1000, // Initial placeholder row count
+                cacheBlockSize: 100, // Number of rows to load at a time
+                maxBlocksInCache: 10, // Maximum number of blocks to keep loaded
+                enableCellTextSelection: true,
+                getRowId: function(params) {
+                    // Use row index as ID - adjust if you have a better unique identifier
+                    return params.data.id || params.node.rowIndex;
+                },
+                // Add tooltip component for better UX
+                tooltipShowDelay: 300,
+                tooltipInteraction: true,
+                // Improve performance with these settings
+                suppressAnimationFrame: true,
+                enableRangeSelection: false,
+                suppressMovableColumns: false,
+                suppressFieldDotNotation: true,
+                // Event handlers
+                onFirstDataRendered: onFirstDataRendered,
+                onGridReady: onGridReady,
+                onFilterChanged: onFilterChanged,
+                onSortChanged: onSortChanged
+            };
+
+            // Create the grid
+            new agGrid.Grid(document.getElementById('data-table'), gridOptions);
+        }
+
+        // Handle grid ready event
+        function onGridReady(params) {
+            gridApi = params.api;
+
+            // Set a datasource for infinite scrolling
+            const dataSource = {
+                getRows: function(params) {
+                    console.log('Asking for ' + params.startRow + ' to ' + params.endRow);
+
+                    // Show loading indicator for initial load
+                    if (params.startRow === 0) {
+                        $("#loading-overlay").show();
+                    }
+
+                    // Build query parameters
+                    const queryParams = {
+                        start_row: params.startRow,
+                        end_row: params.endRow
+                    };
+
+                    // Add sorting if present
+                    if (params.sortModel && params.sortModel.length > 0) {
+                        queryParams.sort_field = params.sortModel[0].colId;
+                        queryParams.sort_dir = params.sortModel[0].sort;
+                    }
+
+                    // Add search term if present
+                    if (searchTerm) {
+                        queryParams.search = searchTerm;
+                    }
+
+                    // Add filters if present
+                    if (params.filterModel && Object.keys(params.filterModel).length > 0) {
+                        queryParams.filter_model = JSON.stringify(params.filterModel);
+                    }
+
+                    $.ajax({
+                        url: "/api/v1/table/data",
+                        method: "GET",
+                        data: queryParams,
+                        dataType: "json",
+                        success: function(response) {
+                            // Update status
+                            $("#status").text(response.rowCount + " kirjet");
+
+                            // Check if we have more rows
+                            const lastRow = response.rowCount <= response.endRow ? response.rowCount : -1;
+
+                            // Provide the data to the grid
+                            params.successCallback(response.rowData, lastRow);
+
+                            // Hide loading overlay
+                            $("#loading-overlay").hide();
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error loading data:", error);
+                            $("#status").text("Viga: " + error);
+                            params.failCallback();
+                            $("#loading-overlay").hide();
+                        }
+                    });
+                }
+            };
+
+            // Set the datasource
+            gridApi.setDatasource(dataSource);
+
+            // Fit columns to available width
+            setTimeout(function() {
+                gridApi.sizeColumnsToFit();
+            }, 100);
+
+            // Update theme if dark mode is active
+            if (isDarkMode) {
+                updateTheme();
+            }
+
+            // Update font size
+            updateFontSize();
+        }
+
+        // Handle first data rendered
+        function onFirstDataRendered(params) {
+            // Auto-size columns for better initial view
+            gridApi.autoSizeColumns();
+
+            // Size columns to fit the viewport after auto-sizing
+            setTimeout(function() {
+                gridApi.sizeColumnsToFit();
+            }, 200);
+        }
+
+        // Handle filter changes
+        function onFilterChanged() {
+            // Update row count in status bar
+            const displayedRowCount = gridApi.getDisplayedRowCount();
+            $("#status").text(displayedRowCount + " kirjet (filtreeritud)");
+        }
+
+        // Handle sort changes
+        function onSortChanged() {
+            // Refresh data with new sort order
+            gridApi.refreshInfiniteCache();
+        }
+
+        // Update font size
+        function updateFontSize() {
+            document.documentElement.style.setProperty('--ag-font-size', currentFontSize + 'px');
+            if (gridApi) {
+                gridApi.refreshCells({ force: true });
+            }
+        }
+
+        // Update theme (light/dark mode)
+        function updateTheme() {
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                $("body").addClass("bg-gray-900").removeClass("bg-gray-50");
+                $(".card, .dropdown-menu, .loading-card, .filter-panel").addClass("bg-gray-800 border-gray-700").removeClass("bg-white border-gray-100");
+                $(".input-control, .filter-select, .filter-input").addClass("bg-gray-700 border-gray-600 text-white").removeClass("bg-white border-gray-200");
+                $(".btn-secondary").addClass("bg-gray-700 text-gray-200 border-gray-600").removeClass("bg-white text-gray-700 border-gray-200");
+                $(".dropdown-item, .dropdown-title, .dropdown-section-title, .filter-group-title").addClass("text-gray-300").removeClass("text-gray-700");
+                $(".dropdown-divider").addClass("bg-gray-700").removeClass("bg-gray-200");
+                $(".status-chip").addClass("bg-gray-700 text-gray-300").removeClass("bg-gray-100 text-gray-600");
+                $(".dropdown-button, .quick-link").addClass("bg-gray-700 text-gray-300").removeClass("bg-gray-100 text-gray-700");
+            } else {
+                document.body.classList.remove('dark-mode');
+                $("body").addClass("bg-gray-50").removeClass("bg-gray-900");
+                $(".card, .dropdown-menu, .loading-card, .filter-panel").addClass("bg-white border-gray-100").removeClass("bg-gray-800 border-gray-700");
+                $(".input-control, .filter-select, .filter-input").addClass("bg-white border-gray-200 text-gray-900").removeClass("bg-gray-700 border-gray-600 text-white");
+                $(".btn-secondary").addClass("bg-white text-gray-700 border-gray-200").removeClass("bg-gray-700 text-gray-200 border-gray-600");
+                $(".dropdown-item, .dropdown-title, .dropdown-section-title, .filter-group-title").addClass("text-gray-700").removeClass("text-gray-300");
+                $(".dropdown-divider").addClass("bg-gray-200").removeClass("bg-gray-700");
+                $(".status-chip").addClass("bg-gray-100 text-gray-600").removeClass("bg-gray-700 text-gray-300");
+                $(".dropdown-button, .quick-link").addClass("bg-gray-100 text-gray-700").removeClass("bg-gray-700 text-gray-300");
+            }
+
+            if (gridApi) {
+                gridApi.refreshCells({ force: true });
+            }
+        }
+
+        // Generate quick links for columns
+        function generateQuickLinks() {
+            if (!columnDefs || columnDefs.length === 0) return;
+
+            const quickLinksContainer = $("#column-quick-links");
+            quickLinksContainer.empty();
+
+            // Add all columns as quick links (or limit to a reasonable number)
+            const maxLinks = Math.min(24, columnDefs.length); // Grid layout will organize these
+            for (let i = 0; i < maxLinks; i++) {
+                const column = columnDefs[i];
+                const linkElement = $("<div>")
+                    .addClass("quick-link")
+                    .text(column.headerName)
+                    .attr("data-field", column.field)
+                    .click(function() {
+                        scrollToColumn(column.field);
+                        $("#links-dropdown-menu").removeClass("show");
+                    });
+
+                quickLinksContainer.append(linkElement);
+            }
+        }
+
+        // Scroll to a specific column
+        function scrollToColumn(fieldName) {
+            if (!gridApi) return;
+
+            // Get column instance
+            const column = gridApi.getColumnDef(fieldName);
+            if (column) {
+                // Ensure column is visible
+                gridApi.ensureColumnVisible(fieldName);
+
+                // Optional: highlight the column briefly
+                gridApi.flashCells({
+                    columns: [fieldName],
+                    rowNodes: gridApi.getDisplayedRowAtIndex(0) ? [gridApi.getDisplayedRowAtIndex(0)] : []
+                });
+            }
+        }
+
+        // Show column visibility modal
+        function showColumnVisibilityModal() {
+            if (!columnDefs || columnDefs.length === 0) return;
+
+            // Build checkboxes for all columns
+            const container = $("#column-checkboxes");
+            container.empty();
+
+            columnDefs.forEach(function(col) {
+                const isVisible = columnVisibility[col.field];
+
+                const checkbox = $(`
+                    <div class="flex items-center">
+                        <input type="checkbox" id="col-${col.field}"
+                            data-field="${col.field}"
+                            class="column-toggle mr-2"
+                            ${isVisible ? 'checked' : ''}>
+                        <label for="col-${col.field}" class="text-sm">${col.headerName}</label>
+                    </div>
+                `);
+
+                container.append(checkbox);
+            });
+
+            // Show the modal
+            $("#column-modal").removeClass("hidden");
+        }
+
+        // Apply column visibility changes
+        function applyColumnVisibility() {
+            if (!gridApi) return;
+
+            // Get checked/unchecked state from checkboxes
+            $(".column-toggle").each(function() {
+                const field = $(this).data('field');
+                const isVisible = $(this).prop('checked');
+
+                // Update local tracking
+                columnVisibility[field] = isVisible;
+
+                // Update AG Grid
+                gridApi.setColumnVisible(field, isVisible);
+            });
+        }
+
+        // Search functionality
+        function performSearch() {
             searchTerm = $("#search-input").val();
-            getData();
-        });
 
-        // Reset
-        $("#reset-button").click(function () {
+            if (gridApi) {
+                // Refresh data with search term
+                gridApi.refreshInfiniteCache();
+            }
+        }
+
+        // Reset search
+        function resetSearch() {
             $("#search-input").val('');
             searchTerm = '';
-            getData();
-        });
 
-        // Enter key in search input
-        $("#search-input").keypress(function (e) {
-            if (e.which == 13) { // Enter key
-                $("#search-button").click();
-            }
-        });
-
-        // Tööriistad (Tools) buttons
-        $("#view-file").click(function () {
-            alert("Funktsioon 'Vaata toimikut' on arendamisel.");
-            $("#tools-dropdown-menu").removeClass("show");
-        });
-
-        $("#virtual-file").click(function () {
-            alert("Funktsioon 'Virtuaaltoimik' on arendamisel.");
-            $("#tools-dropdown-menu").removeClass("show");
-        });
-
-        $("#receipts-report").click(function () {
-            alert("Funktsioon 'Laekumiste aruanne' on arendamisel.");
-            $("#tools-dropdown-menu").removeClass("show");
-        });
-
-        // Settings buttons
-        $("#toggle-columns").click(function () {
-            showColumnVisibilityModal();
-            $("#settings-dropdown-menu").removeClass("show");
-        });
-
-        $("#save-column-layout").click(function () {
-            alert("Veergude paigutuse salvestamine on arendamisel.");
-            $("#settings-dropdown-menu").removeClass("show");
-        });
-
-        // Font size controls
-        $("#font-increase").click(function () {
-            if (currentFontSize < 20) {
-                currentFontSize += 1;
-                updateFontSize();
-            }
-            $("#settings-dropdown-menu").removeClass("show");
-        });
-
-        $("#font-decrease").click(function () {
-            if (currentFontSize > 11) {
-                currentFontSize -= 1;
-                updateFontSize();
-            }
-            $("#settings-dropdown-menu").removeClass("show");
-        });
-
-        // Toggle dark mode
-        $("#toggle-dark-mode").click(function () {
-            isDarkMode = !isDarkMode;
-            updateTheme();
-            $("#settings-dropdown-menu").removeClass("show");
-        });
-
-        // Widget buttons
-        $("#toggle-compact").click(function () {
-            isCompactMode = !isCompactMode;
-            updateCompactMode();
-            $("#widgets-dropdown-menu").removeClass("show");
-        });
-
-        $("#save-view").click(function () {
-            alert("Funktsioon 'Salvesta vaade' on arendamisel.");
-            $("#widgets-dropdown-menu").removeClass("show");
-        });
-
-        $("#load-view").click(function () {
-            alert("Funktsioon 'Lae vaade' on arendamisel.");
-            $("#widgets-dropdown-menu").removeClass("show");
-        });
-
-        // Filter toggle
-        $("#filter-toggle").click(function () {
-            $("#filter-panel").toggleClass("show");
-
-            // If showing, update filter field dropdowns with column options
-            if ($("#filter-panel").hasClass("show")) {
-                updateFilterFields();
-            }
-
-            // Adjust table container height after toggling filter panel
-            setTimeout(resizeTableContainer, 100);
-        });
-
-        // Add filter row
-        $("#add-filter-row").click(function () {
-            addFilterRow();
-        });
-
-        // Handle remove filter button clicks (using event delegation)
-        $("#filter-container").on("click", ".filter-remove-btn", function () {
-            $(this).closest(".filter-row").remove();
-        });
-
-        // Apply filters
-        $("#apply-filters").click(function () {
-            applyFilters();
-        });
-
-        // Clear filters
-        $("#clear-filters").click(function () {
-            clearFilters();
-        });
-
-        // Save filter (placeholder)
-        $("#save-filter").click(function () {
-            alert("Filtri salvestamine on arendamisel.");
-        });
-
-        // Column visibility modal
-        $("#close-column-modal, #column-modal-backdrop, #cancel-column-changes").click(function () {
-            $("#column-modal").addClass("hidden");
-        });
-
-        $("#apply-column-changes").click(function () {
-            applyColumnVisibility();
-            $("#column-modal").addClass("hidden");
-        });
-    }
-
-    // Function to update font size
-    function updateFontSize() {
-        $(".tabulator").css("font-size", currentFontSize + "px");
-        if (table) {
-            table.redraw(true);
-        }
-    }
-
-    // Function to update theme
-    function updateTheme() {
-        if (isDarkMode) {
-            $("body").addClass("bg-gray-900").removeClass("bg-gray-50");
-            $(".card, .dropdown-menu, .loading-card, .filter-panel").addClass("bg-gray-800 border-gray-700").removeClass("bg-white border-gray-100");
-            $(".input-control, .filter-select, .filter-input").addClass("bg-gray-700 border-gray-600 text-white").removeClass("bg-white border-gray-200");
-            $(".btn-secondary").addClass("bg-gray-700 text-gray-200 border-gray-600").removeClass("bg-white text-gray-700 border-gray-200");
-            $(".dropdown-item, .dropdown-title, .dropdown-section-title, .filter-group-title").addClass("text-gray-300").removeClass("text-gray-700");
-            $(".dropdown-divider").addClass("bg-gray-700").removeClass("bg-gray-200");
-            $(".status-chip").addClass("bg-gray-700 text-gray-300").removeClass("bg-gray-100 text-gray-600");
-            $(".dropdown-button, .quick-link").addClass("bg-gray-700 text-gray-300").removeClass("bg-gray-100 text-gray-700");
-
-            // Change table header colors for dark mode
-            $(".tabulator-header, .tabulator-col").addClass("bg-gray-700 text-gray-100").removeClass("bg-gray-100 text-gray-900");
-            $(".tabulator-col-title").addClass("text-gray-100").removeClass("text-gray-900");
-        } else {
-            $("body").addClass("bg-gray-50").removeClass("bg-gray-900");
-            $(".card, .dropdown-menu, .loading-card, .filter-panel").addClass("bg-white border-gray-100").removeClass("bg-gray-800 border-gray-700");
-            $(".input-control, .filter-select, .filter-input").addClass("bg-white border-gray-200 text-gray-900").removeClass("bg-gray-700 border-gray-600 text-white");
-            $(".btn-secondary").addClass("bg-white text-gray-700 border-gray-200").removeClass("bg-gray-700 text-gray-200 border-gray-600");
-            $(".dropdown-item, .dropdown-title, .dropdown-section-title, .filter-group-title").addClass("text-gray-700").removeClass("text-gray-300");
-            $(".dropdown-divider").addClass("bg-gray-200").removeClass("bg-gray-700");
-            $(".status-chip").addClass("bg-gray-100 text-gray-600").removeClass("bg-gray-700 text-gray-300");
-            $(".dropdown-button, .quick-link").addClass("bg-gray-100 text-gray-700").removeClass("bg-gray-700 text-gray-300");
-
-            // Restore light table header colors
-            $(".tabulator-header, .tabulator-col").addClass("bg-gray-100 text-gray-900").removeClass("bg-gray-700 text-gray-100");
-            $(".tabulator-col-title").addClass("text-gray-900").removeClass("text-gray-100");
-        }
-    }
-
-    // Function to update compact mode
-    function updateCompactMode() {
-        if (isCompactMode) {
-            $(".tabulator-cell").css("padding", "0.4rem 0.6rem");
-            $(".tabulator-header").css("padding", "0.15rem 0");
-            $(".tabulator-col").css("padding", "0.4rem 0.6rem");
-        } else {
-            $(".tabulator-cell").css("padding", "0.75rem 1rem");
-            $(".tabulator-header").css("padding", "0.25rem 0");
-            $(".tabulator-col").css("padding", "0.75rem 1rem");
-        }
-
-        if (table) {
-            table.redraw(true);
-        }
-    }
-
-    // Function to resize the table container
-    function resizeTableContainer() {
-        const windowHeight = $(window).height();
-        const headerHeight = $(".app-bar").outerHeight(true);
-        const toolbarHeight = $(".toolbar").parent().outerHeight(true);
-        const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
-        const padding = 40; // Allow for some padding
-
-        const tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
-        $("#table-container").css("height", tableHeight + "px");
-    }
-
-    // Generate quick links for columns
-    function generateQuickLinks() {
-        if (!columns || columns.length === 0) return;
-
-        const quickLinksContainer = $("#column-quick-links");
-        quickLinksContainer.empty();
-
-        // Add all columns as quick links (or limit to a reasonable number)
-        const maxLinks = Math.min(24, columns.length); // Grid layout will organize these
-        for (let i = 0; i < maxLinks; i++) {
-            const column = columns[i];
-            const linkElement = $("<div>")
-                .addClass("quick-link")
-                .text(column.title)
-                .attr("data-field", column.field)
-                .click(function () {
-                    scrollToColumn(column.field);
-                    $("#links-dropdown-menu").removeClass("show");
-                });
-
-            quickLinksContainer.append(linkElement);
-        }
-    }
-
-    // Scroll to a specific column
-    function scrollToColumn(fieldName) {
-        if (!table) return;
-
-        // Get column component and scroll to it
-        const column = table.getColumn(fieldName);
-        if (column) {
-            // Scroll horizontally to this column
-            const element = column.getElement();
-            if (element) {
-                element.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
+            if (gridApi) {
+                // Refresh data without search term
+                gridApi.refreshInfiniteCache();
             }
         }
-    }
 
-    // Update filter fields with column options
-    function updateFilterFields() {
-        if (!columns || columns.length === 0) return;
-
-        // Clear existing options except the first placeholder
-        $(".filter-field").each(function () {
-            const placeholder = $(this).children().first();
-            $(this).empty().append(placeholder);
-        });
-
-        // Add column options to each filter field dropdown
-        columns.forEach(function (column) {
-            const option = $("<option>")
-                .val(column.field)
-                .text(column.title);
-
-            $(".filter-field").each(function () {
-                $(this).append(option.clone());
-            });
-        });
-    }
-
-    // Add a new filter row
-    function addFilterRow() {
-        const newRow = $(`
+        // Add a filter row
+        function addFilterRow() {
+            const newRow = $(`
                 <div class="filter-row" data-id="${nextFilterId}">
                     <select class="filter-select filter-field">
                         <option value="">Vali veerg...</option>
@@ -1293,359 +1366,331 @@
                 </div>
             `);
 
-        $("#filter-container").append(newRow);
+            $("#filter-container").append(newRow);
 
-        // Add column options to the new filter field
-        updateFilterFields();
+            // Add column options to the new filter field
+            updateFilterFields();
 
-        nextFilterId++;
-    }
+            nextFilterId++;
+        }
 
-    // Apply filters to the table
-    function applyFilters() {
-        // Collect filter conditions
-        activeFilters = [];
+        // Update filter fields with column options
+        function updateFilterFields() {
+            if (!columnDefs || columnDefs.length === 0) return;
 
-        $(".filter-row").each(function () {
-            const field = $(this).find(".filter-field").val();
-            const operator = $(this).find(".filter-operator").val();
-            const value = $(this).find(".filter-input").val();
+            // Clear existing options except the first placeholder
+            $(".filter-field").each(function() {
+                const placeholder = $(this).children().first();
+                $(this).empty().append(placeholder);
+            });
 
-            // Only add if a field is selected and has a value
-            if (field && value) {
-                activeFilters.push({
-                    field: field,
-                    operator: operator,
-                    value: value
+            // Add column options to each filter field dropdown
+            columnDefs.forEach(function(col) {
+                const option = $("<option>")
+                    .val(col.field)
+                    .text(col.headerName);
+
+                $(".filter-field").each(function() {
+                    $(this).append(option.clone());
                 });
-            }
-        });
-
-        // Apply filters to the table
-        if (table && activeFilters.length > 0) {
-            table.setFilter(customFilter);
-        } else {
-            // Clear filters if none are active
-            if (table) {
-                table.clearFilter();
-            }
-        }
-
-        // Update status
-        $("#status").text(activeFilters.length > 0 ?
-            `Filtreeritud: ${table.getDataCount()} kirjet` :
-            `${table.getDataCount()} kirjet`);
-
-        // Resize table container (might change height with filter panel)
-        resizeTableContainer();
-    }
-
-    // Custom filter function for Tabulator
-    function customFilter(data, filterParams) {
-        // Return true if data should be included
-        return activeFilters.every(function (filter) {
-            const cellValue = data[filter.field] ? String(data[filter.field]) : "";
-            const filterValue = filter.value;
-
-            switch (filter.operator) {
-                case "contains":
-                    return cellValue.toLowerCase().includes(filterValue.toLowerCase());
-                case "equals":
-                    return cellValue.toLowerCase() === filterValue.toLowerCase();
-                case "starts":
-                    return cellValue.toLowerCase().startsWith(filterValue.toLowerCase());
-                case "ends":
-                    return cellValue.toLowerCase().endsWith(filterValue.toLowerCase());
-                case "greater":
-                    return parseFloat(cellValue) > parseFloat(filterValue);
-                case "less":
-                    return parseFloat(cellValue) < parseFloat(filterValue);
-                default:
-                    return true;
-            }
-        });
-    }
-
-    // Clear all filters
-    function clearFilters() {
-        // Reset filter UI
-        $("#filter-container").empty();
-
-        // Add a single empty filter row
-        nextFilterId = 2; // Reset ID counter
-        addFilterRow();
-
-        // Clear active filters
-        activeFilters = [];
-
-        // Clear table filters
-        if (table) {
-            table.clearFilter();
-        }
-
-        // Update status
-        if (table) {
-            $("#status").text(`${table.getDataCount()} kirjet`);
-        }
-    }
-
-    // Show column visibility modal
-    function showColumnVisibilityModal() {
-        if (!columns || columns.length === 0) return;
-
-        // Get current column visibility
-        if (table) {
-            columns.forEach(function (col) {
-                if (!columnVisibility.hasOwnProperty(col.field)) {
-                    columnVisibility[col.field] = true; // Default to visible
-                }
             });
         }
 
-        // Build checkboxes for all columns
-        const container = $("#column-checkboxes");
-        container.empty();
+        // Apply filters
+        function applyFilters() {
+            // Collect filter conditions
+            activeFilters = [];
 
-        columns.forEach(function (col) {
-            const isVisible = columnVisibility[col.field];
+            $(".filter-row").each(function() {
+                const field = $(this).find(".filter-field").val();
+                const operator = $(this).find(".filter-operator").val();
+                const value = $(this).find(".filter-input").val();
 
-            const checkbox = $(`
-                    <div class="flex items-center">
-                        <input type="checkbox" id="col-${col.field}"
-                            data-field="${col.field}"
-                            class="column-toggle mr-2"
-                            ${isVisible ? 'checked' : ''}>
-                        <label for="col-${col.field}" class="text-sm">${col.title}</label>
-                    </div>
-                `);
-
-            container.append(checkbox);
-        });
-
-        // Show the modal
-        $("#column-modal").removeClass("hidden");
-    }
-
-    // Apply column visibility changes
-    function applyColumnVisibility() {
-        if (!table) return;
-
-        // Get checked/unchecked state from checkboxes
-        $(".column-toggle").each(function () {
-            const field = $(this).data('field');
-            const isVisible = $(this).prop('checked');
-
-            // Update local tracking
-            columnVisibility[field] = isVisible;
-
-            // Update table
-            if (isVisible) {
-                table.showColumn(field);
-            } else {
-                table.hideColumn(field);
-            }
-        });
-
-        // Redraw table to reflect changes
-        table.redraw(true);
-    }
-
-    // Get columns from the API
-    function getColumns() {
-        $("#loading-overlay").show();
-        $("#status").text("Laadimine...");
-
-        $.ajax({
-            url: "/api/v1/table/columns",
-            method: "GET",
-            dataType: "json",
-            success: function (response) {
-                if (response && response.columns && response.columns.length > 0) {
-                    // Process column data
-                    columns = response.columns.map(function (col) {
-                        // Initialize as visible in our tracking
-                        columnVisibility[col.field] = true;
-
-                        return {
-                            title: col.title || col.field,
-                            field: col.field,
-                            headerFilter: false,
-                            resizable: true,
-                            headerSort: true,
-                            tooltip: true
-                        };
+                // Only add if a field is selected and has a value
+                if (field && value) {
+                    activeFilters.push({
+                        field: field,
+                        operator: operator,
+                        value: value
                     });
-
-                    // Generate quick links
-                    generateQuickLinks();
-
-                    // Initialize table
-                    initTable();
-                    getData();
-                } else {
-                    $("#status").text("Viga: Veergude andmeid ei saadud");
-                    $("#loading-overlay").hide();
-                }
-            },
-            error: function (xhr, status, error) {
-                $("#status").text("Viga: " + error);
-                $("#loading-overlay").hide();
-            }
-        });
-    }
-
-    // Initialize the table with columns
-    function initTable() {
-        try {
-            // Initialize Tabulator
-            table = new Tabulator("#data-table", {
-                layout: "fitDataTable",
-                columns: columns,
-                height: "100%",
-                data: [],
-                virtualDom: true,
-                placeholder: "Andmed puuduvad",
-                responsiveLayout: false,
-                columnDefaults: {
-                    resizable: true,
-                    headerSortStartingDir: "asc",
-                    headerTooltip: true
-                },
-                movableColumns: true,
-                tooltips: true,
-                autoResize: true,
-                locale: "et",
-                downloadConfig: {
-                    columnHeaders: true,
-                    columnGroups: false,
-                    rowGroups: false,
-                    columnCalcs: false,
-                    dataTree: false,
                 }
             });
-        } catch (error) {
-            $("#status").text("Viga: " + error.message);
-        }
-    }
 
-    // Get data from the API
-    function getData() {
-        $("#loading-overlay").show();
-        $("#status").text("Laadimine...");
+            // Apply filters to AG Grid
+            if (gridApi && activeFilters.length > 0) {
+                const model = {};
 
-        let url = "/api/v1/table/data";
+                activeFilters.forEach(function(filter) {
+                    let filterModel;
 
-        if (searchTerm) {
-            url += "?search=" + encodeURIComponent(searchTerm);
-        }
-
-        $.ajax({
-            url: url,
-            method: "GET",
-            dataType: "json",
-            success: function (response) {
-                // Check if we got a valid response
-                if (response && Array.isArray(response.data)) {
-                    // Update table data
-                    table.setData(response.data);
-
-                    // Update status
-                    $("#status").text(response.data.length + " kirjet");
-
-                    // Re-apply any active filters
-                    if (activeFilters.length > 0) {
-                        table.setFilter(customFilter);
+                    switch(filter.operator) {
+                        case "contains":
+                            filterModel = {
+                                filterType: 'text',
+                                type: 'contains',
+                                filter: filter.value
+                            };
+                            break;
+                        case "equals":
+                            filterModel = {
+                                filterType: 'text',
+                                type: 'equals',
+                                filter: filter.value
+                            };
+                            break;
+                        case "starts":
+                            filterModel = {
+                                filterType: 'text',
+                                type: 'startsWith',
+                                filter: filter.value
+                            };
+                            break;
+                        case "ends":
+                            filterModel = {
+                                filterType: 'text',
+                                type: 'endsWith',
+                                filter: filter.value
+                            };
+                            break;
+                        case "greater":
+                            filterModel = {
+                                filterType: 'number',
+                                type: 'greaterThan',
+                                filter: parseFloat(filter.value)
+                            };
+                            break;
+                        case "less":
+                            filterModel = {
+                                filterType: 'number',
+                                type: 'lessThan',
+                                filter: parseFloat(filter.value)
+                            };
+                            break;
                     }
-                } else {
-                    $("#status").text("Viga: Vigane vastus");
+
+                    model[filter.field] = filterModel;
+                });
+
+                gridApi.setFilterModel(model);
+            } else if (gridApi) {
+                // Clear filters
+                gridApi.setFilterModel(null);
+            }
+
+            // Update status
+            const displayedRowCount = gridApi ? gridApi.getDisplayedRowCount() : 0;
+            $("#status").text(activeFilters.length > 0 ?
+                `Filtreeritud: ${displayedRowCount} kirjet` :
+                `${displayedRowCount} kirjet`);
+
+            // Resize table container
+            resizeTableContainer();
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            // Reset filter UI
+            $("#filter-container").empty();
+
+            // Add a single empty filter row
+            nextFilterId = 2; // Reset ID counter
+            addFilterRow();
+
+            // Clear active filters
+            activeFilters = [];
+
+            // Clear AG Grid filters
+            if (gridApi) {
+                gridApi.setFilterModel(null);
+            }
+
+            // Update status
+            if (gridApi) {
+                $("#status").text(`${gridApi.getDisplayedRowCount()} kirjet`);
+            }
+        }
+
+        // Export custom functionality
+        function exportToExcel() {
+            if (!gridApi) return;
+
+            const params = {
+                fileName: 'Suur_Andmetabel_Export.xlsx',
+                processCellCallback: function(params) {
+                    // Clean up cell values if needed
+                    return params.value;
+                }
+            };
+
+            gridApi.exportDataAsExcel(params);
+        }
+
+        // Add a debounce function to improve search performance
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
+
+        // Set up event handlers
+        function setupEventHandlers() {
+            // Search with debounce
+            const debouncedSearch = debounce(performSearch, 300);
+
+            $("#search-button").click(performSearch);
+            $("#search-input").on('input', debouncedSearch);
+
+            // Reset search
+            $("#reset-button").click(resetSearch);
+
+            // Enter key in search input
+            $("#search-input").keypress(function(e) {
+                if (e.which == 13) { // Enter key
+                    performSearch();
+                }
+            });
+
+            // Toggle filter panel
+            $("#filter-toggle").click(function() {
+                $("#filter-panel").toggleClass("show");
+
+                // If showing, update filter field dropdowns with column options
+                if ($("#filter-panel").hasClass("show")) {
+                    updateFilterFields();
                 }
 
-                $("#loading-overlay").hide();
-            },
-            error: function (xhr, status, error) {
-                $("#status").text("Viga: " + error);
-                $("#loading-overlay").hide();
-            }
-        });
-    }
+                // Adjust table container height after toggling filter panel
+                setTimeout(resizeTableContainer, 100);
+            });
 
-    // Performance optimizations
-    function optimizePerformance() {
-        // Lazy load columns outside viewport
-        if (table) {
-            table.setOption("columnDefaults", {
-                ...table.getOption("columnDefaults"),
-                headerVisible: true,
-                resizeable: true
+            // Add filter row
+            $("#add-filter-row").click(function() {
+                addFilterRow();
+            });
+
+            // Handle remove filter button clicks (using event delegation)
+            $("#filter-container").on("click", ".filter-remove-btn", function() {
+                $(this).closest(".filter-row").remove();
+            });
+
+            // Apply filters
+            $("#apply-filters").click(function() {
+                applyFilters();
+            });
+
+            // Clear filters
+            $("#clear-filters").click(function() {
+                clearFilters();
+            });
+
+            // Save filter (placeholder)
+            $("#save-filter").click(function() {
+                alert("Filtri salvestamine on arendamisel.");
+            });
+
+            // Tööriistad (Tools) buttons
+            $("#view-file").click(function() {
+                alert("Funktsioon 'Vaata toimikut' on arendamisel.");
+                $("#tools-dropdown-menu").removeClass("show");
+            });
+
+            $("#virtual-file").click(function() {
+                alert("Funktsioon 'Virtuaaltoimik' on arendamisel.");
+                $("#tools-dropdown-menu").removeClass("show");
+            });
+
+            $("#receipts-report").click(function() {
+                alert("Funktsioon 'Laekumiste aruanne' on arendamisel.");
+                $("#tools-dropdown-menu").removeClass("show");
+            });
+
+            // Settings buttons
+            $("#toggle-columns").click(function() {
+                showColumnVisibilityModal();
+                $("#settings-dropdown-menu").removeClass("show");
+            });
+
+            $("#save-column-layout").click(function() {
+                alert("Veergude paigutuse salvestamine on arendamisel.");
+                $("#settings-dropdown-menu").removeClass("show");
+            });
+
+            // Font size controls
+            $("#font-increase").click(function() {
+                if (currentFontSize < 20) {
+                    currentFontSize += 1;
+                    updateFontSize();
+                }
+                $("#settings-dropdown-menu").removeClass("show");
+            });
+
+            $("#font-decrease").click(function() {
+                if (currentFontSize > 11) {
+                    currentFontSize -= 1;
+                    updateFontSize();
+                }
+                $("#settings-dropdown-menu").removeClass("show");
+            });
+
+            // Toggle dark mode
+            $("#toggle-dark-mode").click(function() {
+                isDarkMode = !isDarkMode;
+                updateTheme();
+                $("#settings-dropdown-menu").removeClass("show");
+            });
+
+            // Widget buttons
+            $("#toggle-compact").click(function() {
+                isCompactMode = !isCompactMode;
+
+                // For AG Grid, implement compact mode by changing row height
+                if (gridApi) {
+                    const rowHeight = isCompactMode ? 30 : 40;
+                    gridApi.resetRowHeights();
+                    gridApi.setGridOption('rowHeight', rowHeight);
+                }
+
+                $("#widgets-dropdown-menu").removeClass("show");
+            });
+
+            $("#save-view").click(function() {
+                alert("Funktsioon 'Salvesta vaade' on arendamisel.");
+                $("#widgets-dropdown-menu").removeClass("show");
+            });
+
+            $("#load-view").click(function() {
+                alert("Funktsioon 'Lae vaade' on arendamisel.");
+                $("#widgets-dropdown-menu").removeClass("show");
+            });
+
+            // Column visibility modal
+            $("#close-column-modal, #column-modal-backdrop, #cancel-column-changes").click(function() {
+                $("#column-modal").addClass("hidden");
+            });
+
+            $("#apply-column-changes").click(function() {
+                applyColumnVisibility();
+                $("#column-modal").addClass("hidden");
             });
         }
+    </script>
 
-        // Prefetch likely data
-        prefetchData();
-
-        // Debounce search input
-        const searchInput = document.getElementById('search-input');
-        let debounceTimeout;
-
-        if (searchInput) {
-            searchInput.addEventListener('input', function () {
-                clearTimeout(debounceTimeout);
-                debounceTimeout = setTimeout(() => {
-                    $("#search-button").click();
-                }, 300);
-            });
-        }
-    }
-
-    // Prefetch data that might be needed soon
-    function prefetchData() {
-        // Prefetch empty search results
-        fetch('/api/v1/table/data')
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                console.log('Prefetched data ready');
-            })
-            .catch(error => {
-                console.error('Error prefetching data:', error);
-            });
-    }
-
-    // Add these optimizations after table is loaded
-    $(window).on('load', function () {
-        setTimeout(optimizePerformance, 100);
-    });
-
-    // Optimize images and assets with native browser caching
-    document.addEventListener('DOMContentLoaded', function () {
-        const images = document.querySelectorAll('img');
-        images.forEach(img => {
-            if (!img.complete) {
-                img.style.opacity = '0';
-                img.onload = function () {
-                    this.style.transition = 'opacity 0.3s ease';
-                    this.style.opacity = '1';
-                };
-            }
-        });
-    });
-</script>
-
-<script>
-    if ('serviceWorker' in navigator) {
+    <!-- Register Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/static/sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
+          navigator.serviceWorker.register('/static/sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
         });
-    }
-</script>
-
+      }
+    </script>
 </body>
 </html>

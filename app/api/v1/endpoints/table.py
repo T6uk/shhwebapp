@@ -1,13 +1,15 @@
+# app/api/v1/endpoints/table.py
+
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import Optional, Dict, Any, List
 import logging
-from app.core.cache import get_cache, set_cache, compute_cache_key
 
 from app.core.db import get_db
 from app.models.table import BigTable
+from app.core.cache import get_cache, set_cache, compute_cache_key
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -18,34 +20,37 @@ router = APIRouter(prefix="/table", tags=["table"])
 
 @router.get("/data")
 async def get_table_data(
+        start_row: int = Query(0, ge=0),
+        end_row: int = Query(100, ge=1),
         search: Optional[str] = None,
-        sort: Optional[str] = None,
+        sort_field: Optional[str] = None,
         sort_dir: Optional[str] = None,
+        filter_model: Optional[str] = None,
         db: AsyncSession = Depends(get_db)
 ):
     """
-    Get all table data at once with optional filtering and sorting
+    Get paginated table data with filtering and sorting
     """
     try:
         # Create a cache key from the parameters
         cache_params = {
+            "start": start_row,
+            "end": end_row,
             "search": search or "",
-            "sort": sort or "",
-            "sort_dir": sort_dir or ""
+            "sort_field": sort_field or "",
+            "sort_dir": sort_dir or "",
+            "filter": filter_model or ""
         }
-        cache_key = await compute_cache_key(cache_params)
+        cache_key = f"table_data:{await compute_cache_key(cache_params)}"
 
         # Try to get from cache
-        cached_data = await get_cache(f"table_data:{cache_key}")
+        cached_data = await get_cache(cache_key)
         if cached_data:
             logger.info("Returning cached data")
             return cached_data
 
-        # Build query to get all data
-        sql = f'SELECT * FROM "{BigTable.name}"'
-
-        # Add search if provided
-        params = {}
+        # Get total count first
+        count_sql = f'SELECT COUNT(*) FROM "{BigTable.name}"'
         if search:
             # Find string columns for searching
             col_sql = f"""
@@ -62,16 +67,42 @@ async def get_table_data(
                 for col in string_cols:
                     search_conditions.append(f'"{col}"::text ILIKE :search')
 
+                count_sql += f" WHERE ({' OR '.join(search_conditions)})"
+                count_result = await db.execute(text(count_sql), {"search": f"%{search}%"})
+            else:
+                count_result = await db.execute(text(count_sql))
+        else:
+            count_result = await db.execute(text(count_sql))
+
+        total_rows = count_result.scalar() or 0
+
+        # Build query to get paginated data
+        sql = f'SELECT * FROM "{BigTable.name}"'
+
+        # Add search if provided
+        params = {}
+        if search:
+            # Reuse string columns from above
+            if string_cols:
+                search_conditions = []
+                for col in string_cols:
+                    search_conditions.append(f'"{col}"::text ILIKE :search')
+
                 sql += f" WHERE ({' OR '.join(search_conditions)})"
                 params["search"] = f"%{search}%"
 
         # Add sorting
-        if sort:
+        if sort_field:
             direction = "DESC" if sort_dir and sort_dir.lower() == "desc" else "ASC"
-            sql += f' ORDER BY "{sort}" {direction}'
+            sql += f' ORDER BY "{sort_field}" {direction}'
         else:
             # Default ordering by the first column
             sql += ' ORDER BY 1'
+
+        # Add pagination
+        sql += ' LIMIT :limit OFFSET :offset'
+        params["limit"] = end_row - start_row
+        params["offset"] = start_row
 
         # Execute query
         logger.info(f"Executing query: {sql} with params: {params}")
@@ -81,7 +112,6 @@ async def get_table_data(
         # Convert to list of dicts for JSON response
         data = []
         for row in rows:
-            # Convert SQLAlchemy Row to dict
             row_dict = {}
             for key in row._mapping.keys():
                 value = row._mapping[key]
@@ -92,13 +122,18 @@ async def get_table_data(
                     row_dict[str(key)] = value
             data.append(row_dict)
 
-        logger.info(f"Returning {len(data)} rows in a single response")
+        logger.info(f"Returning {len(data)} rows (of total {total_rows})")
 
-        # Create response
-        response_data = {"data": data}
+        # Create response with row count info
+        response_data = {
+            "rowData": data,
+            "rowCount": total_rows,
+            "startRow": start_row,
+            "endRow": min(start_row + len(data), total_rows)
+        }
 
-        # Cache the result (1 hour TTL)
-        await set_cache(f"table_data:{cache_key}", response_data, expire=3600)
+        # Cache the result (5 minutes TTL for paginated results)
+        await set_cache(cache_key, response_data, expire=300)
 
         return response_data
 
