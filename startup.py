@@ -80,8 +80,7 @@ def start_server():
         "app.main:app",
         "--host", "127.0.0.1",
         "--port", "8000",
-        "--workers", "1",  # Single worker for desktop mode
-        "--loop", "uvloop",
+        "--workers", "4",  # Single worker for desktop mode
         "--http", "httptools",
         "--log-level", "warning",
         "--no-access-log"  # Disable access logging for better performance
