@@ -79,24 +79,60 @@ async def auth_middleware(request: Request, call_next):
     # Check for token
     token = extract_token_from_request(request)
 
-    # If no token, redirect to login
+    # If no token, redirect to login without error message
     if not token:
+        logger.debug("No token found - redirecting to login page")
         return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
     # Verify token
     try:
+        # Normalize token (remove Bearer prefix if present)
+        if token and token.startswith("Bearer "):
+            token = token.replace("Bearer ", "")
+
         # Use the verify_token function from security.py
         payload = await verify_token(token)
 
         # Continue with the request
-        return await call_next(request)
+        response = await call_next(request)
+
+        # Ensure token is preserved in the response if it's a redirect
+        if isinstance(response, RedirectResponse) and "access_token" not in response.headers.get("set-cookie", ""):
+            max_age = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            response.set_cookie(
+                key="access_token",
+                value=f"Bearer {token}",
+                httponly=True,
+                max_age=max_age,
+                path="/",
+                samesite="lax",
+                secure=settings.COOKIE_SECURE
+            )
+
+        return response
 
     except HTTPException:
-        # Token is invalid, redirect to login
-        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+        # Token is invalid - clear it and redirect to login without error message
+        # This happens on first app startup with old tokens
+        logger.debug("Invalid token found - clearing and redirecting to login")
+        response = RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+
+        # Clear the invalid token
+        response.delete_cookie(key="access_token", path="/")
+        response.delete_cookie(key="refresh_token", path="/auth/refresh")
+
+        return response
+
     except Exception as e:
+        # For unexpected errors, log them but don't show error to user on login page
         logger.error(f"Auth middleware error: {str(e)}")
-        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+        response = RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+
+        # Clear any problematic tokens
+        response.delete_cookie(key="access_token", path="/")
+        response.delete_cookie(key="refresh_token", path="/auth/refresh")
+
+        return response
 
 
 @app.get("/")
@@ -146,6 +182,11 @@ async def service_worker():
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and Redis connections on startup"""
+    # Log critical configuration values (but never the full SECRET_KEY)
+    secret_preview = settings.SECRET_KEY[:5] + "..." if settings.SECRET_KEY else "None"
+    logger.info(f"Starting with SECRET_KEY (preview): {secret_preview}")
+    logger.info(f"TOKEN_EXPIRE_MINUTES: {settings.ACCESS_TOKEN_EXPIRE_MINUTES}")
+
     # Initialize user database (SQLite)
     try:
         # Call only once to prevent multiple initialization

@@ -4,6 +4,10 @@ from typing import Optional
 import os
 import secrets
 from pathlib import Path
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -22,8 +26,8 @@ class Settings(BaseSettings):
             self.DATA_DIR.mkdir(parents=True)
         return self.DATA_DIR
 
-    # Security
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    # Security - modified to use persistent SECRET_KEY
+    SECRET_KEY: Optional[str] = None
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30 days
     COOKIE_SECURE: bool = False  # Set to True in production with HTTPS
@@ -104,6 +108,43 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_EMAIL: str = "noreply@andmetabel.ee"
     SMTP_TLS: bool = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Ensure SECRET_KEY is initialized and persistent
+        self._ensure_secret_key()
+
+    def _ensure_secret_key(self):
+        """Ensure a consistent SECRET_KEY exists, stored in a file"""
+        # If SECRET_KEY is provided via environment or other means, use it
+        if self.SECRET_KEY:
+            logger.info("Using provided SECRET_KEY")
+            return
+
+        # Create data directory if it doesn't exist
+        self.get_data_dir
+
+        # Define path for secret key file
+        secret_key_path = self.DATA_DIR / "secret_key.txt"
+
+        # If file exists, load key from it
+        if secret_key_path.exists():
+            try:
+                self.SECRET_KEY = secret_key_path.read_text().strip()
+                logger.info("Loaded SECRET_KEY from file")
+                return
+            except Exception as e:
+                logger.error(f"Failed to read SECRET_KEY from file: {e}")
+                # Continue to key generation if file read fails
+
+        # Generate a new key and save it
+        self.SECRET_KEY = secrets.token_urlsafe(32)
+        try:
+            secret_key_path.write_text(self.SECRET_KEY)
+            logger.info("Generated and saved new SECRET_KEY")
+        except Exception as e:
+            logger.error(f"Failed to save SECRET_KEY to file: {e}")
+            # Continue with in-memory key even if file write fails
 
     class Config:
         env_file = ".env"

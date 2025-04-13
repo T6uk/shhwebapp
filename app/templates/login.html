@@ -137,10 +137,10 @@
     <h1 class="text-2xl font-bold mb-1 text-center">Suur Andmetabel</h1>
     <p class="text-gray-500 text-center mb-6">Sisselogimine</p>
 
-    {% if request.query_params.get("error") %}
+    {% if show_error and error_message %}
     <div class="error-message">
         <i class="fas fa-exclamation-circle mr-2"></i>
-        {{ request.query_params.get("error").replace("+", " ") }}
+        {{ error_message }}
     </div>
     {% endif %}
 
@@ -151,27 +151,27 @@
     </div>
     {% endif %}
 
-    <form method="post" action="/auth/login">
-        <div class="mb-4">
-            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Kasutajanimi</label>
-            <input type="text" id="username" name="username" class="input-control" required autofocus>
-        </div>
+    <form method="post" action="/auth/login" enctype="application/x-www-form-urlencoded">
+    <div class="mb-4">
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Kasutajanimi</label>
+        <input type="text" id="username" name="username" class="input-control" required autofocus>
+    </div>
 
-        <div class="mb-4">
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parool</label>
-            <input type="password" id="password" name="password" class="input-control" required>
-        </div>
+    <div class="mb-4">
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parool</label>
+        <input type="password" id="password" name="password" class="input-control" required>
+    </div>
 
-        <div class="checkbox-label">
-            <input type="checkbox" id="remember_me" name="remember_me" value="true">
-            <label for="remember_me">Jäta mind meelde</label>
-        </div>
+    <div class="checkbox-label">
+        <input type="checkbox" id="remember_me" name="remember_me" value="true">
+        <label for="remember_me">Jäta mind meelde</label>
+    </div>
 
-        <!-- CSRF Token -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <!-- CSRF Token -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-        <button type="submit" class="btn-login">Logi sisse</button>
-    </form>
+    <button type="submit" class="btn-login">Logi sisse</button>
+</form>
 </div>
 </body>
 </html>

@@ -1,11 +1,13 @@
 # app/core/security.py
-from datetime import datetime, timedelta
-from typing import Optional, Union, Any, Dict
-from jose import jwt, JWTError
-from passlib.context import CryptContext
-from fastapi import Request, HTTPException, status
+import logging
 import re
 import secrets  # Import the secrets module properly
+from datetime import datetime, timedelta
+from typing import Optional, Union, Any, Dict
+
+from fastapi import Request, HTTPException, status
+from jose import jwt, JWTError
+from passlib.context import CryptContext
 
 from app.core.config import settings
 
@@ -51,41 +53,46 @@ def create_access_token(
         scopes: list = None
 ) -> str:
     """
-    Create a JWT access token with enhanced claims
-
-    Args:
-        subject: The subject of the token (typically username)
-        expires_delta: Optional expiration override
-        fresh: Whether this is a fresh token (useful for sensitive operations)
-        scopes: Optional list of permission scopes
-
-    Returns:
-        Encoded JWT token string
+    Create a JWT access token with enhanced claims and error handling
     """
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+    try:
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(
+                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+            )
 
-    # Build token claims
-    to_encode = {
-        "exp": expire,
-        "iat": datetime.utcnow(),
-        "sub": str(subject),
-        "jti": secrets.token_urlsafe(16),  # Unique token ID
-    }
+        # Build token claims
+        to_encode = {
+            "exp": expire,
+            "iat": datetime.utcnow(),
+            "sub": str(subject),
+            "jti": secrets.token_urlsafe(16),  # Unique token ID
+        }
 
-    # Add optional claims
-    if fresh:
-        to_encode["fresh"] = True
+        # Add optional claims
+        if fresh:
+            to_encode["fresh"] = True
 
-    if scopes:
-        to_encode["scopes"] = scopes
+        if scopes:
+            to_encode["scopes"] = scopes
 
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+        # Check if SECRET_KEY is properly set
+        if not settings.SECRET_KEY:
+            logger.error("SECRET_KEY is not configured properly!")
+            raise ValueError("Missing SECRET_KEY")
+
+        # Log token creation (never log the full token or SECRET_KEY)
+        logger.debug(f"Creating JWT token for subject: {subject}")
+        logger.debug(f"Token will expire at: {expire}")
+
+        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+        return encoded_jwt
+
+    except Exception as e:
+        logger.error(f"Error creating access token: {str(e)}")
+        raise
 
 
 def create_refresh_token(
@@ -125,44 +132,99 @@ def create_csrf_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
+
+
 async def verify_token(token: str) -> Dict:
     """
-    Verify JWT token and return payload
-
-    Args:
-        token: JWT token string
-
-    Returns:
-        Token payload dictionary if valid
-
-    Raises:
-        HTTPException: If token is invalid
+    Verify JWT token and return payload with improved error handling
     """
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
+    if not token:
+        logger.error("Token is empty or None")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Missing authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Normalize token (remove Bearer prefix if present)
+    if token.startswith("Bearer "):
+        token = token.replace("Bearer ", "")
+
+    try:
+        # Log first few characters of token for debugging (never log full tokens)
+        token_preview = token[:10] + "..." if len(token) > 10 else "invalid_token"
+        logger.debug(f"Verifying token: {token_preview}")
+
+        # Decode and verify the token
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_signature": True}
+        )
+        logger.debug(f"Token verified successfully for subject: {payload.get('sub')}")
+        return payload
+
+    except jwt.ExpiredSignatureError:
+        logger.error("Token has expired")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    except jwt.JWTClaimsError as e:
+        logger.error(f"JWT claims error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token claims",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    except JWTError as e:
+        logger.error(f"JWT error: {str(e)}")
+        logger.error(f"SECRET_KEY first few chars: {settings.SECRET_KEY[:5]}...")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token signature",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error verifying token: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication error",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
 
 def extract_token_from_request(request: Request) -> Optional[str]:
-    """Extract JWT token from either cookie or authorization header"""
+    """Extract JWT token from either cookie or authorization header with better logging"""
     # Try cookie first
     token = request.cookies.get("access_token")
+    source = "cookie"
 
     # If not in cookie, try auth header
     if not token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.replace("Bearer ", "")
+            source = "header"
 
     # Normalize token (strip Bearer prefix if present)
     if token and token.startswith("Bearer "):
         token = token.replace("Bearer ", "")
+
+    # Log token extraction status
+    if token:
+        logger.debug(f"Token extracted from {source}, length: {len(token)}")
+    else:
+        logger.debug("No token found in request")
 
     return token
 
