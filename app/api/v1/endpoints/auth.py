@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 from datetime import datetime, timedelta
+import orjson
 
 from app.api.dependencies import get_current_active_user
 from app.core.user_db import get_user_db
@@ -570,15 +571,35 @@ async def toggle_edit_mode(
         scopes=["edit"]
     )
 
-    response = JSONResponse(content={"success": True, "message": "Edit mode activated"})
+    # Create response with debug info
+    response_data = {
+        "success": True,
+        "message": "Edit mode activated",
+        "token_created": True,
+        "username": current_user.username,
+        "expires_in_minutes": 30
+    }
 
-    # Set the edit mode token as a cookie
+    # Use Response instead of JSONResponse for more control
+    response = Response(
+        content=orjson.dumps(response_data),
+        media_type="application/json"
+    )
+
+    # Set the edit mode token as a cookie with debug info
+    max_age = 30 * 60  # 30 minutes
+    cookie_value = edit_token
+    cookie_path = "/"
+
+    logger.info(f"Setting edit_token cookie: {cookie_value[:10]}... (length: {len(cookie_value)})")
+
+    # Set a more explicit cookie
     response.set_cookie(
         key="edit_token",
-        value=edit_token,
+        value=cookie_value,
+        max_age=max_age,
+        path=cookie_path,
         httponly=True,
-        max_age=30 * 60,  # 30 minutes
-        path="/",
         samesite="lax",
         secure=settings.COOKIE_SECURE
     )

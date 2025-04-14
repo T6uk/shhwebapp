@@ -93,6 +93,19 @@ async def auth_middleware(request: Request, call_next):
         # Use the verify_token function from security.py
         payload = await verify_token(token)
 
+        # For API requests that require edit token (for cell editing)
+        if (request.url.path == "/api/v1/table/cell" and request.method == "PUT"):
+            # Check if edit token exists for cell editing
+            edit_token = request.cookies.get("edit_token")
+            if not edit_token:
+                logger.debug("Edit operation without edit token")
+                # Don't redirect for API calls, return a proper JSON error
+                if request.headers.get("accept") == "application/json" or request.url.path.startswith("/api/"):
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={"detail": "Edit mode not activated. Please enter your password to enable editing."}
+                    )
+
         # Continue with the request
         response = await call_next(request)
 
@@ -120,6 +133,7 @@ async def auth_middleware(request: Request, call_next):
         # Clear the invalid token
         response.delete_cookie(key="access_token", path="/")
         response.delete_cookie(key="refresh_token", path="/auth/refresh")
+        response.delete_cookie(key="edit_token", path="/")  # Also clear edit token
 
         return response
 
@@ -131,6 +145,7 @@ async def auth_middleware(request: Request, call_next):
         # Clear any problematic tokens
         response.delete_cookie(key="access_token", path="/")
         response.delete_cookie(key="refresh_token", path="/auth/refresh")
+        response.delete_cookie(key="edit_token", path="/")  # Also clear edit token
 
         return response
 

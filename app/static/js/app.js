@@ -24,9 +24,15 @@ $(document).ready(function () {
     resizeTableContainer();
     setupAdminNavigation();
 
-    // Check for edit mode token in cookies
-    const editToken = document.cookie.replace(/(?:(?:^|.*;\s*)edit_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-    userPermissions.edit_mode_active = !!editToken;
+    // Initial permissions - will be updated once we get actual permissions
+    userPermissions = {
+        can_edit: false,
+        is_admin: false,
+        edit_mode_active: false
+    };
+
+    // Check for edit mode token in cookies - correct way
+    userPermissions.edit_mode_active = hasValidEditToken();
     console.log("Initial edit mode status:", userPermissions.edit_mode_active);
 
     getUserPermissions();
@@ -132,14 +138,23 @@ function getUserPermissions() {
             userPermissions.can_edit = response.can_edit;
             userPermissions.is_admin = response.is_admin;
 
-            // Check for existing edit token
-            const editToken = document.cookie.replace(/(?:(?:^|.*;\s*)edit_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-            userPermissions.edit_mode_active = !!editToken;
+            // Preserve the token status we already detected
+            const hasToken = hasValidEditToken();
+
+            // Only set edit_mode_active if token exists
+            userPermissions.edit_mode_active = hasToken;
 
             console.log("User permissions loaded:", userPermissions);
+            console.log("Edit token present:", hasToken);
 
-            // Trigger an event when permissions are loaded
+            // Update UI based on permissions
             $(document).trigger('permissionsLoaded');
+
+            // Refresh grid if already initialized
+            if (gridApi && userPermissions.edit_mode_active) {
+                console.log("Refreshing grid after loading permissions");
+                gridApi.refreshCells({force: true});
+            }
         },
         error: function (xhr) {
             console.log("Failed to get user permissions");
@@ -186,8 +201,8 @@ function getColumns() {
                                 "col.editable:", col.editable);
 
                             return userPermissions.edit_mode_active &&
-                                   (userPermissions.can_edit || userPermissions.is_admin) &&
-                                   col.editable === true;
+                                (userPermissions.can_edit || userPermissions.is_admin) &&
+                                col.editable === true;
                         },
                         // Add cell editing for editable fields
                         cellStyle: function (params) {
@@ -199,7 +214,7 @@ function getColumns() {
                             return null;
                         },
                         // Add cell class to show which cells are editable when edit mode is active
-                        cellClass: function(params) {
+                        cellClass: function (params) {
                             if (userPermissions.edit_mode_active &&
                                 (userPermissions.can_edit || userPermissions.is_admin) &&
                                 col.editable === true) {
@@ -308,10 +323,10 @@ function initGrid() {
         // Add editing option for cell double-click
         onCellDoubleClicked: onCellDoubleClicked,
         // Add event to handle edit errors
-        onCellEditingStarted: function(event) {
+        onCellEditingStarted: function (event) {
             console.log('Cell editing started:', event);
         },
-        onCellEditingStopped: function(event) {
+        onCellEditingStopped: function (event) {
             console.log('Cell editing stopped:', event);
         }
     };
@@ -324,6 +339,28 @@ function initGrid() {
 function onCellValueChanged(params) {
     // Only process if we have permission to edit
     if ((!userPermissions.can_edit && !userPermissions.is_admin) || !userPermissions.edit_mode_active) {
+        console.log("Cell edit rejected - no permissions");
+        return;
+    }
+
+    // Check if edit token exists
+    if (!hasValidEditToken()) {
+        console.log("Cell edit rejected - no edit token");
+        showNotification("Muutmise režiim pole aktiivne. Palun sisestage oma parool muutmiseks.", "error");
+
+        // Reset permissions
+        userPermissions.edit_mode_active = false;
+        updateEditModeIndicator();
+
+        // Refresh cell to original value
+        params.api.refreshCells({
+            rowNodes: [params.node],
+            columns: [params.colDef.field],
+            force: true
+        });
+
+        // Show edit mode dialog
+        setTimeout(showEditModeModal, 500);
         return;
     }
 
@@ -399,19 +436,18 @@ function onCellValueChanged(params) {
             let errorMsg = "Viga salvestamisel";
 
             try {
-                // Try to parse error response as JSON
+                // Try to parse error response
                 if (xhr.responseJSON && xhr.responseJSON.detail) {
                     errorMsg = xhr.responseJSON.detail;
-                } else if (xhr.responseText && xhr.responseText.indexOf("{") >= 0) {
-                    // Try to extract JSON from possible HTML response
-                    const jsonStart = xhr.responseText.indexOf("{");
-                    const jsonEnd = xhr.responseText.lastIndexOf("}") + 1;
-                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                        const jsonStr = xhr.responseText.substring(jsonStart, jsonEnd);
-                        const jsonData = JSON.parse(jsonStr);
-                        if (jsonData.detail) {
-                            errorMsg = jsonData.detail;
-                        }
+
+                    // Check for edit mode errors
+                    if (errorMsg.includes("Edit mode") || errorMsg.includes("edit")) {
+                        // Reset edit mode status
+                        userPermissions.edit_mode_active = false;
+                        updateEditModeIndicator();
+
+                        // Show edit mode dialog after a brief delay
+                        setTimeout(showEditModeModal, 500);
                     }
                 }
             } catch (e) {
@@ -455,9 +491,9 @@ function showNotification(message, type = "info", duration = 5000) {
         <div id="${notificationId}" class="fixed top-4 right-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-50 notification">
             <div class="flex items-start">
                 <div class="flex-shrink-0">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle text-green-500' : 
-                                type === 'error' ? 'fa-exclamation-circle text-red-500' :
-                                'fa-info-circle text-blue-500'}"></i>
+                    <i class="fas ${type === 'success' ? 'fa-check-circle text-green-500' :
+        type === 'error' ? 'fa-exclamation-circle text-red-500' :
+            'fa-info-circle text-blue-500'}"></i>
                 </div>
                 <div class="ml-3 w-0 flex-1">
                     <p class="text-sm font-medium text-gray-900 dark:text-gray-100">${message}</p>
@@ -574,42 +610,42 @@ function activateEditMode() {
             csrf_token: getCsrfToken()
         },
         success: function (response) {
+            console.log("Edit mode activation successful:", response);
+
+            // Close the modal
             $("#edit-mode-modal").addClass("hidden");
-            userPermissions.edit_mode_active = true;
 
-            // Clear undo history when starting a new edit session
-            editHistory = [];
+            // Verify the token was actually set in cookies
+            setTimeout(() => {
+                const hasToken = hasValidEditToken();
+                console.log("Token verification after activation:", hasToken);
 
-            // Change the edit indicator to show active edit mode
-            $("#edit-permissions-indicator")
-                .removeClass("bg-blue-100 text-blue-800 bg-green-100 text-green-800")
-                .addClass("bg-yellow-100 text-yellow-800")
-                .html('<i class="fas fa-edit mr-1"></i><span>Muutmise režiim aktiivne</span>')
-                .removeClass("hidden");
+                if (hasToken) {
+                    // Update user permissions
+                    userPermissions.edit_mode_active = true;
 
-            // Refresh the grid to apply new editing capabilities
-            console.log("Edit mode activated, refreshing grid");
-            if (gridApi) {
-                // Force a complete refresh to ensure edit mode is applied
-                gridApi.refreshInfiniteCache();
-                // Also refresh all cells to update their styles and editable status
-                gridApi.refreshCells({force: true});
-            }
+                    // Clear undo history when starting a new edit session
+                    editHistory = [];
 
-            // Show a notification
-            showNotification("Muutmise režiim on aktiveeritud 30 minutiks", "success");
+                    // Change the edit indicator to show active edit mode
+                    updateEditModeIndicator();
 
-            // If a cell was double-clicked, try to put it in edit mode after a brief delay
-            setTimeout(function() {
-                console.log("Attempting to re-trigger cell editing...");
-                const focusedCell = gridApi.getFocusedCell();
-                if (focusedCell) {
-                    gridApi.startEditingCell({
-                        rowIndex: focusedCell.rowIndex,
-                        colKey: focusedCell.column.getId()
-                    });
+                    // Refresh the grid to apply new editing capabilities
+                    console.log("Edit mode activated, refreshing grid");
+                    if (gridApi) {
+                        // Force a complete refresh
+                        gridApi.refreshCells({force: true});
+                    }
+
+                    // Add undo button to toolbar if not present
+                    addUndoButton();
+
+                    // Show a notification
+                    showNotification("Muutmise režiim on aktiveeritud 30 minutiks", "success");
+                } else {
+                    showNotification("Muutmise režiimi aktiveerimine ebaõnnestus. Palun proovige uuesti.", "error");
                 }
-            }, 200);
+            }, 100);
         },
         error: function (xhr) {
             let errorMsg = "Aktiveerimine ebaõnnestus";
@@ -727,8 +763,8 @@ function onCellDoubleClicked(params) {
     // Check if the column is editable
     const colDef = params.colDef;
     const isEditable = colDef.editable ?
-                      (typeof colDef.editable === 'function' ? colDef.editable(params) : colDef.editable)
-                      : false;
+        (typeof colDef.editable === 'function' ? colDef.editable(params) : colDef.editable)
+        : false;
 
     console.log("Is cell editable:", isEditable);
 
@@ -1322,6 +1358,51 @@ function showEditHistory() {
 
     // Show the modal
     $("#edit-history-modal").removeClass("hidden");
+}
+
+function deactivateEditMode() {
+    // Delete the edit token cookie
+    document.cookie = "edit_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+    // Update permissions
+    userPermissions.edit_mode_active = false;
+
+    // Update UI
+    updateEditModeIndicator();
+
+    // Remove undo buttons if they exist
+    $("#undo-edit-button").remove();
+    $("#show-edit-history-button").remove();
+
+    // Refresh the grid
+    if (gridApi) {
+        gridApi.refreshCells({force: true});
+    }
+
+    // Show notification
+    showNotification("Muutmise režiim on välja lülitatud", "info");
+}
+
+function hasValidEditToken() {
+    const editTokenCookie = document.cookie.match(/edit_token=([^;]*)/);
+    return !!editTokenCookie;
+}
+
+function addUndoButton() {
+    if ($("#undo-edit-button").length === 0) {
+        const undoButton = $(`
+            <button id="undo-edit-button" class="btn btn-secondary" title="Võta viimane muudatus tagasi">
+                <i class="fas fa-undo"></i>
+                <span class="hidden sm:inline">Võta tagasi</span>
+            </button>
+        `);
+
+        // Add it to the toolbar's first section
+        $(".toolbar-section").first().append(undoButton);
+
+        // Add click handler
+        undoButton.on("click", undoLastEdit);
+    }
 }
 
 // Function to undo all edits
