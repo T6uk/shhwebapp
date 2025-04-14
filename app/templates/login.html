@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Suur Andmetabel</title>
+
+    <!-- Inter font -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', 'sans-serif'],
+                },
+                extend: {
+                    colors: {
+                        'primary': '#3b82f6',
+                        'primary-dark': '#2563eb',
+                        'primary-light': '#dbeafe',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+
+        .app-logo {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 0.5rem;
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 1.5rem;
+        }
+
+        .input-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background-color: #2563eb;
+        }
+
+        .error-message {
+            background-color: #fee2e2;
+            color: #ef4444;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .success-message {
+            background-color: #dcfce7;
+            color: #16a34a;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+
+        .checkbox-label input {
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <div class="app-logo">
+        <i class="fas fa-table"></i>
+    </div>
+
+    <h1 class="text-2xl font-bold mb-1 text-center">Suur Andmetabel</h1>
+    <p class="text-gray-500 text-center mb-6">Sisselogimine</p>
+
+    {% if show_error and error_message %}
+    <div class="error-message">
+        <i class="fas fa-exclamation-circle mr-2"></i>
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get("success") %}
+    <div class="success-message">
+        <i class="fas fa-check-circle mr-2"></i>
+        {{ request.query_params.get("success").replace("+", " ") }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/auth/login" enctype="application/x-www-form-urlencoded">
+    <div class="mb-4">
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Kasutajanimi</label>
+        <input type="text" id="username" name="username" class="input-control" required autofocus>
+    </div>
+
+    <div class="mb-4">
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parool</label>
+        <input type="password" id="password" name="password" class="input-control" required>
+    </div>
+
+    <div class="checkbox-label">
+        <input type="checkbox" id="remember_me" name="remember_me" value="true">
+        <label for="remember_me">Jäta mind meelde</label>
+    </div>
+
+    <!-- CSRF Token -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <button type="submit" class="btn-login">Logi sisse</button>
+</form>
+</div>
+</body>
+</html>

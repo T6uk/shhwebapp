@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suur Andmetabel</title>
+
+    <!-- Inter font - modern, clean typography -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', 'sans-serif'],
+                },
+                extend: {
+                    colors: {
+                        'primary': '#3b82f6',
+                        'primary-dark': '#2563eb',
+                        'primary-light': '#dbeafe',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- AG Grid CSS and JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-theme-alpine.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/dist/ag-grid-community.min.js"></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PWA support -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+<div class="container mx-auto px-4 py-3">
+    <!-- App Bar -->
+    <div class="app-bar">
+        <div class="app-title-container">
+            <div class="app-logo">
+                <i class="fas fa-table"></i>
+            </div>
+            <div>
+                <div class="app-title">Suur Andmetabel</div>
+                <div class="text-xs text-secondary-color dark:text-gray-400">Andmehaldus rakendus</div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div id="status" class="status-chip"></div>
+
+            <!-- Add direct access for admins if current_user exists and is admin -->
+            {% if current_user and current_user.is_admin %}
+            <a href="/auth/admin" class="btn btn-primary">
+                <i class="fas fa-user-shield"></i>
+                <span class="hidden sm:inline ml-1">Admin</span>
+            </a>
+            {% endif %}
+
+            <a href="/auth/logout" class="btn btn-secondary">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="hidden sm:inline ml-1">Logi välja</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Toolbar -->
+    <div class="card p-4 mb-3">
+        <div class="toolbar">
+            <!-- Left section: search and main actions -->
+            <div class="toolbar-section">
+                <!-- Search bar -->
+                <div class="search-bar">
+                    <div class="input-group flex-1">
+                        <i class="input-icon fas fa-search"></i>
+                        <input type="text" id="search-input" class="input-control" placeholder="Otsi...">
+                    </div>
+                    <button id="search-button" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                        <span class="hidden sm:inline">Otsi</span>
+                    </button>
+                    <button id="reset-button" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        <span class="hidden sm:inline">Lähtesta</span>
+                    </button>
+                </div>
+
+                <!-- Quick Links Dropdown -->
+                <div class="dropdown">
+                    <button id="links-dropdown-toggle" class="btn btn-secondary">
+                        <i class="fas fa-link"></i>
+                        <span class="hidden sm:inline">Kiirlingid</span>
+                    </button>
+                    <div id="links-dropdown-menu" class="dropdown-menu">
+                        <div class="dropdown-title">Veergude kiirlingid</div>
+                        <div class="quick-links-grid" id="column-quick-links">
+                            <!-- Quick links will be inserted here dynamically -->
+                            <div class="text-gray-400 text-xs italic p-2">Veergude laadimine...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter button -->
+                <button id="filter-toggle" class="btn btn-secondary">
+                    <i class="fas fa-filter"></i>
+                    <span class="hidden sm:inline">Filter</span>
+                </button>
+            </div>
+
+            <!-- Right section: tools and utilities -->
+            <div class="toolbar-section">
+                <!-- Tools dropdown (Updated) -->
+                <div class="dropdown">
+                    <button id="tools-dropdown-toggle" class="btn btn-secondary">
+                        <i class="fas fa-tools"></i>
+                        <span class="hidden sm:inline">Tööriistad</span>
+                    </button>
+                    <div id="tools-dropdown-menu" class="dropdown-menu">
+                        <div class="dropdown-title">Tööriistad</div>
+
+                        <!-- New tool buttons -->
+                        <div class="dropdown-item" id="view-file">
+                            <i class="fas fa-folder-open"></i>
+                            <span>Vaata toimikut</span>
+                        </div>
+                        <div class="dropdown-item" id="virtual-file">
+                            <i class="fas fa-folder"></i>
+                            <span>Virtuaaltoimik</span>
+                        </div>
+                        <div class="dropdown-item" id="receipts-report">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Laekumiste aruanne</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="export-excel">
+                            <i class="fas fa-file-excel"></i>
+                            <span>Ekspordi Excelisse</span>
+                        </div>
+                        <div class="dropdown-item" id="export-pdf">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Ekspordi PDF-ina</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if current_user and current_user.is_admin %}
+                <a href="/auth/admin" class="btn btn-primary">
+                    <i class="fas fa-user-shield"></i>
+                    <span class="hidden sm:inline">Admin Dashboard</span>
+                </a>
+                {% endif %}
+
+                <!-- Settings dropdown -->
+                <div class="dropdown">
+                    <button id="settings-dropdown-toggle" class="btn btn-secondary">
+                        <i class="fas fa-cog"></i>
+                        <span class="hidden sm:inline">Seaded</span>
+                    </button>
+                    <div id="settings-dropdown-menu" class="dropdown-menu">
+                        <div class="dropdown-title">Tabeli seaded</div>
+
+                        <div class="dropdown-item" id="toggle-columns">
+                            <i class="fas fa-eye"></i>
+                            <span>Näita/peida veerud</span>
+                        </div>
+                        <div class="dropdown-item" id="save-column-layout">
+                            <i class="fas fa-columns"></i>
+                            <span>Salvesta veergude paigutus</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="font-increase">
+                            <i class="fas fa-text-height"></i>
+                            <span>Suurenda teksti</span>
+                        </div>
+                        <div class="dropdown-item" id="font-decrease">
+                            <i class="fas fa-text-height fa-flip-vertical"></i>
+                            <span>Vähenda teksti</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="toggle-dark-mode">
+                            <i class="fas fa-moon"></i>
+                            <span>Tume režiim</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Widgets dropdown -->
+                <div class="dropdown">
+                    <button id="widgets-dropdown-toggle" class="btn btn-secondary">
+                        <i class="fas fa-puzzle-piece"></i>
+                        <span class="hidden sm:inline">Vidinad</span>
+                    </button>
+                    <div id="widgets-dropdown-menu" class="dropdown-menu">
+                        <div class="dropdown-title">Vidinad</div>
+
+                        <!-- Widgets menu items -->
+                        <div class="dropdown-item" id="save-view">
+                            <i class="fas fa-save"></i>
+                            <span>Salvesta vaade</span>
+                        </div>
+                        <div class="dropdown-item" id="load-view">
+                            <i class="fas fa-folder-open"></i>
+                            <span>Lae vaade</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="toggle-compact">
+                            <i class="fas fa-compress"></i>
+                            <span>Kompaktne režiim</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div id="filter-panel" class="filter-panel">
+        <div class="filter-group-title">Kohandatud filtrid</div>
+
+        <div id="filter-container">
+            <!-- Initial filter row -->
+            <div class="filter-row" data-id="1">
+                <select class="filter-select filter-field">
+                    <option value="">Vali veerg...</option>
+                    <!-- Column options will be added dynamically -->
+                </select>
+
+                <select class="filter-select filter-operator">
+                    <option value="contains">Sisaldab</option>
+                    <option value="equals">Võrdub</option>
+                    <option value="starts">Algab</option>
+                    <option value="ends">Lõpeb</option>
+                    <option value="greater">Suurem kui</option>
+                    <option value="less">Väiksem kui</option>
+                </select>
+
+                <input type="text" class="filter-input" placeholder="Filtri väärtus">
+
+                <button class="filter-remove-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Add filter button -->
+        <div class="mt-4 mb-3">
+            <button id="add-filter-row" class="btn btn-secondary">
+                <i class="fas fa-plus"></i>
+                <span>Lisa filtritingimus</span>
+            </button>
+        </div>
+
+        <!-- Filter actions -->
+        <div class="filter-actions">
+            <button id="apply-filters" class="btn btn-primary">
+                <i class="fas fa-check"></i>
+                <span>Rakenda filtrid</span>
+            </button>
+            <button id="clear-filters" class="btn btn-secondary">
+                <i class="fas fa-times"></i>
+                <span>Tühista filtrid</span>
+            </button>
+            <button id="save-filter" class="btn btn-secondary">
+                <i class="fas fa-save"></i>
+                <span>Salvesta filter</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Container with AG Grid -->
+    <div id="table-container" class="card">
+        <div id="data-table" class="ag-theme-alpine"></div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay fixed inset-0 flex items-center justify-center z-50">
+        <div class="loading-card">
+            <div class="spinner mb-4"></div>
+            <p class="text-lg font-medium mb-2">Laadimine...</p>
+            <p class="text-sm text-secondary-color dark:text-gray-400">Andmete hankimine</p>
+        </div>
+    </div>
+
+    <!-- Column Visibility Modal (hidden by default) -->
+    <div id="column-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="column-modal-backdrop"></div>
+        <div class="modal-content w-full max-w-lg z-10 relative">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Veergude nähtavus</h3>
+                <button id="close-column-modal"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="column-checkboxes">
+                <!-- Column checkboxes will be added here dynamically -->
+            </div>
+
+            <div class="flex justify-end gap-3 mt-4">
+                <button id="apply-column-changes" class="btn btn-primary">
+                    <i class="fas fa-check"></i>
+                    <span>Rakenda</span>
+                </button>
+                <button id="cancel-column-changes" class="btn btn-secondary">
+                    <i class="fas fa-times"></i>
+                    <span>Tühista</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Application Script -->
+<script src="/static/js/app.js"></script>
+
+<!-- Modal JavaScript -->
+<script>
+    // Modified function to create checkboxes with improved styling
+    function showColumnVisibilityModal() {
+        if (!columnDefs || columnDefs.length === 0) return;
+
+        // Build checkboxes for all columns
+        const container = $("#column-checkboxes");
+        container.empty();
+
+        columnDefs.forEach(function (col) {
+            const isVisible = columnVisibility[col.field];
+
+            const checkbox = $(`
+                    <div class="column-checkbox-item">
+                        <input type="checkbox" id="col-${col.field}"
+                            data-field="${col.field}"
+                            class="column-toggle"
+                            ${isVisible ? 'checked' : ''}>
+                        <label for="col-${col.field}" class="text-sm ml-2">${col.headerName}</label>
+                    </div>
+                `);
+
+            container.append(checkbox);
+        });
+
+        // Show the modal
+        $("#column-modal").removeClass("hidden");
+    }
+</script>
+</body>
+</html>
