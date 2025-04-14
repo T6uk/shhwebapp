@@ -8,9 +8,18 @@ let isCompactMode = false;
 let activeFilters = [];
 let nextFilterId = 2; // Start at 2 since we have one filter row by default
 let columnVisibility = {}; // To track which columns are visible
+let uiHidden = false;
 
 // Initialize when document is ready
 $(document).ready(function () {
+    const savedUIState = localStorage.getItem('bigtable_ui_hidden');
+    if (savedUIState === 'true') {
+        uiHidden = true;
+        $("#app-bar").hide();
+        $("#toolbar-container").hide();
+        $("#toggle-ui-btn i").removeClass("fa-compress-alt").addClass("fa-expand-alt");
+        $("#toggle-ui-btn").attr("title", "Show UI elements");
+    }
     // Set the initial table container height
     resizeTableContainer();
     setupAdminNavigation();
@@ -49,6 +58,37 @@ $(document).ready(function () {
         }, 1500); // Show after data loads
     }
 });
+
+function toggleUIElements() {
+    uiHidden = !uiHidden;
+
+    // Save state to localStorage
+    localStorage.setItem('bigtable_ui_hidden', uiHidden ? 'true' : 'false');
+
+    if (uiHidden) {
+        // Hide elements
+        $("#app-bar").slideUp(300);
+        $("#toolbar-container").slideUp(300, function () {
+            // Update icon
+            $("#toggle-ui-btn i").removeClass("fa-compress-alt").addClass("fa-expand-alt");
+            // Update button tooltip
+            $("#toggle-ui-btn").attr("title", "Show UI elements");
+            // Resize table after animation completes
+            resizeTableContainer();
+        });
+    } else {
+        // Show elements
+        $("#app-bar").slideDown(300);
+        $("#toolbar-container").slideDown(300, function () {
+            // Update icon
+            $("#toggle-ui-btn i").removeClass("fa-expand-alt").addClass("fa-compress-alt");
+            // Update button tooltip
+            $("#toggle-ui-btn").attr("title", "Hide UI elements");
+            // Resize table after animation completes
+            resizeTableContainer();
+        });
+    }
+}
 
 // Set up periodic data refresh
 function setupDataRefreshTimer() {
@@ -192,8 +232,8 @@ function setupDropdowns() {
 // Function to resize the table container
 function resizeTableContainer() {
     const windowHeight = $(window).height();
-    const headerHeight = $(".app-bar").outerHeight(true);
-    const toolbarHeight = $(".toolbar").parent().outerHeight(true);
+    const headerHeight = $("#app-bar").is(":visible") ? $("#app-bar").outerHeight(true) : 0;
+    const toolbarHeight = $("#toolbar-container").is(":visible") ? $("#toolbar-container").outerHeight(true) : 0;
     const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
     const padding = 40; // Allow for some padding
 
@@ -203,6 +243,11 @@ function resizeTableContainer() {
     if ($("#edit-history-panel").is(":visible")) {
         const historyPanelHeight = $("#edit-history-panel").outerHeight(true);
         tableHeight -= historyPanelHeight;
+    }
+
+    // If grid API exists, resize columns to fit
+    if (gridApi) {
+        gridApi.sizeColumnsToFit();
     }
 }
 
@@ -893,6 +938,17 @@ function setupEventHandlers() {
         }
     });
 
+    $("#keyboard-shortcuts").click(function () {
+        alert(
+            "Keyboard Shortcuts:\n\n" +
+            "Alt + H: Toggle UI elements (hide/show app bar and toolbar)\n" +
+            "Ctrl + F: Focus search box\n" +
+            "Esc: Close any open dropdown\n" +
+            "F5 or Ctrl + R: Refresh data"
+        );
+        $("#settings-dropdown-menu").removeClass("show");
+    });
+
     // Export functionality
     $("#export-excel").click(function () {
         exportToExcel();
@@ -1025,6 +1081,36 @@ function setupEventHandlers() {
     $("#apply-column-changes").click(function () {
         applyColumnVisibility();
         $("#column-modal").addClass("hidden");
+    });
+
+    $("#toggle-ui-btn").click(function () {
+        toggleUIElements();
+    });
+
+    // Keyboard shortcut (Alt+H) to toggle UI
+    $(document).keydown(function (e) {
+        // Alt + H to toggle UI
+        if (e.altKey && e.keyCode === 72) {
+            toggleUIElements();
+            e.preventDefault();
+        }
+
+        // Ctrl + F to focus search
+        if (e.ctrlKey && e.keyCode === 70) {
+            $("#search-input").focus();
+            e.preventDefault();
+        }
+
+        // Esc to close dropdowns
+        if (e.keyCode === 27) {
+            $(".dropdown-menu").removeClass("show");
+        }
+
+        // F5 or Ctrl + R to refresh data
+        if (e.keyCode === 116 || (e.ctrlKey && e.keyCode === 82)) {
+            refreshData();
+            e.preventDefault();
+        }
     });
 }
 

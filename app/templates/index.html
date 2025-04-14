@@ -51,16 +51,25 @@
     <link rel="stylesheet" href="../static/css/custom.css">
 </head>
 <body>
+<div id="expand-collapse-controls" class="fixed top-4 right-4 z-50 flex gap-2">
+    <button id="toggle-ui-btn"
+            class="btn btn-secondary rounded-full w-10 h-10 flex items-center justify-center shadow-lg"
+            title="Toggle UI elements">
+        <i class="fas fa-compress-alt"></i>
+    </button>
+</div>
 <div class="container mx-auto px-4 sm:px-6 py-4">
     <!-- App Bar -->
-    <div class="app-bar bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4">
+    <div id="app-bar" class="app-bar bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4">
         <div class="app-title-container">
             <div class="app-logo">
                 <i class="fab fa-asymmetrik"></i>
             </div>
             <div>
                 <div class="app-title">Toomas Nipernaadi</div>
-                <div class="text-xs text-secondary-color dark:text-gray-400">Nipernaadit ei saa nimetada vabaduse kehastuseks</div>
+                <div class="text-xs text-secondary-color dark:text-gray-400">Nipernaadit ei saa nimetada vabaduse
+                    kehastuseks
+                </div>
             </div>
         </div>
 
@@ -125,7 +134,7 @@
     {% endif %}
 
     <!-- Main Toolbar -->
-    <div class="card rounded-xl shadow-md p-4 mb-3">
+    <div id="toolbar-container" class="card rounded-xl shadow-md p-4 mb-3">
         <div class="toolbar">
             <!-- Left section: search and main actions -->
             <div class="toolbar-section">
@@ -264,6 +273,11 @@
                         <div class="dropdown-item" id="toggle-dark-mode">
                             <i class="fas fa-moon"></i>
                             <span>Tume režiim</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="keyboard-shortcuts">
+                            <i class="fas fa-keyboard"></i>
+                            <span>Keyboard Shortcuts</span>
                         </div>
                     </div>
                 </div>
