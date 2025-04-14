@@ -1,3 +1,4 @@
+# app/api/v1/endpoints/auth.py
 import traceback
 from fastapi import Form, status, Request, Response, Depends, APIRouter, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
@@ -232,6 +233,7 @@ async def logout():
     response.delete_cookie(key="access_token", path="/")
     response.delete_cookie(key="refresh_token", path="/auth/refresh")
     response.delete_cookie(key="csrf_token", path="/")
+    response.delete_cookie(key="edit_token", path="/")
 
     return response
 
@@ -580,26 +582,20 @@ async def toggle_edit_mode(
         "expires_in_minutes": 30
     }
 
-    # Use Response instead of JSONResponse for more control
-    response = Response(
-        content=orjson.dumps(response_data),
-        media_type="application/json"
-    )
+    # Create a proper JSON response object
+    response = JSONResponse(content=response_data)
 
-    # Set the edit mode token as a cookie with debug info
+    # Set the edit token as an accessible cookie
     max_age = 30 * 60  # 30 minutes
-    cookie_value = edit_token
-    cookie_path = "/"
+    logger.info(f"Setting edit_token cookie: {edit_token[:10]}... (length: {len(edit_token)})")
 
-    logger.info(f"Setting edit_token cookie: {cookie_value[:10]}... (length: {len(cookie_value)})")
-
-    # Set a more explicit cookie
+    # Set a more accessible cookie - this is a key change
     response.set_cookie(
         key="edit_token",
-        value=cookie_value,
+        value=edit_token,
         max_age=max_age,
-        path=cookie_path,
-        httponly=True,
+        path="/",
+        httponly=False,  # Changed to False to make it accessible to JavaScript
         samesite="lax",
         secure=settings.COOKIE_SECURE
     )

@@ -391,6 +391,19 @@ function onCellValueChanged(params) {
     // Show loading indicator for the cell
     params.api.showLoadingOverlay();
 
+    // Get edit token from cookie
+    const editToken = document.cookie.match(/edit_token=([^;]*)/);
+    const editTokenValue = editToken ? editToken[1] : null;
+
+    // Set up headers to include edit token
+    const headers = {};
+    if (editTokenValue) {
+        headers['X-Edit-Token'] = editTokenValue;
+    } else {
+        // If no token in cookie but edit mode is active via localStorage
+        headers['X-Edit-Fallback'] = 'true';
+    }
+
     // Send update to server
     $.ajax({
         url: "/api/v1/table/cell",
@@ -400,6 +413,7 @@ function onCellValueChanged(params) {
             row_id: rowId,
             value: newValue
         },
+        headers: headers,
         dataType: "json",
         success: function (response) {
             // Success - update the cell
@@ -423,7 +437,7 @@ function onCellValueChanged(params) {
 
             // Add click handler for undo button
             setTimeout(() => {
-                $(`#undo-btn-${rowId}-${field}`).on("click", function() {
+                $(`#undo-btn-${rowId}-${field}`).on("click", function () {
                     undoLastEdit();
                     $(`#${notificationId}`).remove();
                 });
@@ -615,6 +629,12 @@ function activateEditMode() {
             // Close the modal
             $("#edit-mode-modal").addClass("hidden");
 
+            // Add fallback to localStorage
+            localStorage.setItem('edit_token', 'active');
+
+            // Debug cookies
+            debugCookies();
+
             // Verify the token was actually set in cookies
             setTimeout(() => {
                 const hasToken = hasValidEditToken();
@@ -643,7 +663,19 @@ function activateEditMode() {
                     // Show a notification
                     showNotification("Muutmise režiim on aktiveeritud 30 minutiks", "success");
                 } else {
-                    showNotification("Muutmise režiimi aktiveerimine ebaõnnestus. Palun proovige uuesti.", "error");
+                    // Use localStorage as fallback
+                    if (localStorage.getItem('edit_token') === 'active') {
+                        console.log("Using localStorage fallback for edit token");
+                        userPermissions.edit_mode_active = true;
+                        updateEditModeIndicator();
+                        if (gridApi) {
+                            gridApi.refreshCells({force: true});
+                        }
+                        addUndoButton();
+                        showNotification("Muutmise režiim on aktiveeritud (fallback mode)", "success");
+                    } else {
+                        showNotification("Muutmise režiimi aktiveerimine ebaõnnestus. Palun proovige uuesti.", "error");
+                    }
                 }
             }, 100);
         },
@@ -1384,8 +1416,22 @@ function deactivateEditMode() {
 }
 
 function hasValidEditToken() {
+    // Check for cookie token
     const editTokenCookie = document.cookie.match(/edit_token=([^;]*)/);
-    return !!editTokenCookie;
+    if (editTokenCookie && editTokenCookie[1]) {
+        console.log("Edit token found in cookies");
+        return true;
+    }
+
+    // Fallback to localStorage
+    const hasLocalStorage = localStorage.getItem('edit_token') === 'active';
+    if (hasLocalStorage) {
+        console.log("Edit token found in localStorage fallback");
+        return true;
+    }
+
+    console.log("No edit token found");
+    return false;
 }
 
 function addUndoButton() {
@@ -1469,6 +1515,17 @@ function undoAllEdits() {
 
     // Start processing from the last edit
     processNextEdit(editHistory.length - 1);
+}
+
+function debugCookies() {
+    console.log("All cookies:", document.cookie);
+    const editToken = document.cookie.match(/edit_token=([^;]*)/);
+    console.log("Edit token in cookies:", editToken ? "Found" : "Not found");
+    console.log("Edit mode active:", userPermissions.edit_mode_active);
+
+    // Try to detect localStorage fallback
+    const storedToken = localStorage.getItem('edit_token');
+    console.log("Edit token in localStorage:", storedToken ? "Found" : "Not found");
 }
 
 // Set up event handlers

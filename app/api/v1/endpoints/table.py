@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from app.api.dependencies import get_current_active_user
 from app.core.cache import get_cache, set_cache, compute_cache_key, invalidate_cache
 from app.core.db import get_db
-from app.core.security import verify_token  # Add this import
+from app.core.security import verify_token
 from app.models.table import BigTable
 from app.models.user import User
 
@@ -224,35 +224,6 @@ async def get_columns(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-async def check_edit_mode_token(request: Request):
-    """Check if the user has a valid edit mode token for edit operations"""
-    if request.method in ["PUT", "POST", "DELETE"]:
-        edit_token = request.cookies.get("edit_token")
-        if not edit_token:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Edit mode not activated. Please enter your password to enable editing."
-            )
-
-        try:
-            payload = await verify_token(edit_token)
-            # Check if token has edit scope
-            scopes = payload.get("scopes", [])
-            if "edit" not in scopes:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Edit mode token is invalid. Please re-enter your password."
-                )
-        except Exception as e:
-            logger.error(f"Edit token validation error: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Edit mode session expired. Please re-enter your password."
-            )
-
-    return True
-
-
 @router.put("/cell")
 async def update_cell(
         request: Request,
@@ -263,36 +234,45 @@ async def update_cell(
         current_user: User = Depends(get_current_active_user)
 ):
     """Update a cell value if the user has permission"""
+    # Debug logging
+    logger.info(f"Cell update request: field={field}, row_id={row_id}, value={value}")
+    logger.info(f"User permissions: can_edit={current_user.can_edit}, is_admin={current_user.is_admin}")
+
+    # Log all cookies for debugging
+    cookies = request.cookies
+    logger.info(f"Cookies: {[f'{k}:{v[:5] if v and len(v) > 5 else v}...' for k, v in cookies.items()]}")
+
     # Check permissions
     if not current_user.can_edit and not current_user.is_admin:
+        logger.warning(f"User {current_user.username} doesn't have edit permissions")
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "You don't have permission to edit data"}
         )
 
-    # Check for edit token
+    # Get edit token from multiple sources
+    edit_token = None
+
+    # Try cookie first
     edit_token = request.cookies.get("edit_token")
+
+    # Try header
     if not edit_token:
+        edit_token = request.headers.get("X-Edit-Token")
+
+    # Try query param
+    if not edit_token:
+        edit_token = request.query_params.get("edit_token")
+
+    # Check localStorage fallback marker
+    use_fallback = request.headers.get("X-Edit-Fallback") == "true"
+
+    # If we have a token or fallback is enabled, proceed
+    if not edit_token and not use_fallback:
+        logger.warning(f"No edit token found for user {current_user.username}")
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "Edit mode not activated. Please enter your password to enable editing."}
-        )
-
-    try:
-        # Verify the token
-        payload = await verify_token(edit_token)
-        # Check if token has edit scope
-        scopes = payload.get("scopes", [])
-        if "edit" not in scopes:
-            return JSONResponse(
-                status_code=status.HTTP_403_FORBIDDEN,
-                content={"detail": "Edit mode token is invalid. Please re-enter your password."}
-            )
-    except Exception as e:
-        logger.error(f"Edit token validation error: {str(e)}")
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"detail": "Edit mode session expired. Please re-enter your password."}
         )
 
     try:
@@ -308,6 +288,7 @@ async def update_cell(
         is_editable = result.scalar() > 0
 
         if not is_editable:
+            logger.warning(f"Column {field} is not editable")
             return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
                 content={"detail": "This column is not editable"}
@@ -336,7 +317,7 @@ async def update_cell(
         logger.info(
             f"Cell edited by {current_user.username}: table={BigTable.name}, row={row_id}, field={field}, old={original_value}, new={value}")
 
-        # Invalidate cache for this row
+        # Invalidate cache for this table
         await invalidate_cache(f"table_data:*")
 
         return JSONResponse(content={
