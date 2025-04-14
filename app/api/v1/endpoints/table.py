@@ -1,23 +1,24 @@
 # app/api/v1/endpoints/table.py
-from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request, status
-from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from typing import Optional, Dict, Any, List
 import logging
 import time
+from typing import Optional
+
 import orjson
+from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.responses import JSONResponse
 
 from app.api.dependencies import get_current_active_user
-from app.core.db import get_db
-from app.models.table import BigTable
 from app.core.cache import get_cache, set_cache, compute_cache_key, invalidate_cache
+from app.core.db import get_db
+from app.core.security import verify_token  # Add this import
+from app.models.table import BigTable
 from app.models.user import User
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/table", tags=["table"])
 
 
@@ -223,67 +224,9 @@ async def get_columns(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.put("/cell")
-async def update_cell(
-        request: Request,
-        field: str,
-        row_id: int,
-        value: str,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
-):
-    """Update a cell value if the user has permission"""
-    if not current_user.can_edit and not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to edit data"
-        )
-
-    try:
-        # First, check if the column is editable
-        sql = f"""
-            SELECT COUNT(*) 
-            FROM information_schema.columns 
-            WHERE table_name = '{BigTable.name}' 
-            AND column_name = :column
-            AND column_name NOT IN ('id', 'created_at', 'updated_at')
-        """
-        result = await db.execute(text(sql), {"column": field})
-        is_editable = result.scalar() > 0
-
-        if not is_editable:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="This column is not editable"
-            )
-
-        # Attempt to update the value with proper SQL injection protection
-        update_sql = f"""
-            UPDATE "{BigTable.name}" 
-            SET "{field}" = :value 
-            WHERE id = :row_id
-        """
-
-        result = await db.execute(text(update_sql), {"value": value, "row_id": row_id})
-        await db.commit()
-
-        # Invalidate cache for this row
-        await invalidate_cache(f"table_data:*")
-
-        return {"success": True, "message": "Cell updated successfully"}
-
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        await db.rollback()
-        logger.error(f"Error updating cell: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-
 async def check_edit_mode_token(request: Request):
     """Check if the user has a valid edit mode token for edit operations"""
-    if request.method == "PUT" or request.method == "POST" or request.method == "DELETE":
+    if request.method in ["PUT", "POST", "DELETE"]:
         edit_token = request.cookies.get("edit_token")
         if not edit_token:
             raise HTTPException(
@@ -301,6 +244,7 @@ async def check_edit_mode_token(request: Request):
                     detail="Edit mode token is invalid. Please re-enter your password."
                 )
         except Exception as e:
+            logger.error(f"Edit token validation error: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Edit mode session expired. Please re-enter your password."
@@ -316,14 +260,39 @@ async def update_cell(
         row_id: int,
         value: str,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_active_user),
-        _: bool = Depends(check_edit_mode_token)  # Add the edit token check
+        current_user: User = Depends(get_current_active_user)
 ):
     """Update a cell value if the user has permission"""
+    # Check permissions
     if not current_user.can_edit and not current_user.is_admin:
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to edit data"
+            content={"detail": "You don't have permission to edit data"}
+        )
+
+    # Check for edit token
+    edit_token = request.cookies.get("edit_token")
+    if not edit_token:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Edit mode not activated. Please enter your password to enable editing."}
+        )
+
+    try:
+        # Verify the token
+        payload = await verify_token(edit_token)
+        # Check if token has edit scope
+        scopes = payload.get("scopes", [])
+        if "edit" not in scopes:
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "Edit mode token is invalid. Please re-enter your password."}
+            )
+    except Exception as e:
+        logger.error(f"Edit token validation error: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Edit mode session expired. Please re-enter your password."}
         )
 
     try:
@@ -339,10 +308,19 @@ async def update_cell(
         is_editable = result.scalar() > 0
 
         if not is_editable:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="This column is not editable"
+                content={"detail": "This column is not editable"}
             )
+
+        # Retrieve original value first (for logging and potential recovery)
+        select_sql = f"""
+            SELECT "{field}" 
+            FROM "{BigTable.name}" 
+            WHERE id = :row_id
+        """
+        select_result = await db.execute(text(select_sql), {"row_id": row_id})
+        original_value = select_result.scalar()
 
         # Attempt to update the value with proper SQL injection protection
         update_sql = f"""
@@ -351,18 +329,29 @@ async def update_cell(
             WHERE id = :row_id
         """
 
-        result = await db.execute(text(update_sql), {"value": value, "row_id": row_id})
+        await db.execute(text(update_sql), {"value": value, "row_id": row_id})
         await db.commit()
+
+        # Log the edit for audit purposes
+        logger.info(
+            f"Cell edited by {current_user.username}: table={BigTable.name}, row={row_id}, field={field}, old={original_value}, new={value}")
 
         # Invalidate cache for this row
         await invalidate_cache(f"table_data:*")
 
-        return {"success": True, "message": "Cell updated successfully"}
+        return JSONResponse(content={
+            "success": True,
+            "message": "Cell updated successfully",
+            "original_value": original_value,
+            "new_value": value,
+            "field": field,
+            "row_id": row_id
+        })
 
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating cell: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Database error: {str(e)}"}
+        )

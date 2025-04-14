@@ -2,6 +2,7 @@
 import logging
 import re
 import secrets  # Import the secrets module properly
+import traceback
 from datetime import datetime, timedelta
 from typing import Optional, Union, Any, Dict
 
@@ -252,3 +253,52 @@ async def verify_csrf_token(request: Request) -> bool:
         return False
 
     return cookie_token == form_token
+
+
+async def verify_edit_token(request: Request) -> dict:
+    """
+    Verify the edit mode token from cookie
+    Returns the payload if valid, or raises HTTPException
+    """
+    edit_token = request.cookies.get("edit_token")
+
+    if not edit_token:
+        logger.warning("No edit token found in request")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Edit mode not activated. Please enter your password to enable editing."
+        )
+
+    try:
+        # Decode and verify the token
+        payload = jwt.decode(
+            edit_token,
+            settings.SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_signature": True}
+        )
+
+        # Check for edit scope
+        scopes = payload.get("scopes", [])
+        if "edit" not in scopes:
+            logger.warning("Token does not have edit scope")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Edit mode token is invalid. Please re-enter your password."
+            )
+
+        return payload
+
+    except jwt.ExpiredSignatureError:
+        logger.warning("Edit token has expired")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Edit mode session expired. Please re-enter your password."
+        )
+
+    except Exception as e:
+        logger.error(f"Error verifying edit token: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authentication error. Please log in again."
+        )

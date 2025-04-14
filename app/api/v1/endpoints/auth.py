@@ -1,6 +1,6 @@
 import traceback
 from fastapi import Form, status, Request, Response, Depends, APIRouter, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -534,29 +534,36 @@ async def toggle_edit_mode(
         current_user: User = Depends(get_current_active_user)
 ):
     """Enable edit mode with password verification"""
+    # Log the attempt
+    logger.info(f"Edit mode activation attempt by user: {current_user.username}")
+
     # Verify CSRF token
     cookie_csrf = request.cookies.get("csrf_token")
     if not cookie_csrf or cookie_csrf != csrf_token:
-        raise HTTPException(
+        logger.warning(f"CSRF token validation failed in toggle-edit-mode for user: {current_user.username}")
+        return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid request signature"
+            content={"detail": "Invalid request signature"}
         )
 
     # Check if user has edit permissions
     if not current_user.can_edit and not current_user.is_admin:
-        raise HTTPException(
+        logger.warning(f"User without edit permissions attempted to enable edit mode: {current_user.username}")
+        return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to edit data"
+            content={"detail": "You don't have permission to edit data"}
         )
 
     # Verify password
     if not verify_password(password, current_user.hashed_password):
-        raise HTTPException(
+        logger.warning(f"Incorrect password provided for edit mode by user: {current_user.username}")
+        return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password"
+            content={"detail": "Incorrect password"}
         )
 
     # Password is correct, generate a specific edit mode token
+    logger.info(f"Edit mode activated for user: {current_user.username}")
     edit_token = create_access_token(
         subject=current_user.username,
         expires_delta=timedelta(minutes=30),  # Short-lived token for edit mode

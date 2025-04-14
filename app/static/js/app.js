@@ -15,11 +15,19 @@ let userPermissions = {
     edit_mode_active: false
 };
 
+let editHistory = []; // Track edit history for undo
+const MAX_UNDO_HISTORY = 50; // Maximum number of undo steps to keep
+
 // Initialize when document is ready
 $(document).ready(function () {
     // Set the initial table container height
     resizeTableContainer();
     setupAdminNavigation();
+
+    // Check for edit mode token in cookies
+    const editToken = document.cookie.replace(/(?:(?:^|.*;\s*)edit_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    userPermissions.edit_mode_active = !!editToken;
+    console.log("Initial edit mode status:", userPermissions.edit_mode_active);
 
     getUserPermissions();
 
@@ -39,11 +47,6 @@ $(document).ready(function () {
 
     // Set up event handlers
     setupEventHandlers();
-
-    const editToken = document.cookie.replace(/(?:(?:^|.*;\s*)edit_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-    if (editToken) {
-        userPermissions.edit_mode_active = true;
-    }
 });
 
 // Check if user is admin and add admin navigation
@@ -125,7 +128,7 @@ function getUserPermissions() {
         url: "/auth/permissions",
         method: "GET",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             userPermissions.can_edit = response.can_edit;
             userPermissions.is_admin = response.is_admin;
 
@@ -138,7 +141,7 @@ function getUserPermissions() {
             // Trigger an event when permissions are loaded
             $(document).trigger('permissionsLoaded');
         },
-        error: function(xhr) {
+        error: function (xhr) {
             console.log("Failed to get user permissions");
         }
     });
@@ -175,14 +178,34 @@ function getColumns() {
                         tooltipField: col.field,
                         // Make editable if column supports it and user has permission
                         editable: function (params) {
-                            return (userPermissions.can_edit || userPermissions.is_admin) && col.editable && userPermissions.edit_mode_active;
+                            // Debug logging to see why editing isn't enabled
+                            console.log("Checking editable for field:", col.field,
+                                "can_edit:", userPermissions.can_edit,
+                                "is_admin:", userPermissions.is_admin,
+                                "edit_mode_active:", userPermissions.edit_mode_active,
+                                "col.editable:", col.editable);
+
+                            return userPermissions.edit_mode_active &&
+                                   (userPermissions.can_edit || userPermissions.is_admin) &&
+                                   col.editable === true;
                         },
                         // Add cell editing for editable fields
                         cellStyle: function (params) {
-                            if ((userPermissions.can_edit || userPermissions.is_admin) && col.editable) {
+                            if (userPermissions.edit_mode_active &&
+                                (userPermissions.can_edit || userPermissions.is_admin) &&
+                                col.editable === true) {
                                 return {backgroundColor: '#f0f9ff'};  // Light blue background for editable cells
                             }
                             return null;
+                        },
+                        // Add cell class to show which cells are editable when edit mode is active
+                        cellClass: function(params) {
+                            if (userPermissions.edit_mode_active &&
+                                (userPermissions.can_edit || userPermissions.is_admin) &&
+                                col.editable === true) {
+                                return 'editable-active';
+                            }
+                            return '';
                         }
                     };
                 });
@@ -245,7 +268,14 @@ function initGrid() {
             minWidth: 100,
             resizable: true,
             sortable: true,
-            filter: true
+            filter: true,
+            // Configure default editor settings
+            editable: false, // By default, columns are not editable
+            cellEditor: 'agTextCellEditor', // Default editor
+            cellEditorParams: {
+                // Enable any needed configurations for the editor
+                useFormatter: true
+            }
         },
         columnDefs: columnDefs,
         rowModelType: 'infinite',  // Use infinite row model for virtualization
@@ -265,6 +295,9 @@ function initGrid() {
         enableRangeSelection: false,
         suppressMovableColumns: false,
         suppressFieldDotNotation: true,
+        // Editing settings
+        stopEditingWhenCellsLoseFocus: true,
+        enterMovesDown: false, // Don't move down on Enter
         // Event handlers
         onFirstDataRendered: onFirstDataRendered,
         onGridReady: onGridReady,
@@ -273,7 +306,14 @@ function initGrid() {
         // Add cell editing event handlers
         onCellValueChanged: onCellValueChanged,
         // Add editing option for cell double-click
-        onCellDoubleClicked: onCellDoubleClicked
+        onCellDoubleClicked: onCellDoubleClicked,
+        // Add event to handle edit errors
+        onCellEditingStarted: function(event) {
+            console.log('Cell editing started:', event);
+        },
+        onCellEditingStopped: function(event) {
+            console.log('Cell editing stopped:', event);
+        }
     };
 
     // Create the grid
@@ -290,6 +330,26 @@ function onCellValueChanged(params) {
     const field = params.colDef.field;
     const rowId = params.data.id;
     const newValue = params.newValue;
+    const oldValue = params.oldValue;
+
+    // Skip if no change
+    if (newValue === oldValue) {
+        return;
+    }
+
+    // Add to undo history
+    editHistory.push({
+        field: field,
+        rowId: rowId,
+        oldValue: oldValue,
+        newValue: newValue,
+        timestamp: new Date()
+    });
+
+    // Cap the history size
+    if (editHistory.length > MAX_UNDO_HISTORY) {
+        editHistory.shift(); // Remove oldest edit
+    }
 
     // Show loading indicator for the cell
     params.api.showLoadingOverlay();
@@ -303,9 +363,11 @@ function onCellValueChanged(params) {
             row_id: rowId,
             value: newValue
         },
+        dataType: "json",
         success: function (response) {
             // Success - update the cell
             params.api.hideOverlay();
+
             // Show a brief success indicator
             const flashCellParams = {
                 rowNodes: [params.node],
@@ -314,16 +376,56 @@ function onCellValueChanged(params) {
                 fadeDelay: 500
             };
             params.api.flashCells(flashCellParams);
+
+            // Show notification with undo option
+            const notificationId = showNotification(
+                `<div>Value changed. <button id="undo-btn-${rowId}-${field}" class="text-blue-500 hover:text-blue-700 font-medium">Undo</button></div>`,
+                "success",
+                8000
+            );
+
+            // Add click handler for undo button
+            setTimeout(() => {
+                $(`#undo-btn-${rowId}-${field}`).on("click", function() {
+                    undoLastEdit();
+                    $(`#${notificationId}`).remove();
+                });
+            }, 100);
         },
-        error: function (xhr) {
+        error: function (xhr, status, error) {
             // Error - revert the change
             params.api.hideOverlay();
+
             let errorMsg = "Viga salvestamisel";
-            if (xhr.responseJSON && xhr.responseJSON.detail) {
-                errorMsg = xhr.responseJSON.detail;
+
+            try {
+                // Try to parse error response as JSON
+                if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMsg = xhr.responseJSON.detail;
+                } else if (xhr.responseText && xhr.responseText.indexOf("{") >= 0) {
+                    // Try to extract JSON from possible HTML response
+                    const jsonStart = xhr.responseText.indexOf("{");
+                    const jsonEnd = xhr.responseText.lastIndexOf("}") + 1;
+                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                        const jsonStr = xhr.responseText.substring(jsonStart, jsonEnd);
+                        const jsonData = JSON.parse(jsonStr);
+                        if (jsonData.detail) {
+                            errorMsg = jsonData.detail;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error parsing error response:", e);
             }
+
             // Show error message
-            alert(errorMsg);
+            showNotification(errorMsg, "error");
+
+            // Remove the failed edit from history
+            editHistory = editHistory.filter(edit =>
+                !(edit.field === field && edit.rowId === rowId && edit.newValue === newValue)
+            );
+
             // Refresh the cell to revert the change
             params.api.refreshCells({
                 rowNodes: [params.node],
@@ -339,6 +441,114 @@ function showEditModeModal() {
     $("#edit-mode-modal").removeClass("hidden");
     $("#edit-password").val("").focus();
     $("#edit-mode-error").addClass("hidden");
+
+    // Add visual cue that we're entering edit mode
+    $("#loading-overlay").addClass("bg-yellow-100");
+    setTimeout(() => {
+        $("#loading-overlay").removeClass("bg-yellow-100");
+    }, 300);
+}
+
+function showNotification(message, type = "info", duration = 5000) {
+    const notificationId = "notification-" + Date.now();
+    const notification = $(`
+        <div id="${notificationId}" class="fixed top-4 right-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-50 notification">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle text-green-500' : 
+                                type === 'error' ? 'fa-exclamation-circle text-red-500' :
+                                'fa-info-circle text-blue-500'}"></i>
+                </div>
+                <div class="ml-3 w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">${message}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button class="notification-close">
+                        <i class="fas fa-times text-gray-400 hover:text-gray-500"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `);
+
+    $("body").append(notification);
+
+    // Add click handler for close button
+    notification.find(".notification-close").on("click", function () {
+        notification.remove();
+    });
+
+    // Auto-remove after specified duration
+    setTimeout(function () {
+        notification.fadeOut(300, function () {
+            notification.remove();
+        });
+    }, duration);
+
+    return notificationId;
+}
+
+function undoLastEdit() {
+    if (editHistory.length === 0) {
+        showNotification("Nothing to undo", "info");
+        return;
+    }
+
+    const lastEdit = editHistory.pop();
+
+    // Show loading overlay
+    if (gridApi) {
+        gridApi.showLoadingOverlay();
+    }
+
+    // Send request to update cell with original value
+    $.ajax({
+        url: "/api/v1/table/cell",
+        method: "PUT",
+        data: {
+            field: lastEdit.field,
+            row_id: lastEdit.rowId,
+            value: lastEdit.oldValue
+        },
+        success: function (response) {
+            if (gridApi) {
+                gridApi.hideOverlay();
+
+                // Find the row node
+                const rowNode = gridApi.getRowNode(lastEdit.rowId);
+
+                if (rowNode) {
+                    // Update the cell value in the grid
+                    rowNode.setDataValue(lastEdit.field, lastEdit.oldValue);
+
+                    // Flash the cell to indicate change
+                    gridApi.flashCells({
+                        rowNodes: [rowNode],
+                        columns: [lastEdit.field],
+                        flashDelay: 2000,
+                        fadeDelay: 500
+                    });
+                } else {
+                    // If we can't find the row, refresh the whole grid
+                    gridApi.refreshInfiniteCache();
+                }
+            }
+
+            showNotification("Edit undone successfully", "success");
+        },
+        error: function (xhr) {
+            if (gridApi) {
+                gridApi.hideOverlay();
+            }
+
+            let errorMsg = "Error undoing edit";
+            if (xhr.responseJSON && xhr.responseJSON.detail) {
+                errorMsg = xhr.responseJSON.detail;
+            }
+
+            showNotification(errorMsg, "error");
+        }
+    });
 }
 
 // Add a function to handle edit mode activation
@@ -349,6 +559,12 @@ function activateEditMode() {
         $("#edit-mode-error").text("Palun sisestage parool").removeClass("hidden");
         return;
     }
+
+    // Show loading indicator
+    const loadingButton = $("#activate-edit-mode");
+    const originalText = loadingButton.html();
+    loadingButton.html('<i class="fas fa-spinner fa-spin"></i> Aktiveerimine...');
+    loadingButton.prop('disabled', true);
 
     $.ajax({
         url: "/auth/toggle-edit-mode",
@@ -361,6 +577,9 @@ function activateEditMode() {
             $("#edit-mode-modal").addClass("hidden");
             userPermissions.edit_mode_active = true;
 
+            // Clear undo history when starting a new edit session
+            editHistory = [];
+
             // Change the edit indicator to show active edit mode
             $("#edit-permissions-indicator")
                 .removeClass("bg-blue-100 text-blue-800 bg-green-100 text-green-800")
@@ -369,12 +588,28 @@ function activateEditMode() {
                 .removeClass("hidden");
 
             // Refresh the grid to apply new editing capabilities
+            console.log("Edit mode activated, refreshing grid");
             if (gridApi) {
+                // Force a complete refresh to ensure edit mode is applied
+                gridApi.refreshInfiniteCache();
+                // Also refresh all cells to update their styles and editable status
                 gridApi.refreshCells({force: true});
             }
 
             // Show a notification
             showNotification("Muutmise režiim on aktiveeritud 30 minutiks", "success");
+
+            // If a cell was double-clicked, try to put it in edit mode after a brief delay
+            setTimeout(function() {
+                console.log("Attempting to re-trigger cell editing...");
+                const focusedCell = gridApi.getFocusedCell();
+                if (focusedCell) {
+                    gridApi.startEditingCell({
+                        rowIndex: focusedCell.rowIndex,
+                        colKey: focusedCell.column.getId()
+                    });
+                }
+            }, 200);
         },
         error: function (xhr) {
             let errorMsg = "Aktiveerimine ebaõnnestus";
@@ -382,9 +617,53 @@ function activateEditMode() {
                 errorMsg = xhr.responseJSON.detail;
             }
             $("#edit-mode-error").text(errorMsg).removeClass("hidden");
+
+            // Reset button
+            loadingButton.html(originalText);
+            loadingButton.prop('disabled', false);
         }
     });
 }
+
+function setupEditModeTimer() {
+    if (userPermissions.edit_mode_active) {
+        const THIRTY_MINUTES = 30 * 60 * 1000;
+
+        // Get the edit token expiration time
+        const editTokenCookie = document.cookie.match(/edit_token=([^;]*)/);
+        if (editTokenCookie) {
+            // Set a timeout to warn user before expiration
+            setTimeout(() => {
+                if (userPermissions.edit_mode_active) {
+                    showNotification(
+                        "Muutmise režiim aegub peagi. Soovitame salvestada oma muudatused.",
+                        "info",
+                        10000
+                    );
+                }
+            }, THIRTY_MINUTES - (2 * 60 * 1000)); // 2 minutes before expiration
+
+            // Set a timeout to disable edit mode
+            setTimeout(() => {
+                if (userPermissions.edit_mode_active) {
+                    userPermissions.edit_mode_active = false;
+                    updateEditModeIndicator();
+
+                    // Remove undo button
+                    $("#undo-edit-button").remove();
+
+                    // Refresh the grid
+                    if (gridApi) {
+                        gridApi.refreshCells({force: true});
+                    }
+
+                    showNotification("Muutmise režiim on aegunud. Sisestage uuesti parool, et jätkata muutmist.", "info");
+                }
+            }, THIRTY_MINUTES);
+        }
+    }
+}
+
 
 // Helper function to get CSRF token
 function getCsrfToken() {
@@ -429,33 +708,39 @@ function showNotification(message, type = "info") {
 
 // Add a function to handle cell double-click for editing
 function onCellDoubleClicked(params) {
+    console.log("Cell double-clicked:", params.colDef.field);
+    console.log("Edit permissions:", userPermissions);
+
     // If user doesn't have edit permission, don't proceed
     if (!userPermissions.can_edit && !userPermissions.is_admin) {
+        console.log("User doesn't have edit permissions");
         return;
     }
 
     // If edit mode is not active, show the password modal
     if (!userPermissions.edit_mode_active) {
+        console.log("Edit mode not active, showing password modal");
         showEditModeModal();
         return;
     }
 
-    // Check if the cell is editable
+    // Check if the column is editable
     const colDef = params.colDef;
-    if (typeof colDef.editable === 'function') {
-        if (colDef.editable(params)) {
-            // Start editing the cell
-            params.api.startEditingCell({
-                rowIndex: params.rowIndex,
-                colKey: params.column.getId()
-            });
-        }
-    } else if (colDef.editable) {
+    const isEditable = colDef.editable ?
+                      (typeof colDef.editable === 'function' ? colDef.editable(params) : colDef.editable)
+                      : false;
+
+    console.log("Is cell editable:", isEditable);
+
+    if (isEditable) {
         // Start editing the cell
+        console.log("Starting cell edit...");
         params.api.startEditingCell({
             rowIndex: params.rowIndex,
             colKey: params.column.getId()
         });
+    } else {
+        console.log("Cell is not editable");
     }
 }
 
@@ -1001,6 +1286,110 @@ function debounce(func, wait) {
     };
 }
 
+function showEditHistory() {
+    if (editHistory.length === 0) {
+        showNotification("No edit history to display", "info");
+        return;
+    }
+
+    // Populate the history list
+    const historyList = $("#edit-history-list");
+    historyList.empty();
+
+    // Add items in reverse order (newest first)
+    for (let i = editHistory.length - 1; i >= 0; i--) {
+        const edit = editHistory[i];
+        const timestamp = new Date(edit.timestamp).toLocaleTimeString();
+
+        const historyItem = $(`
+            <div class="edit-history-item">
+                <div>
+                    <div class="font-medium">${edit.field}</div>
+                    <div class="text-xs text-gray-500">
+                        <span class="line-through">${edit.oldValue}</span> → 
+                        <span class="font-semibold">${edit.newValue}</span>
+                    </div>
+                    <div class="text-xs text-gray-500">${timestamp}</div>
+                </div>
+                <button class="undo-edit-btn btn-secondary btn-sm" data-index="${i}">
+                    <i class="fas fa-undo"></i>
+                </button>
+            </div>
+        `);
+
+        historyList.append(historyItem);
+    }
+
+    // Show the modal
+    $("#edit-history-modal").removeClass("hidden");
+}
+
+// Function to undo all edits
+function undoAllEdits() {
+    if (editHistory.length === 0) {
+        showNotification("Nothing to undo", "info");
+        return;
+    }
+
+    // Confirm with the user
+    if (!confirm("Are you sure you want to undo all edits? This action cannot be reversed.")) {
+        return;
+    }
+
+    // Show loading overlay
+    if (gridApi) {
+        gridApi.showLoadingOverlay();
+    }
+
+    // Process edits in reverse order (LIFO)
+    const processNextEdit = (index) => {
+        if (index < 0) {
+            // All edits processed
+            if (gridApi) {
+                gridApi.hideOverlay();
+                gridApi.refreshInfiniteCache();
+            }
+            editHistory = [];
+            $("#edit-history-modal").addClass("hidden");
+            showNotification("All edits have been undone", "success");
+            return;
+        }
+
+        const edit = editHistory[index];
+
+        // Send request to update cell with original value
+        $.ajax({
+            url: "/api/v1/table/cell",
+            method: "PUT",
+            data: {
+                field: edit.field,
+                row_id: edit.rowId,
+                value: edit.oldValue
+            },
+            success: function () {
+                // Process next edit
+                processNextEdit(index - 1);
+            },
+            error: function (xhr) {
+                if (gridApi) {
+                    gridApi.hideOverlay();
+                }
+
+                let errorMsg = "Error undoing edits";
+                if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMsg = xhr.responseJSON.detail;
+                }
+
+                showNotification(errorMsg, "error");
+                $("#edit-history-modal").addClass("hidden");
+            }
+        });
+    };
+
+    // Start processing from the last edit
+    processNextEdit(editHistory.length - 1);
+}
+
 // Set up event handlers
 function setupEventHandlers() {
     // Search with debounce
@@ -1164,6 +1553,59 @@ function setupEventHandlers() {
         if (e.which === 13) { // Enter key
             activateEditMode();
         }
+    });
+
+    $("#close-edit-history-modal, #edit-history-backdrop, #close-history").click(function () {
+        $("#edit-history-modal").addClass("hidden");
+    });
+
+    // Handle undo button click in history items
+    $("#edit-history-list").on("click", ".undo-edit-btn", function () {
+        const index = parseInt($(this).data("index"));
+        if (index >= 0 && index < editHistory.length) {
+            // Swap the edit to be undone to the end of the array
+            const editToUndo = editHistory[index];
+            editHistory.splice(index, 1);
+            editHistory.push(editToUndo);
+
+            // Undo it
+            undoLastEdit();
+
+            // Close the modal
+            $("#edit-history-modal").addClass("hidden");
+        }
+    });
+
+    // Handle undo all button
+    $("#undo-all-edits").click(undoAllEdits);
+
+    // Add a history button to the toolbar if not already there
+    if ($("#show-edit-history-button").length === 0) {
+        const historyButton = $(`
+            <button id="show-edit-history-button" class="btn btn-secondary" title="Näita muudatuste ajalugu">
+                <i class="fas fa-history"></i>
+                <span class="hidden sm:inline">Ajalugu</span>
+            </button>
+        `);
+
+        // Add it next to the undo button
+        $("#undo-edit-button").after(historyButton);
+
+        // Add click handler
+        historyButton.click(showEditHistory);
+    }
+
+    $(document).keydown(function (e) {
+        if (e.ctrlKey && e.keyCode === 90 && userPermissions.edit_mode_active) {
+            e.preventDefault();
+            undoLastEdit();
+        }
+    });
+
+    // Add handler for the permissions loaded event
+    $(document).on('permissionsLoaded', function () {
+        updateEditModeIndicator();
+        setupEditModeTimer();
     });
 
     // Add a click handler for the edit indicator to toggle edit mode

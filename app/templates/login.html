@@ -152,26 +152,27 @@
     {% endif %}
 
     <form method="post" action="/auth/login" enctype="application/x-www-form-urlencoded">
-    <div class="mb-4">
-        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Kasutajanimi</label>
-        <input type="text" id="username" name="username" class="input-control" required autofocus>
-    </div>
+        <div class="mb-4">
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Kasutajanimi</label>
+            <input type="text" id="username" name="username" class="input-control" required autofocus
+                   autocomplete="off">
+        </div>
 
-    <div class="mb-4">
-        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parool</label>
-        <input type="password" id="password" name="password" class="input-control" required>
-    </div>
+        <div class="mb-4">
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parool</label>
+            <input type="password" id="password" name="password" class="input-control" required autocomplete="off">
+        </div>
 
-    <div class="checkbox-label">
-        <input type="checkbox" id="remember_me" name="remember_me" value="true">
-        <label for="remember_me">Jäta mind meelde</label>
-    </div>
+        <div class="checkbox-label">
+            <input type="checkbox" id="remember_me" name="remember_me" value="true">
+            <label for="remember_me">Jäta mind meelde</label>
+        </div>
 
-    <!-- CSRF Token -->
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-    <button type="submit" class="btn-login">Logi sisse</button>
-</form>
+        <button type="submit" class="btn-login">Logi sisse</button>
+    </form>
 </div>
 </body>
 </html>

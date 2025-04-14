@@ -93,7 +93,9 @@
                 <div class="search-bar">
                     <div class="input-group flex-1">
                         <i class="input-icon fas fa-search"></i>
-                        <input type="text" id="search-input" class="input-control" placeholder="Otsi...">
+                        <label for="search-input"></label>
+                        <input type="text" id="search-input" class="input-control" placeholder="Otsi..."
+                               autocomplete="off">
                     </div>
                     <button id="search-button" class="btn btn-primary">
                         <i class="fas fa-search"></i>
@@ -245,16 +247,20 @@
                     <!-- Column options will be added dynamically -->
                 </select>
 
-                <select class="filter-select filter-operator">
-                    <option value="contains">Sisaldab</option>
-                    <option value="equals">Võrdub</option>
-                    <option value="starts">Algab</option>
-                    <option value="ends">Lõpeb</option>
-                    <option value="greater">Suurem kui</option>
-                    <option value="less">Väiksem kui</option>
-                </select>
+                <label>
+                    <select class="filter-select filter-operator">
+                        <option value="contains">Sisaldab</option>
+                        <option value="equals">Võrdub</option>
+                        <option value="starts">Algab</option>
+                        <option value="ends">Lõpeb</option>
+                        <option value="greater">Suurem kui</option>
+                        <option value="less">Väiksem kui</option>
+                    </select>
+                </label>
 
-                <input type="text" class="filter-input" placeholder="Filtri väärtus">
+                <label>
+                    <input type="text" class="filter-input" placeholder="Filtri väärtus" autocomplete="off">
+                </label>
 
                 <button class="filter-remove-btn">
                     <i class="fas fa-times"></i>
@@ -398,6 +404,44 @@
     $(document).on('permissionsLoaded', updateEditModeIndicator);
 </script>
 
+<script>
+// Debug panel for admins only
+$(document).ready(function() {
+    // Add Ctrl+Shift+D keyboard shortcut for debug panel
+    $(document).keydown(function(e) {
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 68) { // Ctrl+Shift+D
+            e.preventDefault();
+            $("#debug-panel").toggleClass("hidden");
+            updateDebugInfo();
+        }
+    });
+
+    $("#close-debug").click(function() {
+        $("#debug-panel").addClass("hidden");
+    });
+
+    $("#test-edit").click(function() {
+        console.log("Testing edit mode...");
+        userPermissions.edit_mode_active = true;
+        updateEditModeIndicator();
+        if (gridApi) {
+            gridApi.refreshCells({force: true});
+        }
+        updateDebugInfo();
+    });
+
+    function updateDebugInfo() {
+        let info = "";
+        info += "User Permissions: " + JSON.stringify(userPermissions, null, 2) + "<br>";
+        info += "Edit Mode Active: " + userPermissions.edit_mode_active + "<br>";
+        info += "Edit Token: " + (document.cookie.match(/edit_token=([^;]*)/) ? "Present" : "Missing") + "<br>";
+        info += "Grid API: " + (gridApi ? "Initialized" : "Not initialized") + "<br>";
+
+        $("#debug-content").html(info);
+    }
+});
+</script>
+
 <div id="edit-mode-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
     <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="edit-mode-backdrop"></div>
     <div class="modal-content w-full max-w-md z-10 relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
@@ -417,7 +461,8 @@
         <div class="mb-4">
             <label for="edit-password"
                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parool</label>
-            <input type="password" id="edit-password" class="input-control w-full" placeholder="Teie parool">
+            <input type="password" id="edit-password" class="input-control w-full" placeholder="Teie parool"
+                   autocomplete="off">
         </div>
 
         <div id="edit-mode-error" class="text-red-500 text-sm mb-4 hidden"></div>
@@ -432,6 +477,45 @@
                 <span>Tühista</span>
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Add a new modal for edit history -->
+<div id="edit-history-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="edit-history-backdrop"></div>
+    <div class="modal-content w-full max-w-lg z-10 relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Muudatuste ajalugu</h3>
+            <button id="close-edit-history-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div id="edit-history-list" class="max-h-80 overflow-y-auto mb-4">
+            <!-- Edit history items will be dynamically added here -->
+            <div class="text-sm text-gray-500 text-center py-4">Muudatuste ajalugu on tühi</div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <button id="undo-all-edits" class="btn btn-secondary">
+                <i class="fas fa-history mr-1"></i>
+                <span>Võta kõik tagasi</span>
+            </button>
+            <button id="close-history" class="btn btn-primary">
+                <i class="fas fa-check mr-1"></i>
+                <span>Sulge</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="debug-panel" class="fixed bottom-4 right-4 p-4 bg-white shadow-lg rounded-lg border border-gray-200 z-50 hidden">
+    <h3 class="font-bold mb-2">Debug Info</h3>
+    <div id="debug-content" class="text-xs overflow-auto max-h-40 mb-2"></div>
+    <div class="flex gap-2">
+        <button id="close-debug" class="px-2 py-1 bg-red-500 text-white rounded">Close</button>
+        <button id="test-edit" class="px-2 py-1 bg-blue-500 text-white rounded">Test Edit</button>
     </div>
 </div>
 
