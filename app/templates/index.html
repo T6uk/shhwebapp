@@ -50,17 +50,17 @@
     <link rel="stylesheet" href="../static/css/styles.css">
     <link rel="stylesheet" href="../static/css/custom.css">
 
-<script>
-    // Check for dark mode preference on page load and apply immediately to prevent flash
-    if (localStorage.getItem('darkMode') === 'true') {
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark-mode');
+    <script>
+        // Check for dark mode preference on page load and apply immediately to prevent flash
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark-mode');
 
-        // Apply basic dark styles immediately
-        document.body.style.backgroundColor = '#111827';
-        document.body.style.color = '#f3f4f6';
-    }
-</script>
+            // Apply basic dark styles immediately
+            document.body.style.backgroundColor = '#111827';
+            document.body.style.color = '#f3f4f6';
+        }
+    </script>
 </head>
 <body>
 <div id="expand-collapse-controls" class="fixed top-4 right-4 z-50 flex gap-2">
@@ -266,15 +266,6 @@
                             <span>Salvesta veergude paigutus</span>
                         </div>
                         <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" id="font-increase">
-                            <i class="fas fa-text-height"></i>
-                            <span>Suurenda teksti</span>
-                        </div>
-                        <div class="dropdown-item" id="font-decrease">
-                            <i class="fas fa-text-height fa-flip-vertical"></i>
-                            <span>Vähenda teksti</span>
-                        </div>
-                        <div class="dropdown-divider"></div>
                         <div class="dropdown-item" id="toggle-dark-mode">
                             <i class="fas fa-moon"></i>
                             <span>Tume režiim</span>
@@ -304,11 +295,6 @@
                         <div class="dropdown-item" id="load-view">
                             <i class="fas fa-folder-open"></i>
                             <span>Lae vaade</span>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" id="toggle-compact">
-                            <i class="fas fa-compress"></i>
-                            <span>Kompaktne režiim</span>
                         </div>
                     </div>
                 </div>

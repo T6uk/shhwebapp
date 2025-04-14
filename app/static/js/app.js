@@ -2,9 +2,7 @@
 let gridApi = null;
 let columnDefs = [];
 let searchTerm = '';
-let currentFontSize = 14;
 let isDarkMode = false;
-let isCompactMode = false;
 let activeFilters = [];
 let nextFilterId = 2; // Start at 2 since we have one filter row by default
 let columnVisibility = {}; // To track which columns are visible
@@ -12,8 +10,7 @@ let uiHidden = false;
 
 // Initialize when document is ready
 $(document).ready(function () {
-
-     const savedDarkMode = localStorage.getItem('darkMode');
+    const savedDarkMode = localStorage.getItem('darkMode');
     if (savedDarkMode === 'true') {
         isDarkMode = true;
         updateTheme();
@@ -461,9 +458,6 @@ function onGridReady(params) {
     if (isDarkMode) {
         updateTheme();
     }
-
-    // Update font size
-    updateFontSize();
 }
 
 // Handle first data rendered
@@ -1046,23 +1040,6 @@ function setupEventHandlers() {
         $("#settings-dropdown-menu").removeClass("show");
     });
 
-    // Font size controls
-    $("#font-increase").click(function () {
-        if (currentFontSize < 20) {
-            currentFontSize += 1;
-            updateFontSize();
-        }
-        $("#settings-dropdown-menu").removeClass("show");
-    });
-
-    $("#font-decrease").click(function () {
-        if (currentFontSize > 11) {
-            currentFontSize -= 1;
-            updateFontSize();
-        }
-        $("#settings-dropdown-menu").removeClass("show");
-    });
-
     // Toggle dark mode
     $("#toggle-dark-mode").click(function () {
         isDarkMode = !isDarkMode;
@@ -1071,19 +1048,6 @@ function setupEventHandlers() {
     });
 
     // Widget buttons
-    $("#toggle-compact").click(function () {
-        isCompactMode = !isCompactMode;
-
-        // For AG Grid, implement compact mode by changing row height
-        if (gridApi) {
-            const rowHeight = isCompactMode ? 30 : 40;
-            gridApi.resetRowHeights();
-            gridApi.setGridOption('rowHeight', rowHeight);
-        }
-
-        $("#widgets-dropdown-menu").removeClass("show");
-    });
-
     $("#save-view").click(function () {
         alert("Funktsioon 'Salvesta vaade' on arendamisel.");
         $("#widgets-dropdown-menu").removeClass("show");
