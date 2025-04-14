@@ -41,6 +41,9 @@ def get_user_db():
 def init_user_db():
     """Initialize user database and tables"""
     from app.models.user import User  # Import here to avoid circular import
+    from app.models.column_settings import ColumnSetting
+    from app.models.data_change import DataChange
+    from app.models.change_log import ChangeLog
     from app.core.security import get_password_hash
     from datetime import datetime
 
@@ -65,6 +68,7 @@ def init_user_db():
                 hashed_password=get_password_hash(settings.ADMIN_PASSWORD),
                 is_active=True,
                 is_admin=True,
+                can_edit=True,  # Admin can edit by default
                 created_at=datetime.utcnow(),
                 password_last_changed=datetime.utcnow()
             )

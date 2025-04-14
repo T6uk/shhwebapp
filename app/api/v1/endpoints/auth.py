@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 from datetime import datetime, timedelta
+from app.models.column_settings import ColumnSetting
+from app.models.data_change import DataChange
+from app.models.change_log import ChangeLog
 
 from app.api.dependencies import get_current_active_user
 from app.core.user_db import get_user_db
@@ -282,6 +285,43 @@ async def admin_dashboard(
         # Get all users for the admin panel
         users = db.query(User).order_by(User.username).all()
 
+        # Get column settings
+        from app.models.column_settings import ColumnSetting
+
+        # Get columns from the actual database table
+        try:
+            # Get the actual table columns
+            from app.models.table import BigTable
+            from sqlalchemy import inspect
+
+            # Use a separate sync engine to inspect table schema
+            from app.core.db import sync_engine
+
+            # Get all columns from the database
+            inspector = inspect(sync_engine)
+            table_columns = inspector.get_columns("taitur_data")  # Use your actual table name
+            column_names = [col['name'] for col in table_columns]
+
+            # For each column, get or create a ColumnSetting
+            columns = []
+            for col_name in column_names:
+                # Try to get existing setting
+                setting = db.query(ColumnSetting).filter(ColumnSetting.column_name == col_name).first()
+
+                # If not exists, create it
+                if not setting:
+                    display_name = col_name.replace("_", " ").title()
+                    setting = ColumnSetting(column_name=col_name, display_name=display_name, is_editable=False)
+                    db.add(setting)
+                    db.commit()
+                    db.refresh(setting)
+
+                columns.append(setting)
+
+        except Exception as e:
+            logger.error(f"Error loading columns for admin: {str(e)}")
+            columns = []
+
         # Generate CSRF token for admin forms
         csrf_token = create_csrf_token()
 
@@ -292,6 +332,7 @@ async def admin_dashboard(
                 "request": request,
                 "current_user": current_user,
                 "users": users,
+                "columns": columns,  # Add this line
                 "csrf_token": csrf_token
             }
         )
@@ -308,9 +349,13 @@ async def admin_dashboard(
         )
 
         # Also refresh the access token cookie explicitly
+        clean_token = token
+        if clean_token.startswith("Bearer "):
+            clean_token = clean_token.replace("Bearer ", "")
+
         response.set_cookie(
             key="access_token",
-            value=f"Bearer {token}",
+            value=f"Bearer {clean_token}",
             httponly=True,
             max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             path="/",
@@ -333,6 +378,78 @@ async def admin_dashboard(
             status_code=status.HTTP_303_SEE_OTHER
         )
 
+@router.post("/toggle-column-editable/{column_id}")
+async def toggle_column_editable(
+        column_id: int,
+        request: Request,
+        csrf_token: str = Form(None),
+        db: Session = Depends(get_user_db)
+):
+    """Toggle a column's editable status"""
+    # Get authentication token from cookie
+    token = extract_token_from_request(request)
+
+    # Generate a new CSRF token upfront
+    new_csrf_token = create_csrf_token()
+
+    # Verify CSRF token
+    cookie_csrf = request.cookies.get("csrf_token")
+    if not cookie_csrf or cookie_csrf != csrf_token:
+        logger.warning("CSRF token validation failed in toggle-column-editable")
+        return create_authenticated_response(
+            "/auth/admin?error=Invalid+request+signature",
+            token,
+            csrf_token=new_csrf_token
+        )
+
+    try:
+        # Verify the token and check if user is admin
+        if not token:
+            return RedirectResponse(
+                url="/auth/login?error=Session+expired",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+
+        payload = await verify_token(token)
+        username_from_token = payload.get("sub")
+
+        # Get current user from database
+        current_user = db.query(User).filter(User.username == username_from_token).first()
+
+        if not current_user or not current_user.is_admin:
+            return RedirectResponse(
+                url="/auth/login?error=Not+authorized",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+
+        # Find the column setting
+        column_setting = db.query(ColumnSetting).filter(ColumnSetting.id == column_id).first()
+
+        if not column_setting:
+            return create_authenticated_response(
+                "/auth/admin?error=Column+setting+not+found",
+                token,
+                csrf_token=new_csrf_token
+            )
+
+        # Toggle the editable status
+        column_setting.is_editable = not column_setting.is_editable
+        db.commit()
+
+        return create_authenticated_response(
+            "/auth/admin?success=Column+editable+status+updated",
+            token,
+            csrf_token=new_csrf_token
+        )
+
+    except Exception as e:
+        logger.error(f"Toggle column editable error: {str(e)}")
+        return create_authenticated_response(
+            f"/auth/admin?error=System+error:+{str(e)}",
+            token,
+            csrf_token=new_csrf_token
+        )
+
 
 # Now let's update the create_user function to properly preserve auth on errors
 @router.post("/create-user")
@@ -343,10 +460,10 @@ async def create_user(
         email: str = Form(None),
         full_name: str = Form(None),
         is_admin: bool = Form(False),
+        can_edit: bool = Form(False),  # Add this parameter
         csrf_token: str = Form(None),
         db: Session = Depends(get_user_db)
 ):
-    """Create a new user with enhanced security"""
     # Get authentication token from cookie
     token = extract_token_from_request(request)
 
@@ -413,6 +530,7 @@ async def create_user(
             email=email,
             full_name=full_name,
             is_admin=is_admin,
+            can_edit=can_edit,  # Add this line
             password_last_changed=datetime.utcnow()
         )
 

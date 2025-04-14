@@ -1,4 +1,6 @@
 # app/main.py (partial, showing the updated startup section)
+import json
+
 from fastapi import FastAPI, Request, Depends, Response, Cookie, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -8,10 +10,15 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 import os
+import json
+from typing import Optional
+import os
 import logging
 from jose import jwt, JWTError
 from typing import Optional
 from datetime import datetime
+from fastapi import WebSocket, WebSocketDisconnect, Depends, Query
+from app.core.websocket import connect_client, disconnect_client, broadcast_message
 
 from app.core.config import settings
 from app.core.db import get_db, init_db
@@ -135,6 +142,57 @@ async def auth_middleware(request: Request, call_next):
         return response
 
 
+@app.websocket("/ws")
+async def websocket_endpoint(
+        websocket: WebSocket,
+        token: str = Query(...),
+):
+    """WebSocket endpoint for real-time notifications"""
+    user_id = None
+
+    try:
+        # Verify token and get user
+        payload = await verify_token(token)
+        username = payload.get("sub")
+
+        # Get user from database (using synchronous session)
+        from app.models.user import User
+        from app.core.user_db import SessionLocal
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == username).first()
+            if user:
+                user_id = user.id
+            else:
+                logger.warning(f"WebSocket connection attempted with invalid user: {username}")
+                await websocket.close(code=1008)  # Policy violation
+                return
+        finally:
+            db.close()
+
+        # Connect client
+        await connect_client(websocket, user_id)
+
+        # Listen for messages (mainly for ping/pong to keep connection alive)
+        while True:
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                if message.get("type") == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+            except json.JSONDecodeError:
+                pass
+
+    except WebSocketDisconnect:
+        if user_id:
+            await disconnect_client(websocket, user_id)
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+        if user_id:
+            await disconnect_client(websocket, user_id)
+
+
 @app.get("/")
 async def index(request: Request):
     """Render the main page with the data table"""
@@ -205,6 +263,13 @@ async def startup_event():
         await init_redis_pool()
     except Exception as e:
         logger.error(f"Error initializing Redis: {str(e)}")
+
+    logs_dir = os.path.join(settings.BASE_DIR, "logs")
+    try:
+        os.makedirs(logs_dir, exist_ok=True)
+        logger.info(f"Logs directory created at: {logs_dir}")
+    except Exception as e:
+        logger.error(f"Error creating logs directory: {str(e)}")
 
     logger.info("Application startup complete")
 

@@ -19,6 +19,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    can_edit = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     last_login = Column(DateTime, nullable=True)
 

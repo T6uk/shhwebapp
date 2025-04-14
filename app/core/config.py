@@ -5,6 +5,12 @@ import os
 import secrets
 from pathlib import Path
 import logging
+from typing import Optional, List, ClassVar
+from pydantic_settings import BaseSettings
+import os
+import secrets
+from pathlib import Path
+import logging
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -18,6 +24,11 @@ class Settings(BaseSettings):
     # Set base directory for data files
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     DATA_DIR: Path = BASE_DIR / "data"
+
+    EDIT_MODE_PASSWORD: str = "EditData123!"  # Default edit mode password
+    EDIT_MODE_ENABLE_NOTIFICATIONS: bool = True
+    EDIT_MODE_CHECK_INTERVAL: int = 15  # seconds
+    EDIT_MODE_LOG_CHANGES: bool = True
 
     # Ensure data directory exists
     @property

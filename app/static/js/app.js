@@ -39,7 +39,7 @@ function setupAdminNavigation() {
         url: "/auth/check-admin",  // Updated path
         method: "GET",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             if (response.is_admin) {
                 // Add admin link to navigation
                 $("#admin-nav").html(`
@@ -53,7 +53,7 @@ function setupAdminNavigation() {
                 $("#admin-dashboard-btn").show();
             }
         },
-        error: function(xhr) {
+        error: function (xhr) {
             console.log("Not admin or not authenticated");
         }
     });
@@ -104,6 +104,11 @@ function resizeTableContainer() {
 
     const tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
     $("#table-container").css("height", tableHeight + "px");
+
+    if ($("#edit-history-panel").is(":visible")) {
+        const historyPanelHeight = $("#edit-history-panel").outerHeight(true);
+        tableHeight -= historyPanelHeight;
+    }
 }
 
 // Get columns from the API
@@ -195,7 +200,13 @@ function initGrid() {
             minWidth: 100,
             resizable: true,
             sortable: true,
-            filter: true
+            filter: true,
+            // Add these properties for editing
+            editable: function (params) {
+                // Only editable if in edit mode and the column is in editableColumns
+                return isEditMode && editableColumns.includes(params.colDef.field);
+            },
+            cellStyle: getCellStyle
         },
         columnDefs: columnDefs,
         rowModelType: 'infinite',  // Use infinite row model for virtualization
@@ -219,7 +230,8 @@ function initGrid() {
         onFirstDataRendered: onFirstDataRendered,
         onGridReady: onGridReady,
         onFilterChanged: onFilterChanged,
-        onSortChanged: onSortChanged
+        onSortChanged: onSortChanged,
+        onCellValueChanged: onCellValueChanged
     };
 
     // Create the grid

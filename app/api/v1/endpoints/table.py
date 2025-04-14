@@ -7,6 +7,28 @@ from typing import Optional, Dict, Any, List
 import logging
 import time
 import orjson
+from app.api.dependencies import get_current_active_user
+from app.models.user import User
+from app.core.user_db import get_user_db
+from app.services.edit_service import (
+    verify_edit_permission, get_editable_columns, update_cell_value,
+    get_session_changes, undo_change, check_for_changes
+)
+from fastapi import Depends, Form, Query
+from typing import Optional
+from datetime import datetime
+import uuid
+
+from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request, Form
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session  # Add this import
+from sqlalchemy import text
+from typing import Optional, Dict, Any, List, Tuple
+import logging
+import time
+import orjson
+import uuid
+from datetime import datetime
 
 from app.core.db import get_db
 from app.models.table import BigTable
@@ -220,3 +242,135 @@ async def get_columns(
     except Exception as e:
         logger.exception(f"Error getting columns: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/editable-columns")
+async def get_editable_columns_endpoint(
+        db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get which columns are editable for the current user"""
+    editable_columns = await get_editable_columns(db, current_user)
+
+    return {
+        "columns": editable_columns,
+        "can_edit": current_user.can_edit
+    }
+
+
+@router.post("/verify-edit-password")
+async def verify_edit_password_endpoint(
+        password: str = Form(...),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Verify the edit password to enable editing mode"""
+    is_valid = await verify_edit_permission(current_user, password)
+
+    if is_valid:
+        # Generate a session ID for tracking changes
+        session_id = str(uuid.uuid4())
+        return {
+            "success": True,
+            "session_id": session_id,
+            "message": "Edit mode enabled successfully"
+        }
+
+    return {
+        "success": False,
+        "message": "Invalid password or you don't have edit permission"
+    }
+
+
+@router.post("/update-cell")
+async def update_cell_endpoint(
+        request: Request,
+        table_name: str = Form(...),
+        row_id: str = Form(...),
+        column_name: str = Form(...),
+        old_value: Optional[str] = Form(None),
+        new_value: str = Form(...),
+        session_id: str = Form(...),
+        db: AsyncSession = Depends(get_db),
+        user_db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Update a cell value with change tracking"""
+    success = await update_cell_value(
+        db,
+        user_db,
+        current_user,
+        table_name,
+        row_id,
+        column_name,
+        old_value,
+        new_value,
+        session_id,
+        client_ip=request.client.host,
+        user_agent=request.headers.get("User-Agent", "")
+    )
+
+    return {"success": success}
+
+
+@router.get("/session-changes/{session_id}")
+async def get_session_changes_endpoint(
+        session_id: str,
+        user_db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get all changes made in a session for undo functionality"""
+    changes = await get_session_changes(user_db, current_user, session_id)
+
+    return {
+        "changes": [
+            {
+                "id": change.id,
+                "table_name": change.table_name,
+                "row_id": change.row_id,
+                "column_name": change.column_name,
+                "old_value": change.old_value,
+                "new_value": change.new_value,
+                "changed_at": change.changed_at.isoformat()
+            }
+            for change in changes
+        ]
+    }
+
+
+@router.post("/undo-change/{change_id}")
+async def undo_change_endpoint(
+        request: Request,
+        change_id: int,
+        db: AsyncSession = Depends(get_db),
+        user_db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Undo a specific change"""
+    success = await undo_change(
+        db,
+        user_db,
+        current_user,
+        change_id,
+        client_ip=request.client.host,
+        user_agent=request.headers.get("User-Agent", "")
+    )
+
+    return {"success": success}
+
+
+@router.get("/check-for-changes")
+async def check_for_changes_endpoint(
+        last_checked: Optional[str] = Query(None),
+        user_db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Check if there are changes from other users since last check"""
+    last_checked_time = None
+    if last_checked:
+        try:
+            last_checked_time = datetime.fromisoformat(last_checked)
+        except ValueError:
+            pass
+
+    result = await check_for_changes(user_db, current_user, last_checked_time)
+    return result

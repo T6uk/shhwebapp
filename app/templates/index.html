@@ -102,6 +102,18 @@
                     </button>
                 </div>
 
+                <div id="edit-mode-container" class="hidden">
+                    <button id="edit-mode-btn" class="btn btn-secondary bg-green-500 text-white">
+                        <i class="fas fa-edit"></i>
+                        <span class="hidden sm:inline">Enable Editing</span>
+                    </button>
+                    <div id="edit-indicator"
+                         class="hidden status-chip bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        <i class="fas fa-exclamation-circle mr-1"></i>
+                        Editing Mode
+                    </div>
+                </div>
+
                 <!-- Quick Links Dropdown -->
                 <div class="dropdown">
                     <button id="links-dropdown-toggle" class="btn btn-secondary">
@@ -227,6 +239,34 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div id="edit-history-panel"
+             class="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 max-w-md hidden z-50">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-bold text-gray-900 dark:text-white">Recent Changes</h3>
+                <button id="close-history-panel"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="changes-list" class="max-h-60 overflow-y-auto">
+                <!-- Changes will be added here dynamically -->
+                <div class="text-gray-500 dark:text-gray-400 text-sm italic">No changes yet</div>
+            </div>
+            <div class="mt-2 flex justify-end">
+                <button id="undo-all-btn" class="btn btn-secondary text-xs py-1 px-2 mr-2" disabled>
+                    <i class="fas fa-undo mr-1"></i>
+                    Undo All
+                </button>
+                <button id="show-history-btn" class="btn btn-secondary text-xs py-1 px-2">
+                    <i class="fas fa-history mr-1"></i>
+                    Show History
+                </button>
+            </div>
+        </div>
+        <!-- Add notification placeholder -->
+        <div id="notification-container" class="fixed bottom-4 left-4 z-50">
+            <!-- Notifications will be added here dynamically -->
         </div>
     </div>
 
@@ -361,5 +401,8 @@
         $("#column-modal").removeClass("hidden");
     }
 </script>
+
+<script src="../static/js/edit.js"></script>
+
 </body>
 </html>

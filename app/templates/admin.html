@@ -288,6 +288,11 @@
                         <label for="is_admin" class="cursor-pointer">Administraator</label>
                     </div>
 
+                    <div class="input-group flex items-center">
+                        <input type="checkbox" id="can_edit" name="can_edit" class="checkbox-control" value="true">
+                        <label for="can_edit" class="cursor-pointer">Can Edit Data</label>
+                    </div>
+
                     <!-- CSRF token -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
@@ -336,7 +341,8 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else "Pole sisse loginud" }}
+                                {{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else "Pole sisse
+                                loginud" }}
                             </td>
                             <td>
                                 {% if current_user.id != user.id %}
@@ -349,6 +355,51 @@
                                     </button>
                                 </form>
                                 {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- Add this in app/templates/admin.html, after the users table section -->
+        <div class="lg:col-span-3">
+            <div class="content-card">
+                <h2 class="text-lg font-bold mb-4">Editable Columns</h2>
+                <p class="text-sm text-gray-600 mb-4">Enable or disable editing for specific columns in the data
+                    table.</p>
+
+                <div class="overflow-x-auto">
+                    <table class="user-table">
+                        <thead>
+                        <tr>
+                            <th>Column Name</th>
+                            <th>Display Name</th>
+                            <th>Editable</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for column in columns %}
+                        <tr>
+                            <td class="font-medium">{{ column.column_name }}</td>
+                            <td>{{ column.display_name or column.column_name }}</td>
+                            <td>
+                                {% if column.is_editable %}
+                                <span class="badge badge-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-gray-200 text-gray-700">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" action="/auth/toggle-column-editable/{{ column.id }}"
+                                      class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="text-blue-500 hover:text-blue-700">
+                                        <i class="fas fa-toggle-{% if column.is_editable %}on{% else %}off{% endif %}"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
