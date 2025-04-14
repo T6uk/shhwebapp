@@ -34,6 +34,13 @@ $(document).ready(function () {
 
     // Set up periodic data refresh
     setupDataRefreshTimer();
+
+    if ($("#user-profile").length) {
+    const username = $("#user-profile").data("username");
+    setTimeout(function() {
+        showToast("Tere tulemast!", `Tere, ${username}! Andmed on valmis.`, "success");
+    }, 1500); // Show after data loads
+}
 });
 
 // Set up periodic data refresh

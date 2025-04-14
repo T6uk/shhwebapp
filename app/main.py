@@ -195,7 +195,7 @@ async def websocket_endpoint(
 
 @app.get("/")
 async def index(request: Request):
-    """Render the main page with the data table"""
+    """Render the main page with the data table with enhanced user data"""
     # Get token from request
     token = extract_token_from_request(request)
     current_user = None
@@ -206,13 +206,21 @@ async def index(request: Request):
             payload = await verify_token(token)
             username = payload.get("sub")
 
-            # Get user from database
+            # Get user from database with full profile
             from app.models.user import User
             from app.core.user_db import SessionLocal
 
             db = SessionLocal()
             try:
                 current_user = db.query(User).filter(User.username == username).first()
+
+                # Add last login in a nicer format for display
+                if current_user and current_user.last_login:
+                    from datetime import datetime
+                    current_user.formatted_last_login = current_user.last_login.strftime("%d.%m.%Y %H:%M")
+                else:
+                    current_user.formatted_last_login = "Pole sisse loginud"
+
             finally:
                 db.close()
 
