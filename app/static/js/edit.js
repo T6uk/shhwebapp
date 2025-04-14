@@ -1,5 +1,5 @@
-// app/static/js/edit.js - Editing functionality for the table
-// Global variables for editing
+// app/static/js/edit.js - Tabeli redigeerimise funktsioonid
+// Globaalsed muutujad redigeerimiseks
 let isEditMode = false;
 let editSessionId = null;
 let editableColumns = [];
@@ -8,22 +8,22 @@ let lastChangeCheck = null;
 let changeCheckInterval = null;
 let socket = null;
 
-// Initialize when document is ready
+// Algväärtusta kui dokument on laaditud
 $(document).ready(function () {
-    // Check if user has edit permissions and get editable columns
+    // Kontrolli, kas kasutajal on redigeerimisõigused ja lae redigeeritavad veerud
     getEditableColumns();
 
-    // Set up event handlers for edit functionality
+    // Seadista sündmuste käsitlejad redigeerimisfunktsionaalsusele
     setupEditHandlers();
 
-    // Check for changes from other users
+    // Kontrolli muudatusi teistelt kasutajatelt
     setupChangeNotifications();
 
     setupWebSocket();
 });
 
 function setupWebSocket() {
-    // Get the token from cookies
+    // Hangi token küpsistest
     const cookies = document.cookie.split(';');
     let token = null;
     for (let i = 0; i < cookies.length; i++) {
@@ -36,18 +36,18 @@ function setupWebSocket() {
 
     if (!token) return;
 
-    // Clean the token
+    // Puhasta token
     if (token.startsWith('Bearer%20')) {
         token = token.replace('Bearer%20', '');
     } else if (token.startsWith('Bearer ')) {
         token = token.replace('Bearer ', '');
     }
 
-    // Create WebSocket connection
+    // Loo WebSocket ühendus
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
 
-    // Close existing socket if any
+    // Sulge olemasolev sokett, kui see on olemas
     if (socket && socket.readyState !== WebSocket.CLOSED) {
         socket.close();
     }
@@ -55,9 +55,9 @@ function setupWebSocket() {
     socket = new WebSocket(wsUrl);
 
     socket.onopen = function (e) {
-        console.log("WebSocket connection established");
+        console.log("WebSocket ühendus loodud");
 
-        // Send periodic pings to keep connection alive
+        // Saada perioodilisi ping-e, et hoida ühendust elus
         if (window.pingInterval) {
             clearInterval(window.pingInterval);
         }
@@ -73,51 +73,51 @@ function setupWebSocket() {
         try {
             const data = JSON.parse(event.data);
 
-            // Handle different message types
+            // Käitle erinevat tüüpi sõnumeid
             if (data.type === "data_change") {
-                // Show notification for data change
+                // Näita teavitust andmete muutmise kohta
                 showDataChangeNotification([{
-                    username: data.username || "Another user",
+                    username: data.username || "Teine kasutaja",
                     table_name: data.table_name,
                     row_id: data.row_id,
                     column_name: data.column_name,
                     changed_at: data.timestamp
                 }]);
 
-                // Also refresh the grid data to show the latest changes
+                // Värskenda ka tabelit, et näidata viimased muudatused
                 if (gridApi) {
                     gridApi.refreshInfiniteCache();
                 }
             } else if (data.type === "pong") {
-                // Ping response, nothing to do
+                // Ping vastus, midagi pole vaja teha
             }
         } catch (e) {
-            console.error("Error parsing WebSocket message:", e);
+            console.error("Viga WebSocket sõnumi analüüsimisel:", e);
         }
     };
 
     socket.onclose = function (event) {
         if (event.wasClean) {
-            console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+            console.log(`WebSocket ühendus suletud korrektselt, kood=${event.code}, põhjus=${event.reason}`);
         } else {
-            console.error("WebSocket connection died");
+            console.error("WebSocket ühendus katkes");
         }
 
-        // Clear the ping interval if it exists
+        // Tühjenda ping intervall, kui see eksisteerib
         if (window.pingInterval) {
             clearInterval(window.pingInterval);
         }
 
-        // Try to reconnect after a delay
+        // Proovi uuesti ühenduda peale viivitust
         setTimeout(setupWebSocket, 5000);
     };
 
     socket.onerror = function (error) {
-        console.error("WebSocket error:", error);
+        console.error("WebSocket viga:", error);
     };
 }
 
-// Get editable columns from the server
+// Hangi redigeeritavad veerud serverist
 function getEditableColumns() {
     $.ajax({
         url: "/api/v1/table/editable-columns",
@@ -126,53 +126,53 @@ function getEditableColumns() {
         success: function (response) {
             editableColumns = response.columns || [];
 
-            // Show edit button only if user has permission
+            // Näita redigeerimise nuppu ainult siis, kui kasutajal on õigused
             if (response.can_edit) {
                 $("#edit-mode-container").removeClass("hidden");
             }
 
-            console.log("Editable columns:", editableColumns);
+            console.log("Redigeeritavad veerud:", editableColumns);
         },
         error: function (xhr, status, error) {
-            console.error("Error getting editable columns:", error);
+            console.error("Viga redigeeritavate veergude laadimisel:", error);
         }
     });
 }
 
-// Set up edit-related event handlers
+// Seadista redigeerimisega seotud sündmuste käsitlejad
 function setupEditHandlers() {
-    // Edit mode toggle button
+    // Redigeerimisrežiimi lüliti nupp
     $("#edit-mode-btn").click(function () {
         toggleEditMode();
     });
 
-    // Undo all changes button
+    // Kõigi muudatuste tühistamise nupp
     $("#undo-all-btn").click(function () {
         undoAllChanges();
     });
 
-    // Close history panel button
+    // Sule ajaloo paneeli nupp
     $("#close-history-panel").click(function () {
         $("#edit-history-panel").addClass("hidden");
     });
 
-    // Show history button
+    // Näita ajalugu nupp
     $("#show-history-btn").click(function () {
         loadSessionChanges();
     });
 
-    // Add beforeunload event handler to warn about unsaved changes
+    // Lisa beforeunload sündmuse käsitleja hoiatamaks salvestamata muudatuste kohta
     $(window).on("beforeunload", function (e) {
         if (isEditMode && Object.keys(unsavedChanges).length > 0) {
-            // Standard message for beforeunload event
-            const message = "You have unsaved changes. Are you sure you want to leave? Changes can't be undone after.";
+            // Standardne sõnum beforeunload sündmuse jaoks
+            const message = "Teil on salvestamata muudatusi. Kas olete kindel, et soovite lahkuda? Muudatusi ei saa hiljem tagasi võtta.";
             e.returnValue = message;
             return message;
         }
     });
 }
 
-// Toggle edit mode on/off
+// Lülita redigeerimisrežiim sisse/välja
 function toggleEditMode() {
     if (isEditMode) {
         disableEditMode();
@@ -181,13 +181,13 @@ function toggleEditMode() {
     }
 }
 
-// Enable edit mode after password verification
+// Luba redigeerimisrežiim pärast parooli kontrollimist
 function enableEditMode() {
-    // Prompt for password
-    const password = prompt("Enter edit mode password:");
+    // Küsi parool
+    const password = prompt("Sisestage redigeerimisrežiimi parool:");
     if (!password) return;
 
-    // Verify password with server
+    // Kontrolli parooli serveris
     $.ajax({
         url: "/api/v1/table/verify-edit-password",
         method: "POST",
@@ -197,80 +197,80 @@ function enableEditMode() {
         dataType: "json",
         success: function (response) {
             if (response.success) {
-                // Enable edit mode
+                // Luba redigeerimisrežiim
                 isEditMode = true;
                 editSessionId = response.session_id;
 
-                // Update button UI
-                $("#edit-mode-btn").text("Disable Editing");
+                // Uuenda nupu kasutajaliidest
+                $("#edit-mode-btn").text("Lülita redigeerimine välja");
                 $("#edit-mode-btn").removeClass("bg-green-500").addClass("bg-red-500");
 
-                // Show editing indicator
+                // Näita redigeerimise indikaatorit
                 $("#edit-indicator").removeClass("hidden");
 
-                // Show edit history panel
+                // Näita redigeerimise ajaloo paneeli
                 $("#edit-history-panel").removeClass("hidden");
 
-                // Reset unsaved changes
+                // Lähtesta salvestamata muudatused
                 unsavedChanges = {};
 
-                // Refresh grid to highlight editable cells
+                // Värskenda tabelit, et esile tõsta redigeeritavad lahtrid
                 if (gridApi) {
                     gridApi.redrawRows();
                 }
 
-                // Show toast notification
-                showToast("Edit mode enabled", "You can now edit the highlighted cells by double-clicking", "info");
+                // Näita teavitust
+                showToast("Redigeerimisrežiim lubatud", "Saate nüüd redigeerida esiletõstetud lahtreid topeltklõpsates", "info");
             } else {
-                // Show error
-                showToast("Edit mode failed", response.message || "Invalid password", "error");
+                // Näita viga
+                showToast("Redigeerimisrežiimi viga", response.message || "Vale parool", "error");
             }
         },
         error: function (xhr, status, error) {
-            console.error("Error verifying edit password:", error);
-            showToast("Error", "Failed to enable edit mode", "error");
+            console.error("Viga parooli kontrollimisel:", error);
+            showToast("Viga", "Redigeerimisrežiimi lubamine ebaõnnestus", "error");
         }
     });
 }
 
-// Disable edit mode
+// Keela redigeerimisrežiim
 function disableEditMode() {
-    // Check for unsaved changes
+    // Kontrolli salvestamata muudatusi
     if (Object.keys(unsavedChanges).length > 0) {
-        if (!confirm("You have unsaved changes. Are you sure you want to exit edit mode? Changes can't be undone after.")) {
+        if (!confirm("Teil on salvestamata muudatusi. Kas olete kindel, et soovite redigeerimisrežiimist väljuda? Muudatusi ei saa hiljem tagasi võtta.")) {
             return;
         }
     }
 
-    // Disable edit mode
+    // Keela redigeerimisrežiim
     isEditMode = false;
     editSessionId = null;
 
-    // Update button UI
-    $("#edit-mode-btn").text("Enable Editing");
+    // Uuenda nupu kasutajaliidest
+    $("#edit-mode-btn").text("Luba redigeerimine");
     $("#edit-mode-btn").removeClass("bg-red-500").addClass("bg-green-500");
 
-    // Hide editing indicator
+    // Peida redigeerimise indikaator
     $("#edit-indicator").addClass("hidden");
 
-    // Hide edit history panel
+    // Peida redigeerimise ajaloo paneel
     $("#edit-history-panel").addClass("hidden");
 
-    // Clear unsaved changes
+    // Tühjenda salvestamata muudatused
     unsavedChanges = {};
 
-    // Refresh grid to remove highlighting
+    // Värskenda tabelit, et eemaldada esiletõstmine
     if (gridApi) {
         gridApi.redrawRows();
     }
 
-    // Show toast notification
-    showToast("Edit mode disabled", "You are now in view-only mode", "info");
+    // Näita teavitust
+    showToast("Redigeerimisrežiim keelatud", "Olete nüüd ainult vaatamise režiimis", "info");
 }
 
-// Handle cell value change - this integrates with AG Grid
+// Käsitle lahtri väärtuse muutmist - see integreerib AG Grid'iga
 function onCellValueChanged(params) {
-    // Only process if in edit mode
+    // Töötle ainult redigeerimisrežiimis
     if (!isEditMode) return;
 
     const column = params.column.getColDef().field;
@@ -278,13 +278,13 @@ function onCellValueChanged(params) {
     const oldValue = params.oldValue;
     const newValue = params.newValue;
 
-    // Skip if no actual change
+    // Jäta vahele, kui tegelikku muudatust pole
     if (oldValue === newValue) return;
 
-    // Key for tracking this change
+    // Võti selle muudatuse jälgimiseks
     const changeKey = `${rowId}_${column}`;
 
-    // Add to unsaved changes
+    // Lisa salvestamata muudatustesse
     unsavedChanges[changeKey] = {
         rowId: rowId,
         column: column,
@@ -293,12 +293,12 @@ function onCellValueChanged(params) {
         timestamp: new Date().toISOString()
     };
 
-    // Save to server
+    // Salvesta serverisse
     $.ajax({
         url: "/api/v1/table/update-cell",
         method: "POST",
         data: {
-            table_name: "taitur_data", // Replace with your actual table name
+            table_name: "taitur_data", // Asenda oma tegeliku tabeli nimega
             row_id: rowId,
             column_name: column,
             old_value: oldValue,
@@ -308,29 +308,29 @@ function onCellValueChanged(params) {
         dataType: "json",
         success: function (response) {
             if (response.success) {
-                // Remove from unsaved changes since it's saved
+                // Eemalda salvestamata muudatustest, kuna see on salvestatud
                 delete unsavedChanges[changeKey];
 
-                // Update changes list
+                // Uuenda muudatuste nimekirja
                 loadSessionChanges();
 
-                // Show success toast
-                showToast("Cell updated", `Updated ${column} value successfully`, "success");
+                // Näita õnnestumise teavitust
+                showToast("Lahter uuendatud", `Veeru ${column} väärtus edukalt uuendatud`, "success");
             }
         },
         error: function (xhr, status, error) {
-            console.error("Error updating cell:", error);
+            console.error("Viga lahtri uuendamisel:", error);
 
-            // Revert the change in the grid
+            // Taasta muudatus tabelis
             params.node.setDataValue(column, oldValue);
 
-            // Show error toast
-            showToast("Update failed", xhr.responseJSON?.detail || error, "error");
+            // Näita vea teavitust
+            showToast("Uuendamine ebaõnnestus", xhr.responseJSON?.detail || error, "error");
         }
     });
 }
 
-// Load changes for the current editing session
+// Lae muudatused praeguse redigeerimisseansi jaoks
 function loadSessionChanges() {
     if (!editSessionId) return;
 
@@ -339,30 +339,30 @@ function loadSessionChanges() {
         method: "GET",
         dataType: "json",
         success: function (response) {
-            // Update changes list UI
+            // Uuenda muudatuste nimekirja kasutajaliidest
             updateChangesListUI(response.changes);
         },
         error: function (xhr, status, error) {
-            console.error("Error loading session changes:", error);
+            console.error("Viga seansi muudatuste laadimisel:", error);
         }
     });
 }
 
-// Update the changes list UI
+// Uuenda muudatuste nimekirja kasutajaliidest
 function updateChangesListUI(changes) {
     const container = $("#changes-list");
     container.empty();
 
     if (!changes || changes.length === 0) {
-        container.html('<div class="text-gray-500 dark:text-gray-400 text-sm italic">No changes yet</div>');
+        container.html('<div class="text-gray-500 dark:text-gray-400 text-sm italic">Muudatusi pole veel</div>');
         $("#undo-all-btn").prop("disabled", true);
         return;
     }
 
-    // Enable undo all button
+    // Luba tühista kõik nupp
     $("#undo-all-btn").prop("disabled", false);
 
-    // Add each change to the list
+    // Lisa iga muudatus nimekirja
     changes.forEach(function (change) {
         const changeTime = new Date(change.changed_at).toLocaleTimeString();
         const changeItem = $(`
@@ -372,12 +372,12 @@ function updateChangesListUI(changes) {
                     <div class="text-xs text-gray-500">${changeTime}</div>
                 </div>
                 <div class="text-xs mt-1">
-                    <span class="text-red-500 line-through">${change.old_value || '(empty)'}</span>
+                    <span class="text-red-500 line-through">${change.old_value || '(tühi)'}</span>
                     <span class="mx-1">→</span>
-                    <span class="text-green-500">${change.new_value || '(empty)'}</span>
+                    <span class="text-green-500">${change.new_value || '(tühi)'}</span>
                 </div>
                 <button class="undo-change-btn text-xs text-blue-500 hover:text-blue-700 mt-1" data-id="${change.id}">
-                    <i class="fas fa-undo mr-1"></i>Undo
+                    <i class="fas fa-undo mr-1"></i>Tühista
                 </button>
             </div>
         `);
@@ -385,14 +385,14 @@ function updateChangesListUI(changes) {
         container.append(changeItem);
     });
 
-    // Add click handler for undo buttons
+    // Lisa klõpsamisel tühistamise nuppudele
     $(".undo-change-btn").click(function () {
         const changeId = $(this).data("id");
         undoChange(changeId);
     });
 }
 
-// Undo a specific change
+// Tühista konkreetne muudatus
 function undoChange(changeId) {
     $.ajax({
         url: `/api/v1/table/undo-change/${changeId}`,
@@ -400,32 +400,32 @@ function undoChange(changeId) {
         dataType: "json",
         success: function (response) {
             if (response.success) {
-                // Refresh grid data
+                // Värskenda tabeli andmeid
                 if (gridApi) {
                     gridApi.refreshInfiniteCache();
                 }
 
-                // Reload changes list
+                // Lae muudatuste nimekiri uuesti
                 loadSessionChanges();
 
-                // Show success toast
-                showToast("Change undone", "Successfully reverted the change", "success");
+                // Näita õnnestumise teavitust
+                showToast("Muudatus tühistatud", "Muudatus edukalt tagasi võetud", "success");
             }
         },
         error: function (xhr, status, error) {
-            console.error("Error undoing change:", error);
-            showToast("Undo failed", xhr.responseJSON?.detail || error, "error");
+            console.error("Viga muudatuse tühistamisel:", error);
+            showToast("Tühistamine ebaõnnestus", xhr.responseJSON?.detail || error, "error");
         }
     });
 }
 
-// Undo all changes in the current session
+// Tühista kõik muudatused praeguses seansis
 function undoAllChanges() {
-    if (!confirm("Are you sure you want to undo all changes in this session?")) {
+    if (!confirm("Kas olete kindel, et soovite tühistada kõik muudatused selles seansis?")) {
         return;
     }
 
-    // Get all changes and undo them one by one
+    // Hangi kõik muudatused ja tühista need ükshaaval
     $.ajax({
         url: `/api/v1/table/session-changes/${editSessionId}`,
         method: "GET",
@@ -440,43 +440,43 @@ function undoAllChanges() {
                     });
                 });
 
-                // When all undos are complete
+                // Kui kõik tühistamised on lõpetatud
                 Promise.all(undoPromises)
                     .then(() => {
-                        // Refresh grid data
+                        // Värskenda tabeli andmeid
                         if (gridApi) {
                             gridApi.refreshInfiniteCache();
                         }
 
-                        // Reload changes list
+                        // Lae muudatuste nimekiri uuesti
                         loadSessionChanges();
 
-                        // Show success toast
-                        showToast("All changes undone", "Successfully reverted all changes", "success");
+                        // Näita õnnestumise teavitust
+                        showToast("Kõik muudatused tühistatud", "Kõik muudatused edukalt tagasi võetud", "success");
                     })
                     .catch(error => {
-                        console.error("Error undoing all changes:", error);
-                        showToast("Undo failed", "Some changes could not be undone", "error");
+                        console.error("Viga kõigi muudatuste tühistamisel:", error);
+                        showToast("Tühistamine ebaõnnestus", "Mõned muudatused ei õnnestunud tühistada", "error");
                     });
             }
         },
         error: function (xhr, status, error) {
-            console.error("Error getting session changes:", error);
-            showToast("Undo failed", "Could not retrieve changes to undo", "error");
+            console.error("Viga seansi muudatuste hankimisel:", error);
+            showToast("Tühistamine ebaõnnestus", "Ei õnnestunud hankida muudatusi tühistamiseks", "error");
         }
     });
 }
 
-// Set up change notifications from other users
+// Seadista teavitused teiste kasutajate muudatustest
 function setupChangeNotifications() {
-    // Set the initial timestamp
+    // Määra algne ajatempel
     lastChangeCheck = new Date().toISOString();
 
-    // Check for changes every 15 seconds
+    // Kontrolli muudatusi iga 15 sekundi järel
     changeCheckInterval = setInterval(checkForChanges, 15000);
 }
 
-// Check for changes from other users
+// Kontrolli muudatusi teistelt kasutajatelt
 function checkForChanges() {
     $.ajax({
         url: "/api/v1/table/check-for-changes",
@@ -486,89 +486,88 @@ function checkForChanges() {
         },
         dataType: "json",
         success: function (response) {
-            // Update the last check timestamp
+            // Uuenda viimase kontrolli ajatemplit
             lastChangeCheck = response.timestamp;
 
-            // If there are changes, notify the user
+            // Kui on muudatusi, teavita kasutajat
             if (response.has_changes) {
                 showDataChangeNotification(response.changes);
             }
         },
         error: function (xhr, status, error) {
-            console.error("Error checking for changes:", error);
+            console.error("Viga muudatuste kontrollimisel:", error);
         }
     });
 }
 
-// Show notification for data changes from other users
-// Updated function for notification handling in app/static/js/edit.js
+// Näita teavitust teiste kasutajate andmemuudatuste kohta
 function showDataChangeNotification(changes) {
     if (!changes || changes.length === 0) return;
 
-    // Get the user who made the most recent change
+    // Hangi kasutaja, kes tegi viimase muudatuse
     const latestChange = changes[0];
     const username = latestChange.username;
 
-    // Also highlight the refresh button
+    // Tõsta esile ka värskendamise nupp
     if (typeof highlightRefreshButton === 'function') {
         highlightRefreshButton(changes);
     }
 
-    // Create notification element
+    // Loo teavituse element
     const notification = $(`
         <div class="change-notification bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 p-3 rounded-lg shadow-lg mb-3 transform transition-all duration-300 opacity-0 translate-x-10">
             <div class="flex items-center">
                 <i class="fas fa-info-circle mr-2"></i>
                 <div>
-                    <div class="font-medium">Data has been updated</div>
-                    <div class="text-sm">${username} made changes to the data</div>
+                    <div class="font-medium">Andmeid on uuendatud</div>
+                    <div class="text-sm">${username} tegi andmetes muudatusi</div>
                 </div>
             </div>
             <div class="mt-2">
                 <button class="refresh-data-btn bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs">
-                    Refresh Data
+                    Värskenda andmeid
                 </button>
                 <button class="dismiss-btn ml-2 text-blue-800 hover:text-blue-900 dark:text-blue-200 dark:hover:text-white py-1 px-2 text-xs">
-                    Dismiss
+                    Sulge
                 </button>
             </div>
         </div>
     `);
 
-    // Add to notification container
+    // Lisa teavituste konteinerisse
     $("#notification-container").append(notification);
 
-    // Show with animation
+    // Näita animatsiooniga
     setTimeout(() => {
         notification.removeClass("opacity-0 translate-x-10");
     }, 10);
 
-    // Add click handlers
+    // Lisa klõpsamisel käsitlejad
     notification.find(".refresh-data-btn").click(function () {
-        // Refresh the grid data
-        refreshData(); // Call our new function instead
+        // Värskenda tabeli andmeid
+        refreshData(); // Kutsu meie uut funktsiooni selle asemel
 
-        // Remove the notification
+        // Eemalda teavitus
         notification.addClass("opacity-0 translate-x-10");
         setTimeout(() => notification.remove(), 300);
     });
 
     notification.find(".dismiss-btn").click(function () {
-        // Remove the notification
+        // Eemalda teavitus
         notification.addClass("opacity-0 translate-x-10");
         setTimeout(() => notification.remove(), 300);
     });
 
-    // Auto-dismiss after 15 seconds
+    // Automaatne sulgemine 15 sekundi pärast
     setTimeout(function () {
         notification.addClass("opacity-0 translate-x-10");
         setTimeout(() => notification.remove(), 300);
     }, 15000);
 }
 
-// Show toast notification
+// Näita teavitust
 function showToast(title, message, type = "info") {
-    // Define colors based on type
+    // Määra värvid tüübi põhjal
     let colors = {
         "success": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
         "error": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
@@ -583,7 +582,7 @@ function showToast(title, message, type = "info") {
         "warning": "fas fa-exclamation-triangle"
     };
 
-    // Create toast element
+    // Loo teavituse element
     const toast = $(`
         <div class="toast-notification ${colors[type]} p-3 rounded-lg shadow-lg mb-3 transform transition-all duration-300 opacity-0 translate-y-10">
             <div class="flex items-center">
@@ -599,33 +598,33 @@ function showToast(title, message, type = "info") {
         </div>
     `);
 
-    // Add to notification container
+    // Lisa teavituste konteinerisse
     $("#notification-container").append(toast);
 
-    // Show with animation
+    // Näita animatsiooniga
     setTimeout(() => {
         toast.removeClass("opacity-0 translate-y-10");
     }, 10);
 
-    // Add click handler for close button
+    // Lisa sulgemise nupule klõpsamise käsitleja
     toast.find(".close-toast").click(function () {
         toast.addClass("opacity-0 translate-y-10");
         setTimeout(() => toast.remove(), 300);
     });
 
-    // Auto-dismiss after 5 seconds
+    // Automaatne sulgemine 5 sekundi pärast
     setTimeout(function () {
         toast.addClass("opacity-0 translate-y-10");
         setTimeout(() => toast.remove(), 300);
     }, 5000);
 }
 
-// Custom cell style for editable cells - integrates with AG Grid
+// Kohandatud lahtri stiil redigeeritavate lahtrite jaoks - integreerib AG Grid'iga
 function getCellStyle(params) {
-    // Highlight editable cells when in edit mode
+    // Tõsta esile redigeeritavad lahtrid, kui ollakse redigeerimisrežiimis
     if (isEditMode && editableColumns.includes(params.colDef.field)) {
         return {
-            backgroundColor: "#dbeafe",  // Light blue background
+            backgroundColor: "#dbeafe",  // Helesinine taust
             cursor: "pointer"
         };
     }
@@ -633,6 +632,6 @@ function getCellStyle(params) {
     return null;
 }
 
-// These functions need to be accessible in the global scope for AG Grid integration
+// Need funktsioonid peavad olema ligipääsetavad globaalses ulatuses AG Grid'iga integreerimiseks
 window.onCellValueChanged = onCellValueChanged;
 window.getCellStyle = getCellStyle;

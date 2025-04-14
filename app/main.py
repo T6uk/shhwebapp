@@ -247,39 +247,69 @@ async def service_worker():
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and Redis connections on startup"""
-    # Log critical configuration values (but never the full SECRET_KEY)
+    """Initialize resources on startup with better error handling and optimization"""
+    import time
+    start_time = time.time()
+    logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
+
+    # Setup process ID and create required directories
+    import os
+    pid = os.getpid()
+    logger.info(f"Process ID: {pid}")
+
+    # Ensure required directories exist
+    os.makedirs(settings.DATA_DIR, exist_ok=True)
+    os.makedirs(settings.LOGS_DIR, exist_ok=True)
+
+    # Log configuration
+    logger.info(f"Environment: {'Development' if settings.DEBUG else 'Production'}")
+    logger.info(f"Database: {settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}")
+
+    # Initialize resources in parallel for faster startup
+    # Pre-create the directories to avoid race conditions
+    import asyncio
+
+    # Log the SECRET_KEY in a safe way
     secret_preview = settings.SECRET_KEY[:5] + "..." if settings.SECRET_KEY else "None"
-    logger.info(f"Starting with SECRET_KEY (preview): {secret_preview}")
-    logger.info(f"TOKEN_EXPIRE_MINUTES: {settings.ACCESS_TOKEN_EXPIRE_MINUTES}")
+    logger.info(f"SECRET_KEY (preview): {secret_preview}")
 
-    # Initialize user database (SQLite)
+    # Initialize all components in parallel
     try:
-        # Call only once to prevent multiple initialization
-        init_user_db()
-    except Exception as e:
-        logger.error(f"Error initializing user DB: {str(e)}")
+        # Create tasks for parallel initialization
+        init_tasks = [
+            init_user_db_async(),  # Async wrapper for the sync function
+            init_db(),
+            init_redis_pool()
+        ]
 
-    # Initialize main database for table data
-    try:
-        await init_db()
-    except Exception as e:
-        logger.error(f"Error initializing main DB: {str(e)}")
+        # Execute tasks concurrently
+        results = await asyncio.gather(*init_tasks, return_exceptions=True)
 
-    # Initialize Redis
-    try:
-        await init_redis_pool()
-    except Exception as e:
-        logger.error(f"Error initializing Redis: {str(e)}")
+        # Process results
+        for i, result in enumerate(results):
+            component = ["User Database", "Main Database", "Redis Cache"][i]
+            if isinstance(result, Exception):
+                logger.error(f"Error initializing {component}: {str(result)}")
+            else:
+                logger.info(f"{component} initialized successfully")
 
-    logs_dir = os.path.join(settings.BASE_DIR, "logs")
-    try:
-        os.makedirs(logs_dir, exist_ok=True)
-        logger.info(f"Logs directory created at: {logs_dir}")
     except Exception as e:
-        logger.error(f"Error creating logs directory: {str(e)}")
+        logger.error(f"Error during startup: {str(e)}", exc_info=True)
 
-    logger.info("Application startup complete")
+    # Log startup time
+    elapsed = time.time() - start_time
+    logger.info(f"Application startup completed in {elapsed:.2f} seconds")
+
+
+async def init_user_db_async():
+    """Async wrapper for the sync user_db initialization"""
+    import asyncio
+    from functools import partial
+    from app.core.user_db import init_user_db
+
+    # Run in a thread pool since it's a synchronous function
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, init_user_db)
 
 
 if __name__ == "__main__":
