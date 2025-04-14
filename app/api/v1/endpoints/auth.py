@@ -187,6 +187,12 @@ async def login(
         user.last_login = datetime.utcnow()
         db.commit()
 
+        # *** ADDED: Invalidate relevant caches to ensure fresh data ***
+        from app.core.cache import init_redis_pool, invalidate_cache
+        redis = await init_redis_pool()
+        await invalidate_cache("table_data:*")  # Invalidate all table data caches
+        logger.info(f"Invalidated table data cache for user: {username}")
+
         # Generate tokens
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(

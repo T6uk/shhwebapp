@@ -1,4 +1,6 @@
 # app/api/v1/endpoints/table.py
+from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request
+
 from fastapi import APIRouter, Depends, Query, HTTPException, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +45,7 @@ router = APIRouter(prefix="/table", tags=["table"])
 
 @router.get("/data")
 async def get_table_data(
+        request: Request,  # Add the missing request parameter
         start_row: int = Query(0, ge=0),
         end_row: int = Query(100, ge=1),
         search: Optional[str] = None,
@@ -56,6 +59,9 @@ async def get_table_data(
     """
     start_time = time.time()
     try:
+        # Add a force_refresh parameter to bypass cache when needed
+        force_refresh = "timestamp" in request.query_params
+
         # Create a cache key from the parameters
         cache_params = {
             "start": start_row,
@@ -67,8 +73,11 @@ async def get_table_data(
         }
         cache_key = f"table_data:{await compute_cache_key(cache_params)}"
 
-        # Try to get from cache
-        cached_data = await get_cache(cache_key)
+        # Try to get from cache only if not force refreshing
+        cached_data = None
+        if not force_refresh:
+            cached_data = await get_cache(cache_key)
+
         if cached_data:
             logger.info(f"Returning cached data in {time.time() - start_time:.3f}s")
             # Convert cached_data to bytes for faster response
@@ -156,7 +165,7 @@ async def get_table_data(
         }
 
         # Cache the result (5 minutes TTL for paginated results)
-        await set_cache(cache_key, response_data, expire=300)
+        await set_cache(cache_key, response_data, expire=60)
 
         # Return using orjson for faster serialization
         return Response(

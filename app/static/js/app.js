@@ -31,7 +31,23 @@ $(document).ready(function () {
 
     // Set up event handlers
     setupEventHandlers();
+
+    // Set up periodic data refresh
+    setupDataRefreshTimer();
 });
+
+// Set up periodic data refresh
+function setupDataRefreshTimer() {
+    // Refresh data every 30 seconds in the background
+    setInterval(function () {
+        if (gridApi) {
+            // Add a timestamp to force cache bypass
+            const timestamp = new Date().getTime();
+            gridApi.refreshInfiniteCache({timestamp: timestamp});
+            console.log("Performed background data refresh");
+        }
+    }, 30000); // 30 seconds
+}
 
 // Check if user is admin and add admin navigation
 function setupAdminNavigation() {

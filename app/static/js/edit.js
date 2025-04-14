@@ -47,13 +47,22 @@ function setupWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
 
+    // Close existing socket if any
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+        socket.close();
+    }
+
     socket = new WebSocket(wsUrl);
 
     socket.onopen = function(e) {
         console.log("WebSocket connection established");
 
         // Send periodic pings to keep connection alive
-        setInterval(function() {
+        if (window.pingInterval) {
+            clearInterval(window.pingInterval);
+        }
+
+        window.pingInterval = setInterval(function() {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({type: "ping"}));
             }
@@ -68,12 +77,17 @@ function setupWebSocket() {
             if (data.type === "data_change") {
                 // Show notification for data change
                 showDataChangeNotification([{
-                    username: "Another user",
+                    username: data.username || "Another user",
                     table_name: data.table_name,
                     row_id: data.row_id,
                     column_name: data.column_name,
                     changed_at: data.timestamp
                 }]);
+
+                // Also refresh the grid data to show the latest changes
+                if (gridApi) {
+                    gridApi.refreshInfiniteCache();
+                }
             } else if (data.type === "pong") {
                 // Ping response, nothing to do
             }
@@ -87,10 +101,15 @@ function setupWebSocket() {
             console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
         } else {
             console.error("WebSocket connection died");
-
-            // Try to reconnect after a delay
-            setTimeout(setupWebSocket, 5000);
         }
+
+        // Clear the ping interval if it exists
+        if (window.pingInterval) {
+            clearInterval(window.pingInterval);
+        }
+
+        // Try to reconnect after a delay
+        setTimeout(setupWebSocket, 5000);
     };
 
     socket.onerror = function(error) {

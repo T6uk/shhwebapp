@@ -74,7 +74,17 @@ async def update_cell_value(
         )
 
     try:
-        # Update the value in the database
+        # Convert row_id to the appropriate type based on data inspection
+        try:
+            # Try to convert to integer first
+            row_id_value = int(row_id)
+            logger.debug(f"Converted row_id '{row_id}' to integer: {row_id_value}")
+        except ValueError:
+            # If not an integer, keep as string and use proper SQL for string comparison
+            row_id_value = row_id
+            logger.debug(f"Using row_id as string: {row_id_value}")
+
+        # Update the value in the database using parameters
         update_sql = f"""
             UPDATE "{table_name}"
             SET "{column_name}" = :new_value
@@ -83,7 +93,7 @@ async def update_cell_value(
 
         await db.execute(
             text(update_sql),
-            {"new_value": new_value, "row_id": row_id}
+            {"new_value": new_value, "row_id": row_id_value}
         )
 
         # Commit the change
@@ -174,6 +184,16 @@ async def undo_change(
         )
 
     try:
+        # Convert row_id to the appropriate type
+        try:
+            # Try to convert to integer first
+            row_id_value = int(change.row_id)
+            logger.debug(f"Converted row_id '{change.row_id}' to integer: {row_id_value}")
+        except ValueError:
+            # If not an integer, keep as string
+            row_id_value = change.row_id
+            logger.debug(f"Using row_id as string: {row_id_value}")
+
         # Update the database with the old value
         update_sql = f"""
             UPDATE "{change.table_name}"
@@ -183,7 +203,7 @@ async def undo_change(
 
         await db.execute(
             text(update_sql),
-            {"old_value": change.old_value, "row_id": change.row_id}
+            {"old_value": change.old_value, "row_id": row_id_value}
         )
 
         await db.commit()
@@ -309,37 +329,15 @@ def log_data_change(
         logger.error(f"Error writing to change log file: {str(e)}")
 
 
-async def notify_data_change(table_name: str, row_id: str, column_name: str) -> None:
-    """Notify other users about data changes using Redis pub/sub"""
-    try:
-        from app.core.cache import get_redis
-
-        redis = await get_redis()
-
-        # Create a message with change details
-        message = json.dumps({
-            "type": "data_change",
-            "table_name": table_name,
-            "row_id": row_id,
-            "column_name": column_name,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-
-        # Publish to data_changes channel
-        await redis.publish("data_changes", message)
-        logger.info(f"Published change notification for {table_name}.{column_name}")
-
-    except Exception as e:
-        logger.error(f"Error notifying data change: {str(e)}")
-
-
-# Add this to app/services/edit_service.py
 async def notify_data_change(table_name: str, row_id: str, column_name: str, user_id: int = None) -> None:
     """Notify other users about data changes using both Redis pub/sub and WebSockets"""
     try:
         # Using Redis
-        from app.core.cache import get_redis
+        from app.core.cache import get_redis, invalidate_cache
         redis = await get_redis()
+
+        # Invalidate relevant cache to ensure fresh data on next query
+        await invalidate_cache(f"table_data:*")
 
         # Create a message with change details
         message = {
