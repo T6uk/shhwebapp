@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suur Andmetabel</title>
+    <title>Toomas</title>
 
     <!-- Inter font - modern, clean typography -->
     <link rel="stylesheet"
@@ -56,11 +56,11 @@
     <div class="app-bar bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4">
         <div class="app-title-container">
             <div class="app-logo">
-                <i class="fas fa-table"></i>
+                <i class="fab fa-asymmetrik"></i>
             </div>
             <div>
-                <div class="app-title">Suur Andmetabel</div>
-                <div class="text-xs text-secondary-color dark:text-gray-400">Andmehaldus rakendus</div>
+                <div class="app-title">Toomas Nipernaadi</div>
+                <div class="text-xs text-secondary-color dark:text-gray-400">Nipernaadit ei saa nimetada vabaduse kehastuseks</div>
             </div>
         </div>
 
@@ -178,6 +178,17 @@
                     <i class="fas fa-filter"></i>
                     <span class="hidden sm:inline">Filter</span>
                 </button>
+
+                <button id="refresh-button" class="btn btn-secondary flex items-center gap-2 relative"
+                        onclick="refreshData()">
+                    <div class="badge-container absolute top-0 right-0"></div>
+                    <i class="fas fa-sync-alt"></i>
+                    <span class="hidden sm:inline">Värskenda</span>
+                </button>
+
+                <div id="mini-loading-indicator" class="hidden">
+                    <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin ml-2"></div>
+                </div>
             </div>
 
             <!-- Right section: tools and utilities -->

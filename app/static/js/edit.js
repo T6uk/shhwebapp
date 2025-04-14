@@ -9,7 +9,7 @@ let changeCheckInterval = null;
 let socket = null;
 
 // Initialize when document is ready
-$(document).ready(function() {
+$(document).ready(function () {
     // Check if user has edit permissions and get editable columns
     getEditableColumns();
 
@@ -54,7 +54,7 @@ function setupWebSocket() {
 
     socket = new WebSocket(wsUrl);
 
-    socket.onopen = function(e) {
+    socket.onopen = function (e) {
         console.log("WebSocket connection established");
 
         // Send periodic pings to keep connection alive
@@ -62,14 +62,14 @@ function setupWebSocket() {
             clearInterval(window.pingInterval);
         }
 
-        window.pingInterval = setInterval(function() {
+        window.pingInterval = setInterval(function () {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({type: "ping"}));
             }
         }, 30000);
     };
 
-    socket.onmessage = function(event) {
+    socket.onmessage = function (event) {
         try {
             const data = JSON.parse(event.data);
 
@@ -96,7 +96,7 @@ function setupWebSocket() {
         }
     };
 
-    socket.onclose = function(event) {
+    socket.onclose = function (event) {
         if (event.wasClean) {
             console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
         } else {
@@ -112,7 +112,7 @@ function setupWebSocket() {
         setTimeout(setupWebSocket, 5000);
     };
 
-    socket.onerror = function(error) {
+    socket.onerror = function (error) {
         console.error("WebSocket error:", error);
     };
 }
@@ -123,7 +123,7 @@ function getEditableColumns() {
         url: "/api/v1/table/editable-columns",
         method: "GET",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             editableColumns = response.columns || [];
 
             // Show edit button only if user has permission
@@ -133,7 +133,7 @@ function getEditableColumns() {
 
             console.log("Editable columns:", editableColumns);
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error getting editable columns:", error);
         }
     });
@@ -142,27 +142,27 @@ function getEditableColumns() {
 // Set up edit-related event handlers
 function setupEditHandlers() {
     // Edit mode toggle button
-    $("#edit-mode-btn").click(function() {
+    $("#edit-mode-btn").click(function () {
         toggleEditMode();
     });
 
     // Undo all changes button
-    $("#undo-all-btn").click(function() {
+    $("#undo-all-btn").click(function () {
         undoAllChanges();
     });
 
     // Close history panel button
-    $("#close-history-panel").click(function() {
+    $("#close-history-panel").click(function () {
         $("#edit-history-panel").addClass("hidden");
     });
 
     // Show history button
-    $("#show-history-btn").click(function() {
+    $("#show-history-btn").click(function () {
         loadSessionChanges();
     });
 
     // Add beforeunload event handler to warn about unsaved changes
-    $(window).on("beforeunload", function(e) {
+    $(window).on("beforeunload", function (e) {
         if (isEditMode && Object.keys(unsavedChanges).length > 0) {
             // Standard message for beforeunload event
             const message = "You have unsaved changes. Are you sure you want to leave? Changes can't be undone after.";
@@ -195,7 +195,7 @@ function enableEditMode() {
             password: password
         },
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             if (response.success) {
                 // Enable edit mode
                 isEditMode = true;
@@ -226,7 +226,7 @@ function enableEditMode() {
                 showToast("Edit mode failed", response.message || "Invalid password", "error");
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error verifying edit password:", error);
             showToast("Error", "Failed to enable edit mode", "error");
         }
@@ -306,7 +306,7 @@ function onCellValueChanged(params) {
             session_id: editSessionId
         },
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             if (response.success) {
                 // Remove from unsaved changes since it's saved
                 delete unsavedChanges[changeKey];
@@ -318,7 +318,7 @@ function onCellValueChanged(params) {
                 showToast("Cell updated", `Updated ${column} value successfully`, "success");
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error updating cell:", error);
 
             // Revert the change in the grid
@@ -338,11 +338,11 @@ function loadSessionChanges() {
         url: `/api/v1/table/session-changes/${editSessionId}`,
         method: "GET",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             // Update changes list UI
             updateChangesListUI(response.changes);
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error loading session changes:", error);
         }
     });
@@ -363,7 +363,7 @@ function updateChangesListUI(changes) {
     $("#undo-all-btn").prop("disabled", false);
 
     // Add each change to the list
-    changes.forEach(function(change) {
+    changes.forEach(function (change) {
         const changeTime = new Date(change.changed_at).toLocaleTimeString();
         const changeItem = $(`
             <div class="change-item mb-2 p-2 border-b border-gray-200 dark:border-gray-700">
@@ -386,7 +386,7 @@ function updateChangesListUI(changes) {
     });
 
     // Add click handler for undo buttons
-    $(".undo-change-btn").click(function() {
+    $(".undo-change-btn").click(function () {
         const changeId = $(this).data("id");
         undoChange(changeId);
     });
@@ -398,7 +398,7 @@ function undoChange(changeId) {
         url: `/api/v1/table/undo-change/${changeId}`,
         method: "POST",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             if (response.success) {
                 // Refresh grid data
                 if (gridApi) {
@@ -412,7 +412,7 @@ function undoChange(changeId) {
                 showToast("Change undone", "Successfully reverted the change", "success");
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error undoing change:", error);
             showToast("Undo failed", xhr.responseJSON?.detail || error, "error");
         }
@@ -430,7 +430,7 @@ function undoAllChanges() {
         url: `/api/v1/table/session-changes/${editSessionId}`,
         method: "GET",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             if (response.changes && response.changes.length > 0) {
                 const undoPromises = response.changes.map(change => {
                     return $.ajax({
@@ -460,7 +460,7 @@ function undoAllChanges() {
                     });
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error getting session changes:", error);
             showToast("Undo failed", "Could not retrieve changes to undo", "error");
         }
@@ -485,7 +485,7 @@ function checkForChanges() {
             last_checked: lastChangeCheck
         },
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             // Update the last check timestamp
             lastChangeCheck = response.timestamp;
 
@@ -494,19 +494,25 @@ function checkForChanges() {
                 showDataChangeNotification(response.changes);
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error("Error checking for changes:", error);
         }
     });
 }
 
 // Show notification for data changes from other users
+// Updated function for notification handling in app/static/js/edit.js
 function showDataChangeNotification(changes) {
     if (!changes || changes.length === 0) return;
 
     // Get the user who made the most recent change
     const latestChange = changes[0];
     const username = latestChange.username;
+
+    // Also highlight the refresh button
+    if (typeof highlightRefreshButton === 'function') {
+        highlightRefreshButton(changes);
+    }
 
     // Create notification element
     const notification = $(`
@@ -538,25 +544,23 @@ function showDataChangeNotification(changes) {
     }, 10);
 
     // Add click handlers
-    notification.find(".refresh-data-btn").click(function() {
+    notification.find(".refresh-data-btn").click(function () {
         // Refresh the grid data
-        if (gridApi) {
-            gridApi.refreshInfiniteCache();
-        }
+        refreshData(); // Call our new function instead
 
         // Remove the notification
         notification.addClass("opacity-0 translate-x-10");
         setTimeout(() => notification.remove(), 300);
     });
 
-    notification.find(".dismiss-btn").click(function() {
+    notification.find(".dismiss-btn").click(function () {
         // Remove the notification
         notification.addClass("opacity-0 translate-x-10");
         setTimeout(() => notification.remove(), 300);
     });
 
     // Auto-dismiss after 15 seconds
-    setTimeout(function() {
+    setTimeout(function () {
         notification.addClass("opacity-0 translate-x-10");
         setTimeout(() => notification.remove(), 300);
     }, 15000);
@@ -604,13 +608,13 @@ function showToast(title, message, type = "info") {
     }, 10);
 
     // Add click handler for close button
-    toast.find(".close-toast").click(function() {
+    toast.find(".close-toast").click(function () {
         toast.addClass("opacity-0 translate-y-10");
         setTimeout(() => toast.remove(), 300);
     });
 
     // Auto-dismiss after 5 seconds
-    setTimeout(function() {
+    setTimeout(function () {
         toast.addClass("opacity-0 translate-y-10");
         setTimeout(() => toast.remove(), 300);
     }, 5000);

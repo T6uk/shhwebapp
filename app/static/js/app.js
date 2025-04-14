@@ -32,28 +32,100 @@ $(document).ready(function () {
     // Set up event handlers
     setupEventHandlers();
 
-    // Set up periodic data refresh
+    // Check for changes on initial load
+    lastChangeCheck = new Date();
+    lastChangeCheck.setMinutes(lastChangeCheck.getMinutes() - 30); // Check last 30 minutes
+    setTimeout(function () {
+        checkForDatabaseChanges();
+    }, 3000); // Check shortly after page loads
+
+    // Set up periodic change checking (no auto refresh)
     setupDataRefreshTimer();
 
     if ($("#user-profile").length) {
-    const username = $("#user-profile").data("username");
-    setTimeout(function() {
-        showToast("Tere tulemast!", `Tere, ${username}! Andmed on valmis.`, "success");
-    }, 1500); // Show after data loads
-}
+        const username = $("#user-profile").data("username");
+        setTimeout(function () {
+            showToast("Tere tulemast!", `Tere, ${username}! Andmed on valmis.`, "success");
+        }, 1500); // Show after data loads
+    }
 });
 
 // Set up periodic data refresh
 function setupDataRefreshTimer() {
-    // Refresh data every 30 seconds in the background
+    // Initialize refresh state - no automatic refresh
+    console.log("Data refresh will only happen on user action");
+
+    // Check for changes every 30 seconds, but only notify, don't refresh
     setInterval(function () {
-        if (gridApi) {
-            // Add a timestamp to force cache bypass
-            const timestamp = new Date().getTime();
-            gridApi.refreshInfiniteCache({timestamp: timestamp});
-            console.log("Performed background data refresh");
-        }
+        checkForDatabaseChanges();
     }, 30000); // 30 seconds
+}
+
+function checkForDatabaseChanges() {
+    $.ajax({
+        url: "/api/v1/table/check-for-changes",
+        method: "GET",
+        data: {
+            last_checked: lastChangeCheck || new Date().toISOString()
+        },
+        dataType: "json",
+        success: function (response) {
+            // Update the last check timestamp
+            lastChangeCheck = response.timestamp;
+
+            // If there are changes, highlight the refresh button
+            if (response.has_changes) {
+                highlightRefreshButton(response.changes);
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("Error checking for changes:", error);
+        }
+    });
+}
+
+// Function to highlight the refresh button when changes are detected
+function highlightRefreshButton(changes) {
+    // Add pulsing animation and change color
+    $("#refresh-button")
+        .addClass("animate-pulse bg-yellow-500 hover:bg-yellow-600")
+        .removeClass("btn-secondary");
+
+    // Add counter badge if there are multiple changes
+    if (changes && changes.length > 0) {
+        const badge = $(`<span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">${changes.length}</span>`);
+        $("#refresh-button .badge-container").html(badge);
+    }
+}
+
+// Function to reset refresh button to normal state
+function resetRefreshButton() {
+    $("#refresh-button")
+        .removeClass("animate-pulse bg-yellow-500 hover:bg-yellow-600")
+        .addClass("btn-secondary");
+
+    $("#refresh-button .badge-container").empty();
+}
+
+// Function to manually refresh data
+function refreshData() {
+    if (gridApi) {
+        // Show loading indicator
+        $("#mini-loading-indicator").removeClass("hidden");
+
+        // Add a timestamp to force cache bypass
+        const timestamp = new Date().getTime();
+        gridApi.refreshInfiniteCache({timestamp: timestamp});
+        console.log("Manual data refresh performed");
+
+        // Reset the refresh button
+        resetRefreshButton();
+
+        // Hide loading indicator after a short delay
+        setTimeout(function () {
+            $("#mini-loading-indicator").addClass("hidden");
+        }, 500);
+    }
 }
 
 // Check if user is admin and add admin navigation
