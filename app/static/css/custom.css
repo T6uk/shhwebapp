@@ -27,6 +27,10 @@
   box-shadow: var(--shadow-lg);
 }
 
+.dark-mode .card:hover {
+  box-shadow: var(--shadow-dark-lg);
+}
+
 .btn {
   transition: all var(--transition-speed) ease;
   display: inline-flex;
@@ -87,6 +91,11 @@
 
 .toast-notification {
   animation: slideIn 0.3s forwards;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .toast-notification {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 .toast-notification.hide {
@@ -100,6 +109,10 @@
 
 .user-profile:hover {
   background-color: var(--primary-light);
+}
+
+.dark-mode .user-profile:hover {
+  background-color: rgba(59, 130, 246, 0.2);
 }
 
 /* Improve table styling */
@@ -152,8 +165,13 @@
 }
 
 .dark-mode #toggle-ui-btn {
-    background-color: rgba(30, 41, 59, 0.9);
-    border-color: var(--border-dark);
+    background-color: rgba(31, 41, 55, 0.9);
+    border-color: var(--dark-border);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode #toggle-ui-btn:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
 /* Add smooth transitions to UI elements */
@@ -182,4 +200,197 @@ body.ui-hidden #table-container:before {
 
 body.ui-hidden #table-container:hover:before {
     opacity: 0.5;
+}
+
+/* Dark mode enhancements */
+.dark-mode .app-title-container .text-xs {
+    color: var(--dark-text-secondary);
+}
+
+.dark-mode #user-profile {
+    background-color: var(--dark-input-bg);
+    border: 1px solid var(--dark-border);
+}
+
+.dark-mode #user-profile .text-xs {
+    color: var(--dark-text-secondary);
+}
+
+/* Dark mode status/notification colors */
+.dark-mode .status-chip.bg-red-100 {
+    background-color: var(--dark-danger-bg);
+    color: #fca5a5;
+}
+
+.dark-mode .status-chip.bg-green-100 {
+    background-color: var(--dark-success-bg);
+    color: #86efac;
+}
+
+.dark-mode .status-chip.bg-blue-100 {
+    background-color: var(--dark-info-bg);
+    color: #93c5fd;
+}
+
+.dark-mode .status-chip.bg-yellow-100 {
+    background-color: var(--dark-warning-bg);
+    color: #fcd34d;
+}
+
+/* Improved focus styling for dark mode */
+.dark-mode input:focus,
+.dark-mode select:focus,
+.dark-mode button:focus,
+.dark-mode a:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+}
+
+/* Improved dark mode for modals and popups */
+.dark-mode .modal-content {
+    background-color: var(--dark-card-bg);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .column-modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Form button states for dark mode */
+.dark-mode button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Animation for active interactions */
+.dark-mode button:active,
+.dark-mode .btn:active {
+    transform: scale(0.98);
+}
+
+/* Improved scrollbar for dark mode */
+.dark-mode::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode::-webkit-scrollbar-thumb {
+    background-color: var(--dark-border);
+    border-radius: 9999px;
+}
+
+.dark-mode::-webkit-scrollbar-thumb:hover {
+    background-color: var(--dark-text-secondary);
+}
+
+/* Enhanced dropdown and filter styling for dark mode */
+
+/* Fix dropdown menu animation in dark mode */
+.dark-mode .dropdown-menu {
+    transform-origin: top center;
+}
+
+.dark-mode .dropdown-menu.show {
+    animation: darkDropdownFadeIn 0.25s ease forwards;
+}
+
+@keyframes darkDropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Improved filter panel appearance */
+.dark-mode .filter-panel {
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+}
+
+/* Improved styling for filter rows */
+.dark-mode .filter-row {
+    background-color: rgba(15, 23, 42, 0.3);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #334155;
+    transition: all 0.2s ease;
+}
+
+.dark-mode .filter-row:hover {
+    background-color: rgba(15, 23, 42, 0.5);
+    border-color: #475569;
+}
+
+/* Make dropdown menus properly visible against dark backgrounds */
+.dark-mode .dropdown-menu {
+    background-color: #1e293b;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid #334155;
+    backdrop-filter: blur(4px);
+}
+
+/* Add subtle hover effect to dropdown items */
+.dark-mode .dropdown-item {
+    transition: all 0.15s ease;
+    border-radius: 0.375rem;
+    margin-bottom: 0.125rem;
+}
+
+.dark-mode .dropdown-item:hover {
+    transform: translateX(3px);
+}
+
+/* Enhance filter buttons */
+.dark-mode .filter-add-btn,
+.dark-mode .filter-remove-btn {
+    border-radius: 0.375rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.dark-mode .filter-add-btn:hover {
+    transform: scale(1.05);
+}
+
+.dark-mode .filter-remove-btn:hover {
+    transform: scale(1.05);
+}
+
+/* Style focus indicators for better accessibility */
+.dark-mode .filter-select:focus,
+.dark-mode .filter-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Improve filter action buttons */
+.dark-mode .filter-actions .btn {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-mode .filter-actions .btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.dark-mode .filter-actions .btn:hover::after {
+    transform: translateY(0);
 }

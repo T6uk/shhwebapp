@@ -567,12 +567,15 @@ function showDataChangeNotification(changes) {
 
 // Näita teavitust
 function showToast(title, message, type = "info") {
-    // Määra värvid tüübi põhjal
+    // Determine if in dark mode
+    const isDark = document.body.classList.contains('dark-mode');
+
+    // Define colors for light and dark mode
     let colors = {
-        "success": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-        "error": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-        "info": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-        "warning": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        "success": isDark ? "bg-green-900 text-green-100" : "bg-green-100 text-green-800",
+        "error": isDark ? "bg-red-900 text-red-100" : "bg-red-100 text-red-800",
+        "info": isDark ? "bg-blue-900 text-blue-100" : "bg-blue-100 text-blue-800",
+        "warning": isDark ? "bg-yellow-900 text-yellow-100" : "bg-yellow-100 text-yellow-800"
     };
 
     let icons = {
@@ -582,7 +585,7 @@ function showToast(title, message, type = "info") {
         "warning": "fas fa-exclamation-triangle"
     };
 
-    // Loo teavituse element
+    // Create the toast element
     const toast = $(`
         <div class="toast-notification ${colors[type]} p-3 rounded-lg shadow-lg mb-3 transform transition-all duration-300 opacity-0 translate-y-10">
             <div class="flex items-center">
@@ -591,28 +594,28 @@ function showToast(title, message, type = "info") {
                     <div class="font-medium">${title}</div>
                     <div class="text-sm">${message}</div>
                 </div>
-                <button class="close-toast ml-4 text-gray-500 hover:text-gray-700">
+                <button class="close-toast ml-4 text-gray-400 hover:text-gray-200">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
     `);
 
-    // Lisa teavituste konteinerisse
+    // Add to the notifications container
     $("#notification-container").append(toast);
 
-    // Näita animatsiooniga
+    // Show with animation
     setTimeout(() => {
         toast.removeClass("opacity-0 translate-y-10");
     }, 10);
 
-    // Lisa sulgemise nupule klõpsamise käsitleja
+    // Add click handler for close button
     toast.find(".close-toast").click(function () {
         toast.addClass("opacity-0 translate-y-10");
         setTimeout(() => toast.remove(), 300);
     });
 
-    // Automaatne sulgemine 5 sekundi pärast
+    // Auto-close after 5 seconds
     setTimeout(function () {
         toast.addClass("opacity-0 translate-y-10");
         setTimeout(() => toast.remove(), 300);

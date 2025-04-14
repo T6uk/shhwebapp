@@ -12,6 +12,13 @@ let uiHidden = false;
 
 // Initialize when document is ready
 $(document).ready(function () {
+
+     const savedDarkMode = localStorage.getItem('darkMode');
+    if (savedDarkMode === 'true') {
+        isDarkMode = true;
+        updateTheme();
+    }
+
     const savedUIState = localStorage.getItem('bigtable_ui_hidden');
     if (savedUIState === 'true') {
         uiHidden = true;
@@ -495,24 +502,38 @@ function updateFontSize() {
 function updateTheme() {
     if (isDarkMode) {
         document.body.classList.add('dark-mode');
+        localStorage.setItem('darkMode', 'true'); // Save preference
+
+        // Update dropdown toggle buttons
+        $("[id$='-dropdown-toggle']").each(function() {
+            $(this).addClass("bg-gray-700 text-gray-200 border-gray-600")
+                  .removeClass("bg-white text-gray-700 border-gray-200");
+        });
+
+        // Apply TailwindCSS dark classes
         $("body").addClass("bg-gray-900").removeClass("bg-gray-50");
-        $(".card, .dropdown-menu, .loading-card, .filter-panel").addClass("bg-gray-800 border-gray-700").removeClass("bg-white border-gray-100");
-        $(".input-control, .filter-select, .filter-input").addClass("bg-gray-700 border-gray-600 text-white").removeClass("bg-white border-gray-200");
-        $(".btn-secondary").addClass("bg-gray-700 text-gray-200 border-gray-600").removeClass("bg-white text-gray-700 border-gray-200");
-        $(".dropdown-item, .dropdown-title, .dropdown-section-title, .filter-group-title").addClass("text-gray-300").removeClass("text-gray-700");
-        $(".dropdown-divider").addClass("bg-gray-700").removeClass("bg-gray-200");
-        $(".status-chip").addClass("bg-gray-700 text-gray-300").removeClass("bg-gray-100 text-gray-600");
-        $(".dropdown-button, .quick-link").addClass("bg-gray-700 text-gray-300").removeClass("bg-gray-100 text-gray-700");
+        $(".app-title-container .text-xs").addClass("text-gray-400").removeClass("text-gray-500");
+
+        // Apply dark mode to any elements using Tailwind utility classes
+        $("[class*='bg-white']").not(".app-logo, .btn-primary").addClass("bg-gray-800").removeClass("bg-white");
+        $("[class*='text-gray-']").not(".text-gray-400, .text-gray-300, .text-gray-200").addClass("text-gray-300").removeClass("text-gray-700 text-gray-800");
     } else {
         document.body.classList.remove('dark-mode');
-        $("body").addClass("bg-gray-50").removeClass("bg-gray-900");
-        $(".card, .dropdown-menu, .loading-card, .filter-panel").addClass("bg-white border-gray-100").removeClass("bg-gray-800 border-gray-700");
-        $(".input-control, .filter-select, .filter-input").addClass("bg-white border-gray-200 text-gray-900").removeClass("bg-gray-700 border-gray-600 text-white");
-        $(".btn-secondary").addClass("bg-white text-gray-700 border-gray-200").removeClass("bg-gray-700 text-gray-200 border-gray-600");
-        $(".dropdown-item, .dropdown-title, .dropdown-section-title, .filter-group-title").addClass("text-gray-700").removeClass("text-gray-300");
-        $(".dropdown-divider").addClass("bg-gray-200").removeClass("bg-gray-700");
-        $(".status-chip").addClass("bg-gray-100 text-gray-600").removeClass("bg-gray-700 text-gray-300");
-        $(".dropdown-button, .quick-link").addClass("bg-gray-100 text-gray-700").removeClass("bg-gray-700 text-gray-300");
+        localStorage.setItem('darkMode', 'false');
+
+        // Update dropdown toggle buttons
+        $("[id$='-dropdown-toggle']").each(function() {
+            $(this).removeClass("bg-gray-700 text-gray-200 border-gray-600")
+                  .addClass("bg-white text-gray-700 border-gray-200");
+        });
+
+        // Remove TailwindCSS dark classes
+        $("body").removeClass("bg-gray-900").addClass("bg-gray-50");
+        $(".app-title-container .text-xs").removeClass("text-gray-400").addClass("text-gray-500");
+
+        // Restore light mode classes
+        $("[class*='bg-gray-800']").not(".dark\\:bg-gray-800").addClass("bg-white").removeClass("bg-gray-800");
+        $("[class*='text-gray-300']").not(".dark\\:text-gray-300").addClass("text-gray-700").removeClass("text-gray-300");
     }
 
     if (gridApi) {
