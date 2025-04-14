@@ -14,11 +14,12 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, index=True, nullable=True)  # removed unique constraint for potential null values
+    email = Column(String, index=True, nullable=True)
     full_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    can_edit = Column(Boolean, default=False)  # New field for edit permissions
     created_at = Column(DateTime, default=func.now())
     last_login = Column(DateTime, nullable=True)
 

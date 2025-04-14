@@ -9,11 +9,19 @@ let activeFilters = [];
 let nextFilterId = 2; // Start at 2 since we have one filter row by default
 let columnVisibility = {}; // To track which columns are visible
 
+let userPermissions = {
+    can_edit: false,
+    is_admin: false,
+    edit_mode_active: false
+};
+
 // Initialize when document is ready
 $(document).ready(function () {
     // Set the initial table container height
     resizeTableContainer();
     setupAdminNavigation();
+
+    getUserPermissions();
 
     // Handle window resize
     $(window).resize(function () {
@@ -31,6 +39,11 @@ $(document).ready(function () {
 
     // Set up event handlers
     setupEventHandlers();
+
+    const editToken = document.cookie.replace(/(?:(?:^|.*;\s*)edit_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    if (editToken) {
+        userPermissions.edit_mode_active = true;
+    }
 });
 
 // Check if user is admin and add admin navigation
@@ -39,7 +52,7 @@ function setupAdminNavigation() {
         url: "/auth/check-admin",  // Updated path
         method: "GET",
         dataType: "json",
-        success: function(response) {
+        success: function (response) {
             if (response.is_admin) {
                 // Add admin link to navigation
                 $("#admin-nav").html(`
@@ -53,7 +66,7 @@ function setupAdminNavigation() {
                 $("#admin-dashboard-btn").show();
             }
         },
-        error: function(xhr) {
+        error: function (xhr) {
             console.log("Not admin or not authenticated");
         }
     });
@@ -106,6 +119,32 @@ function resizeTableContainer() {
     $("#table-container").css("height", tableHeight + "px");
 }
 
+
+function getUserPermissions() {
+    $.ajax({
+        url: "/auth/permissions",
+        method: "GET",
+        dataType: "json",
+        success: function(response) {
+            userPermissions.can_edit = response.can_edit;
+            userPermissions.is_admin = response.is_admin;
+
+            // Check for existing edit token
+            const editToken = document.cookie.replace(/(?:(?:^|.*;\s*)edit_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+            userPermissions.edit_mode_active = !!editToken;
+
+            console.log("User permissions loaded:", userPermissions);
+
+            // Trigger an event when permissions are loaded
+            $(document).trigger('permissionsLoaded');
+        },
+        error: function(xhr) {
+            console.log("Failed to get user permissions");
+        }
+    });
+}
+
+
 // Get columns from the API
 function getColumns() {
     $("#loading-overlay").show();
@@ -133,7 +172,18 @@ function getColumns() {
                         // Choose appropriate filters based on data type
                         filterParams: getFilterParams(col.type),
                         // Add tooltips for cell values
-                        tooltipField: col.field
+                        tooltipField: col.field,
+                        // Make editable if column supports it and user has permission
+                        editable: function (params) {
+                            return (userPermissions.can_edit || userPermissions.is_admin) && col.editable && userPermissions.edit_mode_active;
+                        },
+                        // Add cell editing for editable fields
+                        cellStyle: function (params) {
+                            if ((userPermissions.can_edit || userPermissions.is_admin) && col.editable) {
+                                return {backgroundColor: '#f0f9ff'};  // Light blue background for editable cells
+                            }
+                            return null;
+                        }
                     };
                 });
 
@@ -219,11 +269,194 @@ function initGrid() {
         onFirstDataRendered: onFirstDataRendered,
         onGridReady: onGridReady,
         onFilterChanged: onFilterChanged,
-        onSortChanged: onSortChanged
+        onSortChanged: onSortChanged,
+        // Add cell editing event handlers
+        onCellValueChanged: onCellValueChanged,
+        // Add editing option for cell double-click
+        onCellDoubleClicked: onCellDoubleClicked
     };
 
     // Create the grid
     new agGrid.Grid(document.getElementById('data-table'), gridOptions);
+}
+
+// Add a function to handle cell value changes
+function onCellValueChanged(params) {
+    // Only process if we have permission to edit
+    if ((!userPermissions.can_edit && !userPermissions.is_admin) || !userPermissions.edit_mode_active) {
+        return;
+    }
+
+    const field = params.colDef.field;
+    const rowId = params.data.id;
+    const newValue = params.newValue;
+
+    // Show loading indicator for the cell
+    params.api.showLoadingOverlay();
+
+    // Send update to server
+    $.ajax({
+        url: "/api/v1/table/cell",
+        method: "PUT",
+        data: {
+            field: field,
+            row_id: rowId,
+            value: newValue
+        },
+        success: function (response) {
+            // Success - update the cell
+            params.api.hideOverlay();
+            // Show a brief success indicator
+            const flashCellParams = {
+                rowNodes: [params.node],
+                columns: [field],
+                flashDelay: 2000,
+                fadeDelay: 500
+            };
+            params.api.flashCells(flashCellParams);
+        },
+        error: function (xhr) {
+            // Error - revert the change
+            params.api.hideOverlay();
+            let errorMsg = "Viga salvestamisel";
+            if (xhr.responseJSON && xhr.responseJSON.detail) {
+                errorMsg = xhr.responseJSON.detail;
+            }
+            // Show error message
+            alert(errorMsg);
+            // Refresh the cell to revert the change
+            params.api.refreshCells({
+                rowNodes: [params.node],
+                columns: [field],
+                force: true
+            });
+        }
+    });
+}
+
+
+function showEditModeModal() {
+    $("#edit-mode-modal").removeClass("hidden");
+    $("#edit-password").val("").focus();
+    $("#edit-mode-error").addClass("hidden");
+}
+
+// Add a function to handle edit mode activation
+function activateEditMode() {
+    const password = $("#edit-password").val();
+
+    if (!password) {
+        $("#edit-mode-error").text("Palun sisestage parool").removeClass("hidden");
+        return;
+    }
+
+    $.ajax({
+        url: "/auth/toggle-edit-mode",
+        method: "POST",
+        data: {
+            password: password,
+            csrf_token: getCsrfToken()
+        },
+        success: function (response) {
+            $("#edit-mode-modal").addClass("hidden");
+            userPermissions.edit_mode_active = true;
+
+            // Change the edit indicator to show active edit mode
+            $("#edit-permissions-indicator")
+                .removeClass("bg-blue-100 text-blue-800 bg-green-100 text-green-800")
+                .addClass("bg-yellow-100 text-yellow-800")
+                .html('<i class="fas fa-edit mr-1"></i><span>Muutmise režiim aktiivne</span>')
+                .removeClass("hidden");
+
+            // Refresh the grid to apply new editing capabilities
+            if (gridApi) {
+                gridApi.refreshCells({force: true});
+            }
+
+            // Show a notification
+            showNotification("Muutmise režiim on aktiveeritud 30 minutiks", "success");
+        },
+        error: function (xhr) {
+            let errorMsg = "Aktiveerimine ebaõnnestus";
+            if (xhr.responseJSON && xhr.responseJSON.detail) {
+                errorMsg = xhr.responseJSON.detail;
+            }
+            $("#edit-mode-error").text(errorMsg).removeClass("hidden");
+        }
+    });
+}
+
+// Helper function to get CSRF token
+function getCsrfToken() {
+    return document.cookie.replace(/(?:(?:^|.*;\s*)csrf_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+}
+
+// Add a notification function
+function showNotification(message, type = "info") {
+    const notification = $(`
+        <div class="fixed top-4 right-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-50 notification">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle text-green-500' : 'fa-info-circle text-blue-500'}"></i>
+                </div>
+                <div class="ml-3 w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">${message}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button class="notification-close">
+                        <i class="fas fa-times text-gray-400 hover:text-gray-500"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `);
+
+    $("body").append(notification);
+
+    // Add click handler for close button
+    notification.find(".notification-close").on("click", function () {
+        notification.remove();
+    });
+
+    // Auto-remove after 5 seconds
+    setTimeout(function () {
+        notification.fadeOut(300, function () {
+            notification.remove();
+        });
+    }, 5000);
+}
+
+
+// Add a function to handle cell double-click for editing
+function onCellDoubleClicked(params) {
+    // If user doesn't have edit permission, don't proceed
+    if (!userPermissions.can_edit && !userPermissions.is_admin) {
+        return;
+    }
+
+    // If edit mode is not active, show the password modal
+    if (!userPermissions.edit_mode_active) {
+        showEditModeModal();
+        return;
+    }
+
+    // Check if the cell is editable
+    const colDef = params.colDef;
+    if (typeof colDef.editable === 'function') {
+        if (colDef.editable(params)) {
+            // Start editing the cell
+            params.api.startEditingCell({
+                rowIndex: params.rowIndex,
+                colKey: params.column.getId()
+            });
+        }
+    } else if (colDef.editable) {
+        // Start editing the cell
+        params.api.startEditingCell({
+            rowIndex: params.rowIndex,
+            colKey: params.column.getId()
+        });
+    }
 }
 
 // Handle grid ready event
@@ -918,6 +1151,45 @@ function setupEventHandlers() {
     $("#apply-column-changes").click(function () {
         applyColumnVisibility();
         $("#column-modal").addClass("hidden");
+    });
+
+    $("#close-edit-mode-modal, #edit-mode-backdrop, #cancel-edit-mode").click(function () {
+        $("#edit-mode-modal").addClass("hidden");
+    });
+
+    $("#activate-edit-mode").click(activateEditMode);
+
+    // Allow pressing Enter in password field
+    $("#edit-password").keypress(function (e) {
+        if (e.which === 13) { // Enter key
+            activateEditMode();
+        }
+    });
+
+    // Add a click handler for the edit indicator to toggle edit mode
+    $("#edit-permissions-indicator").click(function () {
+        if (userPermissions.can_edit || userPermissions.is_admin) {
+            if (!userPermissions.edit_mode_active) {
+                showEditModeModal();
+            } else {
+                // Allow disabling edit mode by clicking the indicator
+                userPermissions.edit_mode_active = false;
+
+                // Reset the indicator
+                updateEditModeIndicator();
+
+                // Refresh the grid
+                if (gridApi) {
+                    gridApi.refreshCells({force: true});
+                }
+
+                // Delete the edit token cookie
+                document.cookie = "edit_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+                // Show notification
+                showNotification("Muutmise režiim on välja lülitatud", "info");
+            }
+        }
     });
 }
 

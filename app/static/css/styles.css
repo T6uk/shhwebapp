@@ -865,3 +865,64 @@ body.dark-mode {
         grid-template-columns: 1fr;
     }
 }
+
+/* Add this to the end of the file */
+.editable-cell {
+    background-color: #f0f9ff !important; /* Light blue background for editable cells */
+    cursor: pointer;
+}
+
+.editable-cell:hover {
+    background-color: #dbeafe !important; /* Slightly darker blue on hover */
+}
+
+/* Editing indicator */
+.ag-cell-inline-editing {
+    border: 2px solid #3b82f6 !important;
+    padding: 0 !important;
+}
+
+.ag-cell-inline-editing input {
+    height: 100%;
+    width: 100%;
+    padding: 0 1rem;
+    font-size: var(--ag-font-size);
+    border: none;
+    outline: none;
+}
+/* Add these styles to the end of the file */
+.notification {
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Style for edit mode indicator - make it clickable */
+#edit-permissions-indicator {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#edit-permissions-indicator:hover {
+    transform: scale(1.05);
+}
+
+/* Style for editable cells - more noticeable when edit mode is active */
+.ag-cell.editable-active {
+    background-color: #e9f5fe !important;
+    border: 1px dashed #3b82f6;
+}
+
+.ag-cell.editable-active:hover {
+    background-color: #dbeafe !important;
+}

@@ -65,7 +65,10 @@
 
         <div class="flex items-center gap-3">
             <div id="status" class="status-chip"></div>
-
+            <div id="edit-permissions-indicator" class="status-chip hidden">
+                <i class="fas fa-edit mr-1"></i>
+                <span>Muutmise režiim</span>
+            </div>
             <!-- Add direct access for admins if current_user exists and is admin -->
             {% if current_user and current_user.is_admin %}
             <a href="/auth/admin" class="btn btn-primary">
@@ -361,5 +364,76 @@
         $("#column-modal").removeClass("hidden");
     }
 </script>
+<script>
+    // Show edit mode indicator if user has edit permissions
+    function updateEditModeIndicator() {
+        if (userPermissions.can_edit || userPermissions.is_admin) {
+            $("#edit-permissions-indicator").removeClass("hidden");
+
+            if (userPermissions.edit_mode_active) {
+                // Active edit mode
+                $("#edit-permissions-indicator")
+                    .removeClass("bg-blue-100 text-blue-800 bg-green-100 text-green-800")
+                    .addClass("bg-yellow-100 text-yellow-800")
+                    .html('<i class="fas fa-edit mr-1"></i><span>Muutmise režiim aktiivne</span>');
+            } else if (userPermissions.is_admin) {
+                // Admin with potential to edit
+                $("#edit-permissions-indicator")
+                    .removeClass("bg-yellow-100 text-yellow-800 bg-green-100 text-green-800")
+                    .addClass("bg-blue-100 text-blue-800")
+                    .html('<i class="fas fa-edit mr-1"></i><span>Muutmise õigus</span>');
+            } else {
+                // Regular user with edit permissions
+                $("#edit-permissions-indicator")
+                    .removeClass("bg-yellow-100 text-yellow-800 bg-blue-100 text-blue-800")
+                    .addClass("bg-green-100 text-green-800")
+                    .html('<i class="fas fa-edit mr-1"></i><span>Muutmise õigus</span>');
+            }
+        } else {
+            $("#edit-permissions-indicator").addClass("hidden");
+        }
+    }
+
+    // Call this once permissions are loaded
+    $(document).on('permissionsLoaded', updateEditModeIndicator);
+</script>
+
+<div id="edit-mode-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="edit-mode-backdrop"></div>
+    <div class="modal-content w-full max-w-md z-10 relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Aktiveerige muutmise režiim</h3>
+            <button id="close-edit-mode-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Palun sisestage oma parool andmete muutmise režiimi sisselülitamiseks. Muutmise režiim jääb aktiivseks 30
+            minutiks.
+        </p>
+
+        <div class="mb-4">
+            <label for="edit-password"
+                   class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parool</label>
+            <input type="password" id="edit-password" class="input-control w-full" placeholder="Teie parool">
+        </div>
+
+        <div id="edit-mode-error" class="text-red-500 text-sm mb-4 hidden"></div>
+
+        <div class="flex justify-end gap-3">
+            <button id="activate-edit-mode" class="btn btn-primary">
+                <i class="fas fa-unlock mr-1"></i>
+                <span>Aktiveeri muutmine</span>
+            </button>
+            <button id="cancel-edit-mode" class="btn btn-secondary">
+                <i class="fas fa-times mr-1"></i>
+                <span>Tühista</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

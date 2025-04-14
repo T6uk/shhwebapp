@@ -343,6 +343,7 @@ async def create_user(
         email: str = Form(None),
         full_name: str = Form(None),
         is_admin: bool = Form(False),
+        can_edit: bool = Form(False),  # Add the can_edit parameter
         csrf_token: str = Form(None),
         db: Session = Depends(get_user_db)
 ):
@@ -413,6 +414,7 @@ async def create_user(
             email=email,
             full_name=full_name,
             is_admin=is_admin,
+            can_edit=can_edit,  # Set the can_edit flag
             password_last_changed=datetime.utcnow()
         )
 
@@ -511,3 +513,67 @@ async def delete_user(
             token,
             csrf_token=new_csrf_token
         )
+
+
+@router.get("/permissions")
+async def get_user_permissions(current_user: User = Depends(get_current_active_user)):
+    """Get the current user's permissions"""
+    return {
+        "username": current_user.username,
+        "is_admin": current_user.is_admin,
+        "can_edit": current_user.can_edit
+    }
+
+
+@router.post("/toggle-edit-mode")
+async def toggle_edit_mode(
+        request: Request,
+        password: str = Form(...),
+        csrf_token: str = Form(None),
+        db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Enable edit mode with password verification"""
+    # Verify CSRF token
+    cookie_csrf = request.cookies.get("csrf_token")
+    if not cookie_csrf or cookie_csrf != csrf_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid request signature"
+        )
+
+    # Check if user has edit permissions
+    if not current_user.can_edit and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to edit data"
+        )
+
+    # Verify password
+    if not verify_password(password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+
+    # Password is correct, generate a specific edit mode token
+    edit_token = create_access_token(
+        subject=current_user.username,
+        expires_delta=timedelta(minutes=30),  # Short-lived token for edit mode
+        scopes=["edit"]
+    )
+
+    response = JSONResponse(content={"success": True, "message": "Edit mode activated"})
+
+    # Set the edit mode token as a cookie
+    response.set_cookie(
+        key="edit_token",
+        value=edit_token,
+        httponly=True,
+        max_age=30 * 60,  # 30 minutes
+        path="/",
+        samesite="lax",
+        secure=settings.COOKIE_SECURE
+    )
+
+    return response

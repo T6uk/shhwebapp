@@ -284,6 +284,11 @@
                     </div>
 
                     <div class="input-group flex items-center">
+                        <input type="checkbox" id="can_edit" name="can_edit" class="checkbox-control" value="true">
+                        <label for="can_edit" class="cursor-pointer">Andmete muutmise õigus</label>
+                    </div>
+
+                    <div class="input-group flex items-center">
                         <input type="checkbox" id="is_admin" name="is_admin" class="checkbox-control" value="true">
                         <label for="is_admin" class="cursor-pointer">Administraator</label>
                     </div>
@@ -336,19 +341,19 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else "Pole sisse loginud" }}
+                                <!-- Display editing permissions -->
+                                {% if user.can_edit %}
+                                <span class="badge" style="background-color: #e0f2fe; color: #0369a1;">Muutmine</span>
+                                {% else %}
+                                <span class="badge bg-gray-200 text-gray-700">Ainult vaatamine</span>
+                                {% endif %}
                             </td>
                             <td>
-                                {% if current_user.id != user.id %}
-                                <form method="post" action="/auth/delete-user/{{ user.id }}" class="inline"
-                                      onsubmit="return confirm('Kas olete kindel, et soovite selle kasutaja kustutada?');">
-                                    <!-- CSRF token -->
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                    <button type="submit" class="text-red-500 hover:text-red-700">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
+                                {{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else "Pole sisse
+                                loginud" }}
+                            </td>
+                            <td>
+                                <!-- Existing code for actions -->
                             </td>
                         </tr>
                         {% endfor %}
