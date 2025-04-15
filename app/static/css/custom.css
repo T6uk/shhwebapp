@@ -2,144 +2,144 @@
 /* Enhanced styles for the Big Table App */
 
 :root {
-  --transition-speed: 0.2s;
+    --transition-speed: 0.2s;
 }
 
 /* Improved component styling */
 .app-bar {
-  padding: 1rem 1.5rem;
-  transition: background-color var(--transition-speed) ease;
+    padding: 1rem 1.5rem;
+    transition: background-color var(--transition-speed) ease;
 }
 
 .app-logo {
-  transition: transform 0.3s ease;
+    transition: transform 0.3s ease;
 }
 
 .app-logo:hover {
-  transform: scale(1.05);
+    transform: scale(1.05);
 }
 
 .card {
-  transition: all var(--transition-speed) ease;
+    transition: all var(--transition-speed) ease;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-lg);
 }
 
 .dark-mode .card:hover {
-  box-shadow: var(--shadow-dark-lg);
+    box-shadow: var(--shadow-dark-lg);
 }
 
 .btn {
-  transition: all var(--transition-speed) ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+    transition: all var(--transition-speed) ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .btn-primary {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
+    transform: translateY(-1px);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 /* Improved animation effects */
 .dropdown-menu {
-  transform-origin: top right;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  opacity: 0;
-  transform: scale(0.95);
-  pointer-events: none;
+    transform-origin: top right;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
 }
 
 .dropdown-menu.show {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
 }
 
 /* Notification animations */
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 @keyframes slideOut {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
 }
 
 .toast-notification {
-  animation: slideIn 0.3s forwards;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    animation: slideIn 0.3s forwards;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode .toast-notification {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 .toast-notification.hide {
-  animation: slideOut 0.3s forwards;
+    animation: slideOut 0.3s forwards;
 }
 
 /* Enhanced user profile area */
 .user-profile {
-  transition: all var(--transition-speed) ease;
+    transition: all var(--transition-speed) ease;
 }
 
 .user-profile:hover {
-  background-color: var(--primary-light);
+    background-color: var(--primary-light);
 }
 
 .dark-mode .user-profile:hover {
-  background-color: rgba(59, 130, 246, 0.2);
+    background-color: rgba(59, 130, 246, 0.2);
 }
 
 /* Improve table styling */
 .ag-theme-alpine {
-  --ag-row-hover-color: rgba(59, 130, 246, 0.1);
-  --ag-selected-row-background-color: rgba(59, 130, 246, 0.15);
-  transition: all var(--transition-speed) ease;
+    --ag-row-hover-color: rgba(59, 130, 246, 0.1);
+    --ag-selected-row-background-color: rgba(59, 130, 246, 0.15);
+    transition: all var(--transition-speed) ease;
 }
 
 .dark-mode .ag-theme-alpine {
-  --ag-row-hover-color: rgba(59, 130, 246, 0.2);
-  --ag-selected-row-background-color: rgba(59, 130, 246, 0.25);
+    --ag-row-hover-color: rgba(59, 130, 246, 0.2);
+    --ag-selected-row-background-color: rgba(59, 130, 246, 0.25);
 }
 
 /* Improved mobile responsiveness */
 @media (max-width: 640px) {
-  .app-bar {
-    padding: 0.75rem 1rem;
-  }
+    .app-bar {
+        padding: 0.75rem 1rem;
+    }
 
-  .toolbar {
-    padding: 0.75rem;
-  }
+    .toolbar {
+        padding: 0.75rem;
+    }
 
-  .btn {
-    padding: 0.5rem 0.75rem;
-  }
+    .btn {
+        padding: 0.5rem 0.75rem;
+    }
 }
 
 /* Toggle UI button styles */
@@ -399,8 +399,8 @@ body, .card, .dropdown-menu, .btn, input, select, .ag-theme-alpine,
 .toast-notification, .loading-overlay, .filter-panel, .modal-content,
 .status-chip, .quick-link, #edit-history-panel {
     transition: background-color 0.3s ease-in-out,
-                color 0.3s ease-in-out,
-                border-color 0.3s ease-in-out;
+    color 0.3s ease-in-out,
+    border-color 0.3s ease-in-out;
 }
 
 /* Ensure AG Grid in dark mode has proper styling */
@@ -495,8 +495,12 @@ body, .card, .dropdown-menu, .btn, input, select, .ag-theme-alpine,
 }
 
 @keyframes darkTransition {
-    0% { opacity: 0.8; }
-    100% { opacity: 1; }
+    0% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 1;
+    }
 }
 
 /* Fix for color status indicators in dark mode */
@@ -549,7 +553,7 @@ body, .card, .dropdown-menu, .btn, input, select, .ag-theme-alpine,
 /* Improve cell highlight/selection appearance in dark mode */
 .dark-mode .ag-theme-alpine .ag-cell-highlight,
 .dark-mode .ag-theme-alpine .ag-row-selected .ag-cell {
-    background-color: rgba(147, 197, 253, 0.3) !important;  /* Light blue with alpha */
+    background-color: rgba(147, 197, 253, 0.3) !important; /* Light blue with alpha */
 }
 
 /* Ensure custom highlighted cells use black text */
@@ -579,4 +583,56 @@ body, .card, .dropdown-menu, .btn, input, select, .ag-theme-alpine,
 .dark-mode .ag-theme-alpine .editable-cell:hover {
     background-color: #60a5fa;
     color: #000000;
+}
+
+#edit-mode-btn.edit-mode-active {
+    background-color: #ef4444 !important; /* Red-500 */
+    border-color: #ef4444 !important;
+    color: white !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3) !important;
+    animation: pulse-edit-button 2s infinite !important;
+    position: relative !important;
+}
+
+#edit-mode-btn.edit-mode-active:hover {
+    background-color: #dc2626 !important; /* Red-600 */
+    border-color: #dc2626 !important;
+}
+
+#edit-mode-btn.edit-mode-inactive {
+    background-color: #22c55e !important; /* Green-500 */
+    border-color: #22c55e !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+#edit-mode-btn.edit-mode-inactive:hover {
+    background-color: #16a34a !important; /* Green-600 */
+    border-color: #16a34a !important;
+}
+
+@keyframes pulse-edit-button {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Initial state styling */
+#edit-mode-btn {
+    background-color: #22c55e !important; /* Green 500 */
+    border-color: #22c55e !important;
+    color: white !important;
+    transition: all 0.3s ease;
+}
+
+#edit-mode-btn:hover {
+    background-color: #16a34a !important; /* Green 600 */
+    border-color: #16a34a !important;
 }

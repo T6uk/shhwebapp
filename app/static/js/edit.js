@@ -20,6 +20,34 @@ $(document).ready(function () {
     setupChangeNotifications();
 
     setupWebSocket();
+
+    const originalInit = window.getEditableColumns;
+
+    // Override the original function to add our initialization
+    window.getEditableColumns = function () {
+        // Call the original function
+        if (originalInit) originalInit();
+
+        // Initialize button hover state
+        const editBtn = document.getElementById('edit-mode-btn');
+        if (editBtn) {
+            editBtn.style.backgroundColor = "#22c55e"; // Green-500
+            editBtn.style.borderColor = "#22c55e";
+            editBtn.style.color = "white";
+
+            $(editBtn).hover(
+                function () {
+                    this.style.backgroundColor = "#16a34a"; // Green-600 for hover
+                    this.style.borderColor = "#16a34a";
+                },
+                function () {
+                    this.style.backgroundColor = "#22c55e"; // Back to Green-500
+                    this.style.borderColor = "#22c55e";
+                }
+            );
+        }
+    };
+    $("#edit-mode-btn").addClass('edit-mode-inactive');
 });
 
 function setupWebSocket() {
@@ -183,11 +211,14 @@ function toggleEditMode() {
 
 // Luba redigeerimisrežiim pärast parooli kontrollimist
 function enableEditMode() {
-    // Küsi parool
+    // Ask for password
     const password = prompt("Sisestage redigeerimisrežiimi parool:");
     if (!password) return;
 
-    // Kontrolli parooli serveris
+    // Add log to verify this function runs
+    console.log("Attempting to enable edit mode");
+
+    // Verify password with server
     $.ajax({
         url: "/api/v1/table/verify-edit-password",
         method: "POST",
@@ -196,33 +227,38 @@ function enableEditMode() {
         },
         dataType: "json",
         success: function (response) {
+            console.log("Edit mode password verification response:", response);
+
             if (response.success) {
-                // Luba redigeerimisrežiim
+                // Enable edit mode
                 isEditMode = true;
                 editSessionId = response.session_id;
 
-                // Uuenda nupu kasutajaliidest
-                $("#edit-mode-btn").text("Lülita redigeerimine välja");
-                $("#edit-mode-btn").removeClass("bg-green-500").addClass("bg-red-500");
+                // Update button UI using classes
+                const editBtn = document.getElementById('edit-mode-btn');
+                editBtn.textContent = "Lülita redigeerimine välja";
 
-                // Näita redigeerimise indikaatorit
-                $("#edit-indicator").removeClass("hidden");
+                // Remove inactive class and add active class
+                $(editBtn).removeClass('edit-mode-inactive')
+                    .addClass('edit-mode-active');
 
-                // Näita redigeerimise ajaloo paneeli
-                $("#edit-history-panel").removeClass("hidden");
+                console.log("Edit mode enabled, button should be red now");
 
-                // Lähtesta salvestamata muudatused
+                // Reset unsaved changes
                 unsavedChanges = {};
 
-                // Värskenda tabelit, et esile tõsta redigeeritavad lahtrid
+                // Redraw rows to highlight editable cells
                 if (gridApi) {
                     gridApi.redrawRows();
                 }
 
-                // Näita teavitust
+                // Show edit history panel
+                $("#edit-history-panel").removeClass("hidden");
+
+                // Show notification
                 showToast("Redigeerimisrežiim lubatud", "Saate nüüd redigeerida esiletõstetud lahtreid topeltklõpsates", "info");
             } else {
-                // Näita viga
+                // Show error
                 showToast("Redigeerimisrežiimi viga", response.message || "Vale parool", "error");
             }
         },
@@ -233,38 +269,41 @@ function enableEditMode() {
     });
 }
 
-// Keela redigeerimisrežiim
+// Disable edit mode
 function disableEditMode() {
-    // Kontrolli salvestamata muudatusi
+    // Check for unsaved changes
     if (Object.keys(unsavedChanges).length > 0) {
         if (!confirm("Teil on salvestamata muudatusi. Kas olete kindel, et soovite redigeerimisrežiimist väljuda? Muudatusi ei saa hiljem tagasi võtta.")) {
             return;
         }
     }
 
-    // Keela redigeerimisrežiim
+    // Disable edit mode
     isEditMode = false;
     editSessionId = null;
 
-    // Uuenda nupu kasutajaliidest
-    $("#edit-mode-btn").text("Luba redigeerimine");
-    $("#edit-mode-btn").removeClass("bg-red-500").addClass("bg-green-500");
+    // Update button UI using classes
+    const editBtn = document.getElementById('edit-mode-btn');
+    editBtn.textContent = "Luba redigeerimine";
 
-    // Peida redigeerimise indikaator
-    $("#edit-indicator").addClass("hidden");
+    // Remove active class and add inactive class
+    $(editBtn).removeClass('edit-mode-active')
+        .addClass('edit-mode-inactive');
 
-    // Peida redigeerimise ajaloo paneel
+    console.log("Edit mode disabled, button should be green now");
+
+    // Hide edit history panel
     $("#edit-history-panel").addClass("hidden");
 
-    // Tühjenda salvestamata muudatused
+    // Clear unsaved changes
     unsavedChanges = {};
 
-    // Värskenda tabelit, et eemaldada esiletõstmine
+    // Refresh table to remove highlighting
     if (gridApi) {
         gridApi.redrawRows();
     }
 
-    // Näita teavitust
+    // Show notification
     showToast("Redigeerimisrežiim keelatud", "Olete nüüd ainult vaatamise režiimis", "info");
 }
 
