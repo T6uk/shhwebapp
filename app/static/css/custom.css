@@ -394,3 +394,189 @@ body.ui-hidden #table-container:hover:before {
 .dark-mode .filter-actions .btn:hover::after {
     transform: translateY(0);
 }
+
+body, .card, .dropdown-menu, .btn, input, select, .ag-theme-alpine,
+.toast-notification, .loading-overlay, .filter-panel, .modal-content,
+.status-chip, .quick-link, #edit-history-panel {
+    transition: background-color 0.3s ease-in-out,
+                color 0.3s ease-in-out,
+                border-color 0.3s ease-in-out;
+}
+
+/* Ensure AG Grid in dark mode has proper styling */
+.dark-mode .ag-theme-alpine {
+    --ag-background-color: #1f2937;
+    --ag-header-background-color: #111827;
+    --ag-odd-row-background-color: rgba(255, 255, 255, 0.03);
+    --ag-header-foreground-color: #f3f4f6;
+    --ag-foreground-color: #f3f4f6;
+    --ag-border-color: #374151;
+    --ag-secondary-border-color: #374151;
+    --ag-row-border-color: rgba(255, 255, 255, 0.1);
+    --ag-row-hover-color: rgba(255, 255, 255, 0.07);
+    --ag-selected-row-background-color: rgba(59, 130, 246, 0.2);
+    --ag-input-focus-border-color: #3b82f6;
+    --ag-input-border-color: #4b5563;
+    --ag-input-disabled-background-color: rgba(255, 255, 255, 0.05);
+    --ag-input-disabled-border-color: #6b7280;
+    --ag-checkbox-background-color: #1f2937;
+    --ag-checkbox-checked-color: #3b82f6;
+    --ag-checkbox-unchecked-color: #d1d5db;
+    --ag-checkbox-indeterminate-color: #3b82f6;
+    --ag-icon-color: #d1d5db;
+    --ag-alt-icon-color: #f3f4f6;
+    --ag-disabled-foreground-color: #9ca3af;
+}
+
+/* Handle notifications & toasts in dark mode */
+.dark-mode .toast-notification {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .toast-notification.bg-blue-100 {
+    background-color: rgba(30, 58, 138, 0.8);
+    color: #bfdbfe;
+}
+
+.dark-mode .toast-notification.bg-red-100 {
+    background-color: rgba(127, 29, 29, 0.8);
+    color: #fecaca;
+}
+
+.dark-mode .toast-notification.bg-green-100 {
+    background-color: rgba(6, 78, 59, 0.8);
+    color: #a7f3d0;
+}
+
+.dark-mode .toast-notification.bg-yellow-100 {
+    background-color: rgba(120, 53, 15, 0.8);
+    color: #fde68a;
+}
+
+/* Improved focus styles for dark mode */
+.dark-mode button:focus,
+.dark-mode input:focus,
+.dark-mode select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Scrollbar for dark mode */
+.dark-mode::-webkit-scrollbar-track {
+    background-color: #1f2937;
+}
+
+.dark-mode::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 0.375rem;
+}
+
+.dark-mode::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+}
+
+/* Select dropdown appearance fix for dark mode */
+.dark-mode select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23e5e7eb'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+}
+
+/* Edit mode indicator in dark mode */
+.dark-mode #edit-indicator.bg-red-100 {
+    background-color: rgba(127, 29, 29, 0.8);
+    color: #fecaca;
+}
+
+/* Improved animation for mode switch */
+.dark-mode * {
+    animation: darkTransition 0.3s ease-in-out;
+}
+
+@keyframes darkTransition {
+    0% { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+/* Fix for color status indicators in dark mode */
+.dark-mode .status-chip.bg-red-100 {
+    background-color: rgba(127, 29, 29, 0.8);
+    color: #fecaca;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.dark-mode .status-chip.bg-green-100 {
+    background-color: rgba(6, 78, 59, 0.8);
+    color: #a7f3d0;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.dark-mode .status-chip.bg-blue-100 {
+    background-color: rgba(30, 58, 138, 0.8);
+    color: #bfdbfe;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.dark-mode .status-chip.bg-yellow-100 {
+    background-color: rgba(120, 53, 15, 0.8);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Make sure highlighted/selected cells have black text in dark mode */
+.dark-mode .ag-theme-alpine .ag-cell-highlight,
+.dark-mode .ag-theme-alpine .ag-row-selected .ag-cell,
+.dark-mode .ag-theme-alpine .ag-cell-range-selected,
+.dark-mode .ag-theme-alpine .ag-cell-range-single-cell,
+.dark-mode .ag-theme-alpine .ag-cell-range-selected:not(.ag-cell-range-single-cell) {
+    color: #000000 !important;
+}
+
+/* Specifically target AG Grid cells that are editable in dark mode */
+.dark-mode .ag-theme-alpine .ag-cell-editable {
+    color: #000000;
+}
+
+/* Ensure text in editing mode is black */
+.dark-mode .ag-theme-alpine .ag-cell-inline-editing,
+.dark-mode .ag-theme-alpine .ag-popup-editor,
+.dark-mode .ag-theme-alpine .ag-text-field-input {
+    color: #000000;
+    background-color: #f8fafc;
+}
+
+/* Improve cell highlight/selection appearance in dark mode */
+.dark-mode .ag-theme-alpine .ag-cell-highlight,
+.dark-mode .ag-theme-alpine .ag-row-selected .ag-cell {
+    background-color: rgba(147, 197, 253, 0.3) !important;  /* Light blue with alpha */
+}
+
+/* Ensure custom highlighted cells use black text */
+.dark-mode .ag-theme-alpine [style*="background-color: #93c5fd"],
+.dark-mode .ag-theme-alpine [style*="background-color:#93c5fd"],
+.dark-mode .ag-theme-alpine [style*="background-color: rgb(147, 197, 253)"],
+.dark-mode .ag-theme-alpine [style*="background-color:rgb(147,197,253)"] {
+    color: #000000 !important;
+}
+
+.ag-theme-alpine .editable-cell {
+    background-color: #dbeafe;
+    cursor: pointer;
+}
+
+.dark-mode .ag-theme-alpine .editable-cell {
+    background-color: #93c5fd;
+    color: #000000;
+    border: 1px solid #60a5fa;
+}
+
+/* When hovering over editable cells */
+.ag-theme-alpine .editable-cell:hover {
+    background-color: #bfdbfe;
+}
+
+.dark-mode .ag-theme-alpine .editable-cell:hover {
+    background-color: #60a5fa;
+    color: #000000;
+}

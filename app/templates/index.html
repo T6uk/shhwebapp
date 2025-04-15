@@ -24,7 +24,8 @@
                         'primary-light': '#dbeafe',
                     }
                 }
-            }
+            },
+            darkMode: 'class' // Explicitly set Tailwind to use class strategy
         }
     </script>
 
@@ -51,15 +52,48 @@
     <link rel="stylesheet" href="../static/css/custom.css">
 
     <script>
-        // Check for dark mode preference on page load and apply immediately to prevent flash
-        if (localStorage.getItem('darkMode') === 'true') {
-            document.documentElement.classList.add('dark');
-            document.body.classList.add('dark-mode');
+        // Check for dark mode preference and apply immediately to prevent flash
+        (function () {
+            if (localStorage.getItem('darkMode') === 'true') {
+                // Apply to documentElement for CSS selectors
+                document.documentElement.classList.add('dark');
+                // Apply to body for JS selectors
+                document.body.classList.add('dark-mode');
 
-            // Apply basic dark styles immediately
-            document.body.style.backgroundColor = '#111827';
-            document.body.style.color = '#f3f4f6';
-        }
+                // Apply critical styles immediately inline
+                document.body.style.backgroundColor = '#111827';
+                document.body.style.color = '#f3f4f6';
+
+                // Pre-apply dark styles to prevent flash of light content
+                const style = document.createElement('style');
+                style.textContent = `
+                .card, .dropdown-menu, .loading-card, .filter-panel, .modal-content {
+                    background-color: #1f2937 !important;
+                    border-color: #374151 !important;
+                    color: #f3f4f6 !important;
+                }
+                .btn-secondary:not(.bg-yellow-500):not(.bg-red-500):not(.bg-green-500) {
+                    background-color: #374151 !important;
+                    color: #f3f4f6 !important;
+                    border-color: #4b5563 !important;
+                }
+                input, select, .input-control, .filter-select, .filter-input {
+                    background-color: #374151 !important;
+                    color: #f3f4f6 !important;
+                    border-color: #4b5563 !important;
+                }
+                .loading-overlay {
+                    background-color: rgba(17, 24, 39, 0.8) !important;
+                }
+                .ag-theme-alpine {
+                    --ag-background-color: #1f2937;
+                    --ag-header-background-color: #111827;
+                    --ag-foreground-color: #f3f4f6;
+                }
+            `;
+                document.head.appendChild(style);
+            }
+        })();
     </script>
 </head>
 <body>

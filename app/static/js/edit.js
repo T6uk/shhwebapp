@@ -572,10 +572,10 @@ function showToast(title, message, type = "info") {
 
     // Define colors for light and dark mode
     let colors = {
-        "success": isDark ? "bg-green-900 text-green-100" : "bg-green-100 text-green-800",
-        "error": isDark ? "bg-red-900 text-red-100" : "bg-red-100 text-red-800",
-        "info": isDark ? "bg-blue-900 text-blue-100" : "bg-blue-100 text-blue-800",
-        "warning": isDark ? "bg-yellow-900 text-yellow-100" : "bg-yellow-100 text-yellow-800"
+        "success": isDark ? "bg-green-900 text-green-100 border border-green-800" : "bg-green-100 text-green-800 border border-green-200",
+        "error": isDark ? "bg-red-900 text-red-100 border border-red-800" : "bg-red-100 text-red-800 border border-red-200",
+        "info": isDark ? "bg-blue-900 text-blue-100 border border-blue-800" : "bg-blue-100 text-blue-800 border border-blue-200",
+        "warning": isDark ? "bg-yellow-900 text-yellow-100 border border-yellow-800" : "bg-yellow-100 text-yellow-800 border border-yellow-200"
     };
 
     let icons = {
@@ -585,7 +585,7 @@ function showToast(title, message, type = "info") {
         "warning": "fas fa-exclamation-triangle"
     };
 
-    // Create the toast element
+    // Create the toast element with enhanced styling
     const toast = $(`
         <div class="toast-notification ${colors[type]} p-3 rounded-lg shadow-lg mb-3 transform transition-all duration-300 opacity-0 translate-y-10">
             <div class="flex items-center">
@@ -624,11 +624,24 @@ function showToast(title, message, type = "info") {
 
 // Kohandatud lahtri stiil redigeeritavate lahtrite jaoks - integreerib AG Grid'iga
 function getCellStyle(params) {
+    // Check if we're in dark mode
+    const isDarkMode = document.body.classList.contains('dark-mode');
+
     // Tõsta esile redigeeritavad lahtrid, kui ollakse redigeerimisrežiimis
     if (isEditMode && editableColumns.includes(params.colDef.field)) {
         return {
-            backgroundColor: "#dbeafe",  // Helesinine taust
-            cursor: "pointer"
+            backgroundColor: isDarkMode ? "#93c5fd" : "#dbeafe",  // Lighter blue in dark mode
+            color: "#000000", // Always black text for highlighted cells
+            cursor: "pointer",
+            // Add a subtle border to make it stand out more in dark mode
+            border: isDarkMode ? "1px solid #60a5fa" : "none"
+        };
+    }
+
+    // Special styling for highlighted/selected cells in dark mode
+    if (isDarkMode && params.node.isSelected()) {
+        return {
+            color: "#000000" // Black text for selected cells in dark mode
         };
     }
 
