@@ -10,8 +10,9 @@ import logging
 import time
 import orjson
 from fastapi import Form
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy.orm import Session
+import json
 from sqlalchemy import or_
 from app.models.saved_filter import SavedFilter
 from app.api.dependencies import get_current_active_user
@@ -50,7 +51,7 @@ router = APIRouter(prefix="/table", tags=["table"])
 
 @router.get("/data")
 async def get_table_data(
-        request: Request,  # Add the missing request parameter
+        request: Request,
         start_row: int = Query(0, ge=0),
         end_row: int = Query(100, ge=1),
         search: Optional[str] = None,
@@ -64,86 +65,241 @@ async def get_table_data(
     """
     start_time = time.time()
     try:
-        # Add a force_refresh parameter to bypass cache when needed
-        force_refresh = "timestamp" in request.query_params
+        # Build SQL query components
+        where_clauses = []
+        query_params = {}
 
-        # Create a cache key from the parameters
-        cache_params = {
-            "start": start_row,
-            "end": end_row,
-            "search": search or "",
-            "sort_field": sort_field or "",
-            "sort_dir": sort_dir or "",
-            "filter": filter_model or ""
-        }
-        cache_key = f"table_data:{await compute_cache_key(cache_params)}"
-
-        # Try to get from cache only if not force refreshing
-        cached_data = None
-        if not force_refresh:
-            cached_data = await get_cache(cache_key)
-
-        if cached_data:
-            logger.info(f"Returning cached data in {time.time() - start_time:.3f}s")
-            # Convert cached_data to bytes for faster response
-            return Response(
-                content=orjson.dumps(cached_data),
-                media_type="application/json"
-            )
-
-        # Build query to get paginated data with total count in one query
-        # This is an optimization to avoid two separate database round-trips
-        sql_parts = []
-        params = {}
-
-        # Count query
-        count_sql = f'SELECT COUNT(*) FROM "{BigTable.name}"'
-
-        # Data query
-        data_sql = f'SELECT * FROM "{BigTable.name}"'
-
-        # Add search if provided
-        if search:
-            # Find string columns for searching
-            col_sql = f"""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = '{BigTable.name}'
-                  AND data_type IN ('character varying', 'text', 'char', 'varchar')
+        # Get column data types for proper type conversion - cache this to improve performance
+        column_types = {}
+        try:
+            # Get table column information including data types
+            schema_query = """
+                SELECT column_name, data_type, udt_name 
+                FROM information_schema.columns 
+                WHERE table_name = :table_name
             """
-            col_result = await db.execute(text(col_sql))
-            string_cols = [row[0] for row in col_result.fetchall()]
+            schema_result = await db.execute(text(schema_query), {"table_name": BigTable.name})
 
-            if string_cols:
-                search_conditions = []
-                for col in string_cols:
-                    search_conditions.append(f'"{col}"::text ILIKE :search')
+            for row in schema_result:
+                column_name = row[0]
+                data_type = row[1]
+                udt_name = row[2]
+                column_types[column_name] = {
+                    "data_type": data_type,
+                    "udt_name": udt_name
+                }
 
-                where_clause = f" WHERE ({' OR '.join(search_conditions)})"
-                count_sql += where_clause
-                data_sql += where_clause
-                params["search"] = f"%{search}%"
+            logger.info(f"Retrieved column types: {column_types}")
+        except Exception as e:
+            logger.error(f"Error getting column types: {str(e)}")
+            # Continue without type information - we'll try to guess types
 
-        # Add sorting to data query
+        # Log received filter model for debugging
+        logger.info(f"Received filter_model: {filter_model}")
+
+        # Add search filters if provided
+        if search:
+            search_value = f"%{search}%"
+            query_params["search_value"] = search_value
+
+            # Get text columns for searching
+            text_cols_query = """
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = :table_name
+                AND data_type IN ('character varying', 'text', 'character', 'varchar')
+            """
+            text_cols_result = await db.execute(text(text_cols_query), {"table_name": BigTable.name})
+            text_cols = [row[0] for row in text_cols_result.fetchall()]
+
+            if text_cols:
+                search_conditions = [f'"{col}"::text ILIKE :search_value' for col in text_cols]
+                where_clauses.append(f"({' OR '.join(search_conditions)})")
+
+        # Process filter model if provided
+        if filter_model:
+            try:
+                # Try to parse the filter model
+                try:
+                    filters = json.loads(filter_model)
+                except json.JSONDecodeError:
+                    logger.error(f"Invalid JSON in filter_model: {filter_model}")
+                    raise ValueError("Invalid filter model format")
+
+                logger.info(f"Parsed filters: {filters}")
+
+                # Process each filter
+                filter_idx = 0
+                for field, filter_config in filters.items():
+                    filter_type = filter_config.get('type')
+                    filter_value = filter_config.get('filter')
+
+                    logger.info(f"Processing filter: field={field}, type={filter_type}, value={filter_value}")
+
+                    # Skip if field doesn't exist in the table
+                    if field not in column_types and field != "id":  # Always allow "id"
+                        logger.warning(f"Field {field} not found in table schema")
+                        continue
+
+                    # Convert value based on column type
+                    converted_value = filter_value
+                    try:
+                        # Get column type info
+                        col_type_info = column_types.get(field, {})
+                        col_type = col_type_info.get("data_type", "").lower()
+                        udt_name = col_type_info.get("udt_name", "").lower()
+
+                        # Convert value based on column type
+                        if field == "id" or col_type in ("integer", "bigint", "smallint") or udt_name in (
+                        "int4", "int8", "int2"):
+                            # Handle integer types
+                            if filter_value is not None and filter_value != "":
+                                if isinstance(filter_value, dict):  # For inRange
+                                    if 'from' in filter_value and filter_value['from']:
+                                        filter_value['from'] = int(filter_value['from'])
+                                    if 'to' in filter_value and filter_value['to']:
+                                        filter_value['to'] = int(filter_value['to'])
+                                    converted_value = filter_value
+                                else:
+                                    converted_value = int(filter_value)
+
+                        elif col_type in ("numeric", "decimal", "real", "double precision", "float") or udt_name in (
+                        "numeric", "float4", "float8"):
+                            # Handle float types
+                            if filter_value is not None and filter_value != "":
+                                if isinstance(filter_value, dict):  # For inRange
+                                    if 'from' in filter_value and filter_value['from']:
+                                        filter_value['from'] = float(filter_value['from'])
+                                    if 'to' in filter_value and filter_value['to']:
+                                        filter_value['to'] = float(filter_value['to'])
+                                    converted_value = filter_value
+                                else:
+                                    converted_value = float(filter_value)
+
+                        # Date types will be handled as strings but with proper formatting
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error converting value for {field}: {e}")
+                        # Continue with the original value
+
+                    logger.info(f"Converted value for {field}: {filter_value} -> {converted_value}")
+
+                    # Special case for ID column when type info is missing - assume integer
+                    if field == "id" and filter_value is not None and not isinstance(filter_value, dict):
+                        try:
+                            converted_value = int(filter_value)
+                        except (ValueError, TypeError):
+                            logger.warning(f"Cannot convert ID value {filter_value} to integer")
+
+                    # Handle each filter type
+                    if filter_type == 'contains':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
+                        query_params[param_name] = f"%{filter_value}%"
+                        filter_idx += 1
+
+                    elif filter_type == 'equals':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}" = :{param_name}')
+                        query_params[param_name] = converted_value
+                        filter_idx += 1
+
+                    elif filter_type == 'notEqual':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}" != :{param_name}')
+                        query_params[param_name] = converted_value
+                        filter_idx += 1
+
+                    elif filter_type == 'startsWith':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
+                        query_params[param_name] = f"{filter_value}%"
+                        filter_idx += 1
+
+                    elif filter_type == 'endsWith':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
+                        query_params[param_name] = f"%{filter_value}"
+                        filter_idx += 1
+
+                    elif filter_type == 'blank':
+                        where_clauses.append(f'("{field}" IS NULL OR "{field}" = \'\')')
+
+                    elif filter_type == 'notBlank':
+                        where_clauses.append(f'("{field}" IS NOT NULL AND "{field}" != \'\')')
+
+                    elif filter_type == 'greaterThan':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}" > :{param_name}')
+                        query_params[param_name] = converted_value
+                        filter_idx += 1
+
+                    elif filter_type == 'lessThan':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}" < :{param_name}')
+                        query_params[param_name] = converted_value
+                        filter_idx += 1
+
+                    elif filter_type == 'greaterThanOrEqual':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}" >= :{param_name}')
+                        query_params[param_name] = converted_value
+                        filter_idx += 1
+
+                    elif filter_type == 'lessThanOrEqual':
+                        param_name = f"filter_{filter_idx}"
+                        where_clauses.append(f'"{field}" <= :{param_name}')
+                        query_params[param_name] = converted_value
+                        filter_idx += 1
+
+                    elif filter_type == 'inRange' and isinstance(converted_value, dict):
+                        from_value = converted_value.get('from')
+                        to_value = converted_value.get('to')
+
+                        if from_value is not None:
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}" >= :{param_name}')
+                            query_params[param_name] = from_value
+                            filter_idx += 1
+
+                        if to_value is not None:
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}" <= :{param_name}')
+                            query_params[param_name] = to_value
+                            filter_idx += 1
+
+            except Exception as e:
+                logger.error(f"Error processing filter model: {str(e)}", exc_info=True)
+                # Continue without failing - best effort filtering
+
+        # Combine WHERE clauses
+        where_sql = ""
+        if where_clauses:
+            where_sql = f" WHERE {' AND '.join(where_clauses)}"
+
+        # Log the final SQL for debugging
+        logger.info(f"WHERE clause: {where_sql}")
+        logger.info(f"Query params: {query_params}")
+
+        # Build and execute count query
+        count_sql = f'SELECT COUNT(*) FROM "{BigTable.name}"{where_sql}'
+        count_result = await db.execute(text(count_sql), query_params)
+        total_rows = count_result.scalar() or 0
+
+        # Build and execute data query with sorting and pagination
+        data_sql = f'SELECT * FROM "{BigTable.name}"{where_sql}'
         if sort_field:
-            direction = "DESC" if sort_dir and sort_dir.lower() == "desc" else "ASC"
-            data_sql += f' ORDER BY "{sort_field}" {direction}'
+            sort_direction = "DESC" if sort_dir and sort_dir.lower() == "desc" else "ASC"
+            data_sql += f' ORDER BY "{sort_field}" {sort_direction}'
         else:
-            # Default ordering by the first column
-            data_sql += ' ORDER BY 1'
+            data_sql += ' ORDER BY 1'  # Default sort
 
         # Add pagination
         data_sql += ' LIMIT :limit OFFSET :offset'
-        params["limit"] = end_row - start_row
-        params["offset"] = start_row
-
-        # Execute count query
-        count_result = await db.execute(text(count_sql), params)
-        total_rows = count_result.scalar() or 0
+        query_params["limit"] = end_row - start_row
+        query_params["offset"] = start_row
 
         # Execute data query
-        logger.info(f"Executing query: {data_sql} with params: {params}")
-        result = await db.execute(text(data_sql), params)
+        result = await db.execute(text(data_sql), query_params)
         rows = result.fetchall()
 
         # Convert to list of dicts for JSON response
@@ -153,13 +309,13 @@ async def get_table_data(
             for key in row._mapping.keys():
                 value = row._mapping[key]
                 # Handle datetime objects for JSON serialization
-                if hasattr(value, 'isoformat'):
+                if isinstance(value, (datetime, date)):
                     row_dict[str(key)] = value.isoformat()
                 else:
                     row_dict[str(key)] = value
             data.append(row_dict)
 
-        logger.info(f"Returning {len(data)} rows (of total {total_rows}) in {time.time() - start_time:.3f}s")
+        logger.info(f"Query returned {len(data)} rows out of {total_rows} total in {time.time() - start_time:.3f}s")
 
         # Create response with row count info
         response_data = {
@@ -168,9 +324,6 @@ async def get_table_data(
             "startRow": start_row,
             "endRow": min(start_row + len(data), total_rows)
         }
-
-        # Cache the result (5 minutes TTL for paginated results)
-        await set_cache(cache_key, response_data, expire=60)
 
         # Return using orjson for faster serialization
         return Response(

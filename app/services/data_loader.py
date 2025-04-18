@@ -78,11 +78,19 @@ async def load_table_data(
         # Enhanced filter model handling - more advanced filtering options
         if filter_model:
             try:
+                # Parse filter model - could be a string or already parsed object
                 filters = json.loads(filter_model) if isinstance(filter_model, str) else filter_model
 
+                # Log for debugging
+                logger.debug(f"Processing filter model: {filters}")
+
                 for field, filter_config in filters.items():
+                    # Extract filter type and value
                     filter_type = filter_config.get("type")
                     filter_value = filter_config.get("filter")
+
+                    # Log filter details for debugging
+                    logger.debug(f"Processing filter: field={field}, type={filter_type}, value={filter_value}")
 
                     # Handle range filters with from/to values
                     if filter_type == "inRange" and isinstance(filter_value, dict):
@@ -123,6 +131,10 @@ async def load_table_data(
         where_sql = ""
         if where_clauses:
             where_sql = "WHERE " + " AND ".join(where_clauses)
+
+        # Log the final WHERE clause for debugging
+        logger.debug(f"Final WHERE clause: {where_sql}")
+        logger.debug(f"Query parameters: {query_params}")
 
         # Execute count query and data query in parallel for better performance
         count_sql = f'SELECT COUNT(*) FROM "{BigTable.name}" {where_sql}'
@@ -182,10 +194,11 @@ async def load_table_data(
 
 
 def build_filter_condition(field: str, filter_type: str, param_name: str) -> str:
-    """Build SQL condition for different filter types"""
+    """Build SQL condition for different filter types with improved handling"""
     if not filter_type:
         return ""
 
+    # Map filter types to SQL conditions
     filter_map = {
         "equals": f'"{field}" = :{param_name}',
         "notEqual": f'"{field}" != :{param_name}',
@@ -197,15 +210,30 @@ def build_filter_condition(field: str, filter_type: str, param_name: str) -> str
         "greaterThanOrEqual": f'"{field}" >= :{param_name}',
         "lessThan": f'"{field}" < :{param_name}',
         "lessThanOrEqual": f'"{field}" <= :{param_name}',
-        "inRange": None,  # Handled separately
+        # inRange is handled separately in the main function
     }
 
+    # Get the SQL condition for the filter type
     condition = filter_map.get(filter_type)
 
-    if condition is None:
-        return ""
+    # Log details for debugging
+    if condition is None and filter_type != "inRange":
+        logger.warning(f"Unknown filter type: {filter_type}")
 
-    return condition
+    return condition or ""
+
+
+def prepare_filter_value(filter_type: str, value: Any) -> Any:
+    """Prepare filter value based on filter type with improved handling"""
+    if filter_type == "contains" or filter_type == "notContains":
+        return f"%{value}%"
+    elif filter_type == "startsWith":
+        return f"{value}%"
+    elif filter_type == "endsWith":
+        return f"%{value}"
+    else:
+        # For other types, return value as is
+        return value
 
 
 def prepare_filter_value(filter_type: str, value: Any) -> Any:

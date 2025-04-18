@@ -223,6 +223,13 @@
                     </div>
                 </div>
 
+                <div id="active-filters-container" class="px-4 py-2 mb-2 hidden">
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Aktiivsed filtrid:</span>
+                        <div id="active-filters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
                 <!-- Filter button -->
                 <button id="filter-toggle" class="btn btn-secondary flex items-center gap-2">
                     <i class="fas fa-filter"></i>
@@ -393,7 +400,8 @@
                             <!-- Column options will be added dynamically -->
                         </select>
 
-                        <select class="filter-select filter-operator" onchange="updateFilterValueInput($(this).closest('.filter-row'))">
+                        <select class="filter-select filter-operator"
+                                onchange="updateFilterValueInput($(this).closest('.filter-row'))">
                             <option value="contains">Sisaldab</option>
                             <option value="equals">Võrdub</option>
                             <option value="notEqual">Ei võrdu</option>
@@ -422,14 +430,16 @@
 
                     <div class="mt-2 flex items-center">
                         <input type="checkbox" id="auto-close-filters" class="mr-2" checked>
-                        <label for="auto-close-filters" class="text-sm text-gray-600 dark:text-gray-400">Sulge filtrimenüü pärast rakendamist</label>
+                        <label for="auto-close-filters" class="text-sm text-gray-600 dark:text-gray-400">Sulge
+                            filtrimenüü pärast rakendamist</label>
                     </div>
                 </div>
             </div>
 
             <div>
                 <div class="filter-group-title">Salvestatud filtrid</div>
-                <div id="saved-filters-list" class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                <div id="saved-filters-list"
+                     class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
                     <!-- Saved filters will be loaded here -->
                     <div class="p-4 text-center text-gray-500 dark:text-gray-400">Filtrite laadimine...</div>
                 </div>
@@ -502,25 +512,31 @@
         <div class="modal-content w-full max-w-md z-10 relative bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold dark:text-white">Salvesta filter</h3>
-                <button id="close-filter-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" onclick="$('#save-filter-modal').addClass('hidden')">
+                <button id="close-filter-modal"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        onclick="$('#save-filter-modal').addClass('hidden')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <div class="space-y-4">
                 <div class="input-group">
-                    <label for="filter-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filtri nimi *</label>
+                    <label for="filter-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filtri
+                        nimi *</label>
                     <input type="text" id="filter-name" class="input-control" placeholder="Kõik aktiivsed..." required>
                 </div>
 
                 <div class="input-group">
-                    <label for="filter-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kirjeldus</label>
-                    <textarea id="filter-description" class="input-control" placeholder="Filtri kirjeldus..." rows="2"></textarea>
+                    <label for="filter-description"
+                           class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kirjeldus</label>
+                    <textarea id="filter-description" class="input-control" placeholder="Filtri kirjeldus..."
+                              rows="2"></textarea>
                 </div>
 
                 <div class="flex items-center">
                     <input type="checkbox" id="filter-public" class="checkbox-control mr-2">
-                    <label for="filter-public" class="text-sm text-gray-700 dark:text-gray-300">Avalik filter (nähtav kõigile kasutajatele)</label>
+                    <label for="filter-public" class="text-sm text-gray-700 dark:text-gray-300">Avalik filter (nähtav
+                        kõigile kasutajatele)</label>
                 </div>
             </div>
 

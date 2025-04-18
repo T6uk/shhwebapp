@@ -459,11 +459,14 @@ function onGridReady(params) {
     // Set a datasource for infinite scrolling
     const dataSource = {
         getRows: function (params) {
-            console.log('Asking for ' + params.startRow + ' to ' + params.endRow);
+            console.log('AG Grid requesting rows:', params.startRow, 'to', params.endRow);
 
             // Show loading indicator for initial load
             if (params.startRow === 0) {
                 $("#loading-overlay").show();
+            } else {
+                // Show mini loading indicator for subsequent loads
+                $("#mini-loading-indicator").removeClass("hidden");
             }
 
             // Build query parameters
@@ -476,16 +479,25 @@ function onGridReady(params) {
             if (params.sortModel && params.sortModel.length > 0) {
                 queryParams.sort_field = params.sortModel[0].colId;
                 queryParams.sort_dir = params.sortModel[0].sort;
+                console.log('Adding sort:', queryParams.sort_field, queryParams.sort_dir);
             }
 
             // Add search term if present
             if (searchTerm) {
                 queryParams.search = searchTerm;
+                console.log('Adding search term:', searchTerm);
             }
 
             // Add filters if present
             if (params.filterModel && Object.keys(params.filterModel).length > 0) {
+                // Convert the filter model to a JSON string
                 queryParams.filter_model = JSON.stringify(params.filterModel);
+                console.log('Adding filter model:', queryParams.filter_model);
+            }
+
+            // Add timestamp to bust cache when refreshing
+            if (params.parentNode && params.parentNode.data && params.parentNode.data.timestamp) {
+                queryParams.timestamp = params.parentNode.data.timestamp;
             }
 
             $.ajax({
@@ -495,7 +507,8 @@ function onGridReady(params) {
                 dataType: "json",
                 success: function (response) {
                     // Update status
-                    $("#status").text(response.rowCount + " kirjet");
+                    $("#status").text(response.rowCount + " kirjet" +
+                        (queryParams.filter_model ? " (filtreeritud)" : ""));
 
                     // Check if we have more rows
                     const lastRow = response.rowCount <= response.endRow ? response.rowCount : -1;
@@ -503,14 +516,20 @@ function onGridReady(params) {
                     // Provide the data to the grid
                     params.successCallback(response.rowData, lastRow);
 
-                    // Hide loading overlay
+                    // Hide loading indicators
                     $("#loading-overlay").hide();
+                    $("#mini-loading-indicator").addClass("hidden");
                 },
                 error: function (xhr, status, error) {
                     console.error("Error loading data:", error);
+                    console.error("Response:", xhr.responseText);
                     $("#status").text("Viga: " + error);
                     params.failCallback();
                     $("#loading-overlay").hide();
+                    $("#mini-loading-indicator").addClass("hidden");
+
+                    // Show error toast
+                    showToast("Andmete laadimine ebaõnnestus", error, "error");
                 }
             });
         }
@@ -518,6 +537,10 @@ function onGridReady(params) {
 
     // Set the datasource
     gridApi.setDatasource(dataSource);
+
+    gridApi.addEventListener('filterChanged', function () {
+        setTimeout(updateActiveFiltersDisplay, 100);
+    });
 
     // Fit columns to available width
     setTimeout(function () {
@@ -1398,73 +1421,121 @@ function updateFilterValueInput($row) {
 
 // Enhanced apply filters function
 function applyEnhancedFilters() {
-    // Collect filter conditions
-    activeFilters = [];
+    console.log("Applying filters");
+
+    // Create a simple object to hold our filters
     let filterModel = {};
 
+    // Process each filter row
     $(".filter-row").each(function () {
         const field = $(this).find(".filter-field").val();
+        if (!field) return; // Skip incomplete filters
+
         const operator = $(this).find(".filter-operator").val();
-
-        // Skip if no field selected
-        if (!field) return;
-
         let value;
 
-        // Handle different operators
-        if (operator === 'blank' || operator === 'notBlank') {
-            value = null; // No value needed
+        // Handle different filter types
+        if (operator === 'blank') {
+            // For blank fields
+            filterModel[field] = {
+                filterType: 'text',
+                type: 'blank'
+            };
+            return;
+        } else if (operator === 'notBlank') {
+            // For not blank fields
+            filterModel[field] = {
+                filterType: 'text',
+                type: 'notBlank'
+            };
+            return;
         } else if (operator === 'inRange') {
-            // Get from/to values
+            // For range filters
             const fromValue = $(this).find(".filter-from").val();
             const toValue = $(this).find(".filter-to").val();
 
-            if (!fromValue && !toValue) return; // Skip if no range values
+            if (!fromValue && !toValue) return; // Skip empty ranges
 
-            value = {
-                from: fromValue || null,
-                to: toValue || null
+            filterModel[field] = {
+                filterType: 'number',
+                type: 'inRange',
+                filter: {
+                    from: fromValue || null,
+                    to: toValue || null
+                }
             };
-        } else {
-            // Get single value from input
-            const $valueInput = $(this).find(".filter-input");
-            value = $valueInput.val();
-
-            if (!value && operator !== 'blank' && operator !== 'notBlank') return; // Skip if no value
+            return;
         }
-        // Save the filter to the model
-        activeFilters.push({
-            field: field,
-            operator: operator,
-            value: value
-        });
 
-        // Add to AG Grid filter model
+        // For standard filters
+        value = $(this).find(".filter-input").val();
+        if (!value && operator !== 'blank' && operator !== 'notBlank') return; // Skip empty values
+
+        // Map operators to AG Grid format
+        let agGridType;
+        switch (operator) {
+            case 'contains':
+                agGridType = 'contains';
+                break;
+            case 'equals':
+                agGridType = 'equals';
+                break;
+            case 'notEqual':
+                agGridType = 'notEqual';
+                break;
+            case 'startsWith':
+                agGridType = 'startsWith';
+                break;
+            case 'endsWith':
+                agGridType = 'endsWith';
+                break;
+            case 'greaterThan':
+                agGridType = 'greaterThan';
+                break;
+            case 'greaterThanOrEqual':
+                agGridType = 'greaterThanOrEqual';
+                break;
+            case 'lessThan':
+                agGridType = 'lessThan';
+                break;
+            case 'lessThanOrEqual':
+                agGridType = 'lessThanOrEqual';
+                break;
+            default:
+                agGridType = 'equals';
+        }
+
+        // Create the filter object
         filterModel[field] = {
-            filterType: getFilterType(operator),
-            type: operator,
+            filterType: operator.includes('greater') || operator.includes('less') ? 'number' : 'text',
+            type: agGridType,
             filter: value
         };
     });
 
-    // Apply filters to AG Grid
-    if (gridApi && Object.keys(filterModel).length > 0) {
-        gridApi.setFilterModel(filterModel);
-    } else if (gridApi) {
-        // Clear filters
-        gridApi.setFilterModel(null);
+    console.log("Filter model:", JSON.stringify(filterModel));
+
+    // Apply the filter model directly
+    if (gridApi) {
+        try {
+            gridApi.setFilterModel(filterModel);
+
+            // Force a refresh with timestamp for cache invalidation
+            gridApi.refreshInfiniteCache();
+
+            // Update status text
+            setTimeout(() => {
+                const count = gridApi.getDisplayedRowCount();
+                $("#status").text(`Filtreeritud: ${count} kirjet`);
+            }, 500);
+
+        } catch (err) {
+            console.error("Error applying filters:", err);
+            showToast("Viga", "Filtrite rakendamisel tekkis viga", "error");
+        }
     }
 
-    // Update status
-    const displayedRowCount = gridApi ? gridApi.getDisplayedRowCount() : 0;
-    $("#status").text(activeFilters.length > 0 ?
-        `Filtreeritud: ${displayedRowCount} kirjet` :
-        `${displayedRowCount} kirjet`);
-
-    // Resize table container
-    resizeTableContainer();
-
-    // Close the filter panel if configured to auto-close
+    // Close the filter panel if checkbox is checked
     if ($("#auto-close-filters").prop("checked")) {
         $("#filter-panel").removeClass("show");
     }
@@ -1472,19 +1543,64 @@ function applyEnhancedFilters() {
 
 // Helper function to get filter type for AG Grid
 function getFilterType(operator) {
+    // Check for text-based operators
     if (operator === 'contains' || operator === 'notContains' ||
         operator === 'startsWith' || operator === 'endsWith' ||
         operator === 'equals' || operator === 'notEqual' ||
         operator === 'blank' || operator === 'notBlank') {
         return 'text';
-    } else if (operator === 'greaterThan' || operator === 'greaterThanOrEqual' ||
+    }
+
+    // Check for number-based operators
+    else if (operator === 'greaterThan' || operator === 'greaterThanOrEqual' ||
         operator === 'lessThan' || operator === 'lessThanOrEqual' ||
         operator === 'inRange') {
         return 'number';
-    } else {
+    }
+
+    // Default to text for unknown operators
+    else {
+        console.warn(`Unknown operator: ${operator}, defaulting to text`);
         return 'text';
     }
 }
+
+
+function clearFilters() {
+    // Reset filter UI
+    $("#filter-container").empty();
+
+    // Add a single empty filter row
+    nextFilterId = 2; // Reset ID counter
+    addEnhancedFilterRow();
+
+    // Clear active filters
+    activeFilters = [];
+
+    // Clear AG Grid filters
+    if (gridApi) {
+        gridApi.setFilterModel(null);
+        gridApi.refreshInfiniteCache();
+    }
+
+    // Update status
+    if (gridApi) {
+        const displayedRowCount = gridApi.getDisplayedRowCount();
+        $("#status").text(`${displayedRowCount} kirjet`);
+    }
+
+    // Show confirmation
+    showToast("Filtrid lähtestatud", "Kõik filtrid on eemaldatud", "info");
+}
+
+// Make sure the clearFilters function is properly connected to the button
+document.addEventListener("DOMContentLoaded", function () {
+    // Ensure the clear filters button is connected
+    $("#clear-filters").off('click').on('click', function () {
+        clearFilters();
+    });
+});
+
 
 // Show save filter modal
 function showSaveFilterModal() {
