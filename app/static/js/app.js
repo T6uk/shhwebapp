@@ -128,26 +128,23 @@ function toggleUIElements() {
     // Save state to localStorage
     localStorage.setItem('bigtable_ui_hidden', uiHidden ? 'true' : 'false');
 
+    // Update button icon
     if (uiHidden) {
-        // Hide elements
-        $("#app-bar").slideUp(300);
-        $("#toolbar-container").slideUp(300, function () {
-            // Update icon
-            $("#toggle-ui-btn i").removeClass("fa-compress-alt").addClass("fa-expand-alt");
-            // Update button tooltip
-            $("#toggle-ui-btn").attr("title", "Show UI elements");
-            // Resize table after animation completes
+        $("#toggle-ui-btn i").removeClass("fa-compress-alt").addClass("fa-expand-alt");
+        $("#toggle-ui-btn").attr("title", "Show UI elements");
+    } else {
+        $("#toggle-ui-btn i").removeClass("fa-expand-alt").addClass("fa-compress-alt");
+        $("#toggle-ui-btn").attr("title", "Hide UI elements");
+    }
+
+    if (uiHidden) {
+        // Hide toolbar but keep header
+        $("#toolbar-container").slideUp(300, function() {
             resizeTableContainer();
         });
     } else {
-        // Show elements
-        $("#app-bar").slideDown(300);
-        $("#toolbar-container").slideDown(300, function () {
-            // Update icon
-            $("#toggle-ui-btn i").removeClass("fa-expand-alt").addClass("fa-compress-alt");
-            // Update button tooltip
-            $("#toggle-ui-btn").attr("title", "Hide UI elements");
-            // Resize table after animation completes
+        // Show toolbar
+        $("#toolbar-container").slideDown(300, function() {
             resizeTableContainer();
         });
     }
@@ -296,22 +293,25 @@ function setupDropdowns() {
 // Function to resize the table container
 function resizeTableContainer() {
     const windowHeight = $(window).height();
-    const headerHeight = $("#app-bar").is(":visible") ? $("#app-bar").outerHeight(true) : 0;
+    const headerHeight = $("#compact-header").outerHeight(true) || 0;
     const toolbarHeight = $("#toolbar-container").is(":visible") ? $("#toolbar-container").outerHeight(true) : 0;
     const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
-    const padding = 40; // Allow for some padding
+    const padding = 24; // Less padding for more space
 
     const tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
     $("#table-container").css("height", tableHeight + "px");
 
     if ($("#edit-history-panel").is(":visible")) {
-        const historyPanelHeight = $("#edit-history-panel").outerHeight(true);
-        tableHeight -= historyPanelHeight;
+        // Don't subtract the whole height - just give a bit of space
+        const historyPanelOffset = 40;
+        $("#table-container").css("height", (tableHeight - historyPanelOffset) + "px");
     }
 
     // If grid API exists, resize columns to fit
     if (gridApi) {
-        gridApi.sizeColumnsToFit();
+        setTimeout(() => {
+            gridApi.sizeColumnsToFit();
+        }, 50);
     }
 }
 
