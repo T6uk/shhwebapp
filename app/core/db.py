@@ -9,7 +9,7 @@ from typing import AsyncGenerator
 
 from app.core.config import settings
 from app.models.table import metadata, BigTable
-from app.models.user import Base as UserBase
+from app.core.db_base import Base, UserBase  # Updated import
 
 logger = logging.getLogger(__name__)
 

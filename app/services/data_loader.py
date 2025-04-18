@@ -1,13 +1,14 @@
 # app/services/data_loader.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text, func, select
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import json
 import logging
 from asyncio import gather
+from datetime import datetime, date
 
 from app.models.table import BigTable
-from app.core.cache import get_cache, set_cache
+from app.core.cache import get_cache, set_cache, compute_cache_key
 
 # Cache time-to-live (1 hour)
 CACHE_TTL = 3600
@@ -22,27 +23,30 @@ async def load_table_data(
         params: Dict[str, Any]
 ) -> Tuple[List[Dict[str, Any]], int]:
     """
-    Load table data with pagination, filtering, sorting and caching with optimized queries
+    Load table data with enhanced pagination, filtering, sorting and caching with optimized queries
     """
     # Create a cache key based on the query parameters
-    cache_key = f"table_data:{json.dumps(params, default=str)}"
+    cache_key = f"table_data:{await compute_cache_key(params)}"
 
-    # Try to get data from cache first
-    cached_data = await get_cache(cache_key)
-    if cached_data:
-        logger.debug(f"Cache hit for {cache_key}")
-        return cached_data.get("data", []), cached_data.get("total", 0)
+    # Try to get data from cache first, unless force_refresh is specified
+    force_refresh = params.get("force_refresh", False)
+    if not force_refresh:
+        cached_data = await get_cache(cache_key)
+        if cached_data:
+            logger.debug(f"Cache hit for {cache_key}")
+            return cached_data.get("data", []), cached_data.get("total", 0)
 
     # Get pagination parameters
     page = params.get("page", 1)
     size = params.get("size", 1000)
+    offset = params.get("offset", 0)
     sort = params.get("sort")
     sort_dir = params.get("sort_dir", "asc")
     search = params.get("search")
     filter_model = params.get("filter_model")
 
     try:
-        # Construct SQL queries more efficiently
+        # Construct SQL queries with more efficient parameter handling
         where_clauses = []
         query_params = {}
 
@@ -71,37 +75,49 @@ async def load_table_data(
                 ]
                 where_clauses.append(f"({' OR '.join(search_conditions)})")
 
-        # Handle filter model - more complex filtering logic
+        # Enhanced filter model handling - more advanced filtering options
         if filter_model:
             try:
-                filters = json.loads(filter_model)
+                filters = json.loads(filter_model) if isinstance(filter_model, str) else filter_model
+
                 for field, filter_config in filters.items():
                     filter_type = filter_config.get("type")
                     filter_value = filter_config.get("filter")
 
-                    if filter_type and filter_value is not None:
-                        param_name = f"filter_{field}"
+                    # Handle range filters with from/to values
+                    if filter_type == "inRange" and isinstance(filter_value, dict):
+                        from_value = filter_value.get("from")
+                        to_value = filter_value.get("to")
 
-                        if filter_type == "contains":
-                            query_params[param_name] = f"%{filter_value}%"
-                            where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
-                        elif filter_type == "equals":
-                            query_params[param_name] = filter_value
-                            where_clauses.append(f'"{field}" = :{param_name}')
-                        elif filter_type == "startsWith":
-                            query_params[param_name] = f"{filter_value}%"
-                            where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
-                        elif filter_type == "endsWith":
-                            query_params[param_name] = f"%{filter_value}"
-                            where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
-                        elif filter_type == "greaterThan":
-                            query_params[param_name] = filter_value
-                            where_clauses.append(f'"{field}" > :{param_name}')
-                        elif filter_type == "lessThan":
-                            query_params[param_name] = filter_value
-                            where_clauses.append(f'"{field}" < :{param_name}')
-            except json.JSONDecodeError:
-                logger.warning(f"Invalid filter_model JSON: {filter_model}")
+                        if from_value is not None:
+                            param_name = f"filter_{field}_from"
+                            query_params[param_name] = from_value
+                            where_clauses.append(f'"{field}" >= :{param_name}')
+
+                        if to_value is not None:
+                            param_name = f"filter_{field}_to"
+                            query_params[param_name] = to_value
+                            where_clauses.append(f'"{field}" <= :{param_name}')
+
+                    # Handle special filters
+                    elif filter_type == "blank":
+                        where_clauses.append(f'("{field}" IS NULL OR "{field}" = \'\')')
+
+                    elif filter_type == "notBlank":
+                        where_clauses.append(f'("{field}" IS NOT NULL AND "{field}" != \'\')')
+
+                    # Handle standard single value filters
+                    elif filter_value is not None:
+                        param_name = f"filter_{field}"
+                        condition = build_filter_condition(field, filter_type, param_name)
+
+                        if condition:
+                            where_clauses.append(condition)
+                            # Prepare parameter value based on filter type
+                            query_params[param_name] = prepare_filter_value(filter_type, filter_value)
+
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.warning(f"Invalid filter_model: {filter_model}. Error: {str(e)}")
 
         # Combine WHERE clauses
         where_sql = ""
@@ -126,9 +142,9 @@ async def load_table_data(
 
         # Add pagination parameters
         query_params["limit"] = size
-        query_params["offset"] = (page - 1) * size
+        query_params["offset"] = offset
 
-        # Execute queries in parallel using asyncio.gather for better performance
+        # Execute queries in parallel
         count_future = db.execute(text(count_sql), query_params)
         data_future = db.execute(text(data_sql), query_params)
 
@@ -137,15 +153,16 @@ async def load_table_data(
         total_count = count_result.scalar() or 0
         rows = data_result.fetchall()
 
-        # Process results
+        # Process results with optimized data conversion
         data = []
         for row in rows:
             if hasattr(row, '_mapping'):
-                row_dict = {str(key): value for key, value in row._mapping.items()}
-                # Handle datetime serialization
-                for k, v in row_dict.items():
-                    if hasattr(v, 'isoformat'):
-                        row_dict[k] = v.isoformat()
+                row_dict = {}
+                for key, value in row._mapping.items():
+                    if isinstance(value, (datetime, date)):
+                        row_dict[str(key)] = value.isoformat()
+                    else:
+                        row_dict[str(key)] = value
                 data.append(row_dict)
 
         # Store in cache with TTL
@@ -164,69 +181,77 @@ async def load_table_data(
         return [], 0
 
 
-async def load_table_columns(db: AsyncSession) -> List[Dict[str, Any]]:
-    """
-    Get metadata about table columns for the frontend with improved performance
-    """
-    # Try to get from cache
-    cache_key = "table_columns"
-    cached_columns = await get_cache(cache_key)
-    if cached_columns:
-        return cached_columns
+def build_filter_condition(field: str, filter_type: str, param_name: str) -> str:
+    """Build SQL condition for different filter types"""
+    if not filter_type:
+        return ""
 
+    filter_map = {
+        "equals": f'"{field}" = :{param_name}',
+        "notEqual": f'"{field}" != :{param_name}',
+        "contains": f'"{field}"::text ILIKE :{param_name}',
+        "notContains": f'"{field}"::text NOT ILIKE :{param_name}',
+        "startsWith": f'"{field}"::text ILIKE :{param_name}',
+        "endsWith": f'"{field}"::text ILIKE :{param_name}',
+        "greaterThan": f'"{field}" > :{param_name}',
+        "greaterThanOrEqual": f'"{field}" >= :{param_name}',
+        "lessThan": f'"{field}" < :{param_name}',
+        "lessThanOrEqual": f'"{field}" <= :{param_name}',
+        "inRange": None,  # Handled separately
+    }
+
+    condition = filter_map.get(filter_type)
+
+    if condition is None:
+        return ""
+
+    return condition
+
+
+def prepare_filter_value(filter_type: str, value: Any) -> Any:
+    """Prepare filter value based on filter type"""
+    if filter_type in ["contains", "notContains"]:
+        return f"%{value}%"
+    elif filter_type == "startsWith":
+        return f"{value}%"
+    elif filter_type == "endsWith":
+        return f"%{value}"
+    else:
+        return value
+
+
+async def get_available_filter_values(
+        db: AsyncSession,
+        column_name: str,
+        search_term: Optional[str] = None,
+        limit: int = 100
+) -> List[Any]:
+    """Get unique values for a column to populate filter dropdowns"""
     try:
-        # More efficient query to get column information directly from information_schema
-        schema_sql = f"""
-            SELECT 
-                column_name,
-                data_type,
-                is_nullable,
-                column_default,
-                ordinal_position
-            FROM 
-                information_schema.columns
-            WHERE 
-                table_name = '{BigTable.name}'
-            ORDER BY 
-                ordinal_position
+        # Create a query to get distinct values for the column
+        query = f"""
+            SELECT DISTINCT "{column_name}" 
+            FROM "{BigTable.name}" 
+            WHERE "{column_name}" IS NOT NULL 
         """
 
-        schema_result = await db.execute(text(schema_sql))
-        schema_rows = schema_result.fetchall()
+        params = {}
 
-        columns = []
-        for schema_row in schema_rows:
-            column_name = schema_row[0]
-            data_type = schema_row[1]
-            is_nullable = schema_row[2] == 'YES'
-            column_default = schema_row[3]
+        # Add search constraint if provided
+        if search_term:
+            query += f' AND "{column_name}"::text ILIKE :search_term'
+            params['search_term'] = f"%{search_term}%"
 
-            # Determine best field type for frontend
-            field_type = "string"  # Default
-            if data_type in ("integer", "bigint", "numeric", "real", "double precision"):
-                field_type = "number"
-            elif data_type in ("date", "timestamp", "timestamp with time zone"):
-                field_type = "date"
-            elif data_type in ("boolean"):
-                field_type = "boolean"
+        # Add order and limit
+        query += f' ORDER BY "{column_name}" LIMIT :limit'
+        params['limit'] = limit
 
-            column_info = {
-                "field": column_name,
-                "title": column_name.capitalize().replace("_", " "),
-                "type": field_type,
-                "dataType": data_type,
-                "nullable": is_nullable,
-                "hasDefault": column_default is not None
-            }
-            columns.append(column_info)
+        # Execute query
+        result = await db.execute(text(query), params)
+        values = [row[0] for row in result.fetchall()]
 
-        # Cache for 24 hours since schema rarely changes
-        await set_cache(cache_key, columns, expire=CACHE_TTL * 24)
-
-        logger.info(f"Retrieved {len(columns)} columns from schema")
-        return columns
+        return values
 
     except Exception as e:
-        logger.error(f"Error loading table columns: {str(e)}", exc_info=True)
-        # Return empty columns on error
+        logger.error(f"Error getting filter values for {column_name}: {str(e)}")
         return []

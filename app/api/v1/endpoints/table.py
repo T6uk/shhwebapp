@@ -9,6 +9,11 @@ from typing import Optional, Dict, Any, List
 import logging
 import time
 import orjson
+from fastapi import Form
+from datetime import datetime
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from app.models.saved_filter import SavedFilter
 from app.api.dependencies import get_current_active_user
 from app.models.user import User
 from app.core.user_db import get_user_db
@@ -383,3 +388,164 @@ async def check_for_changes_endpoint(
 
     result = await check_for_changes(user_db, current_user, last_checked_time)
     return result
+
+
+@router.get("/filter-values/{column_name}")
+async def get_filter_values(
+        column_name: str,
+        search: Optional[str] = None,
+        limit: int = Query(100, ge=1, le=1000),
+        db: AsyncSession = Depends(get_db)
+):
+    """Get available values for a column to populate filter dropdowns"""
+    try:
+        from app.services.data_loader import get_available_filter_values
+
+        values = await get_available_filter_values(db, column_name, search, limit)
+
+        return {
+            "values": values,
+            "count": len(values)
+        }
+
+    except Exception as e:
+        logger.exception(f"Error getting filter values: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting filter values: {str(e)}")
+
+
+@router.post("/save-filter")
+async def save_filter(
+        name: str = Form(...),
+        description: Optional[str] = Form(None),
+        filter_model: str = Form(...),
+        is_public: bool = Form(False),
+        db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Save a filter configuration for later use"""
+    try:
+        # Create a new filter model
+        new_filter = SavedFilter(
+            name=name,
+            description=description,
+            filter_model=filter_model,
+            is_public=is_public,
+            user_id=current_user.id,
+            created_at=datetime.utcnow()
+        )
+
+        db.add(new_filter)
+        db.commit()
+        db.refresh(new_filter)
+
+        return {
+            "id": new_filter.id,
+            "name": new_filter.name,
+            "message": "Filter saved successfully"
+        }
+
+    except Exception as e:
+        logger.exception(f"Error saving filter: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error saving filter: {str(e)}")
+
+
+@router.get("/saved-filters")
+async def get_saved_filters(
+        db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get all saved filters for the current user plus public filters"""
+    try:
+        # Get user's filters and public filters
+        filters = db.query(SavedFilter).filter(
+            or_(
+                SavedFilter.user_id == current_user.id,
+                SavedFilter.is_public == True
+            )
+        ).order_by(SavedFilter.name).all()
+
+        return {
+            "filters": [
+                {
+                    "id": f.id,
+                    "name": f.name,
+                    "description": f.description,
+                    "is_public": f.is_public,
+                    "created_at": f.created_at.isoformat(),
+                    "is_owner": f.user_id == current_user.id
+                }
+                for f in filters
+            ]
+        }
+
+    except Exception as e:
+        logger.exception(f"Error getting saved filters: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting saved filters: {str(e)}")
+
+
+@router.get("/saved-filter/{filter_id}")
+async def get_saved_filter(
+        filter_id: int,
+        db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get a specific saved filter"""
+    try:
+        # Get the filter
+        filter = db.query(SavedFilter).filter(SavedFilter.id == filter_id).first()
+
+        if not filter:
+            raise HTTPException(status_code=404, detail="Filter not found")
+
+        # Check if user has access (owner or public filter)
+        if filter.user_id != current_user.id and not filter.is_public:
+            raise HTTPException(status_code=403, detail="Access denied to this filter")
+
+        return {
+            "id": filter.id,
+            "name": filter.name,
+            "description": filter.description,
+            "filter_model": filter.filter_model,
+            "is_public": filter.is_public,
+            "created_at": filter.created_at.isoformat(),
+            "is_owner": filter.user_id == current_user.id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error getting filter details: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting filter details: {str(e)}")
+
+
+@router.delete("/saved-filter/{filter_id}")
+async def delete_saved_filter(
+        filter_id: int,
+        db: Session = Depends(get_user_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Delete a saved filter"""
+    try:
+        # Get the filter
+        filter = db.query(SavedFilter).filter(SavedFilter.id == filter_id).first()
+
+        if not filter:
+            raise HTTPException(status_code=404, detail="Filter not found")
+
+        # Check if user is the owner
+        if filter.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="You can only delete your own filters")
+
+        # Delete the filter
+        db.delete(filter)
+        db.commit()
+
+        return {
+            "message": "Filter deleted successfully"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error deleting filter: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting filter: {str(e)}")

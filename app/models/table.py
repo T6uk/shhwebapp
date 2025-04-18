@@ -1,7 +1,7 @@
+# app/models/table.py
 from sqlalchemy import Table, MetaData
-from sqlalchemy.ext.declarative import declarative_base
+from app.core.db_base import Base
 
-Base = declarative_base()
 metadata = MetaData()
 
 # Instead of defining a specific model with hardcoded columns,

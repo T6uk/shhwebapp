@@ -1,11 +1,11 @@
 # app/core/user_db.py
 from sqlalchemy import create_engine, MetaData
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 import logging
 import os
 
 from app.core.config import settings
+from app.core.db_base import UserBase, UserMetadata  # Import from new module
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -24,10 +24,6 @@ user_engine = create_engine(
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=user_engine)
 
-# Create Base model class
-UserBase = declarative_base()
-UserMetadata = MetaData()
-
 
 def get_user_db():
     """Synchronous dependency for getting user database session"""
@@ -40,10 +36,12 @@ def get_user_db():
 
 def init_user_db():
     """Initialize user database and tables"""
-    from app.models.user import User  # Import here to avoid circular import
+    # Import models here to avoid circular import
+    from app.models.user import User
     from app.models.column_settings import ColumnSetting
     from app.models.data_change import DataChange
     from app.models.change_log import ChangeLog
+    from app.models.saved_filter import SavedFilter
     from app.core.security import get_password_hash
     from datetime import datetime
 

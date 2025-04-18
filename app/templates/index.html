@@ -229,6 +229,26 @@
                     <span class="hidden sm:inline">Filter</span>
                 </button>
 
+                <!-- Filters dropdown with saved filters -->
+                <div class="dropdown">
+                    <button id="filters-dropdown-toggle" class="btn btn-secondary flex items-center gap-2">
+                        <i class="fas fa-filter"></i>
+                        <span class="hidden sm:inline">Filtrid</span>
+                    </button>
+                    <div id="filters-dropdown-menu" class="dropdown-menu">
+                        <div class="dropdown-title">Salvestatud filtrid</div>
+                        <div id="saved-filters-menu">
+                            <!-- Saved filters will be loaded here -->
+                            <div class="text-gray-400 text-xs italic p-2">Filtrite laadimine...</div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="open-filter-panel">
+                            <i class="fas fa-cog"></i>
+                            <span>Halda filtreid</span>
+                        </div>
+                    </div>
+                </div>
+
                 <button id="refresh-button" class="btn btn-secondary flex items-center gap-2 relative"
                         onclick="refreshData()">
                     <div class="badge-container absolute top-0 right-0"></div>
@@ -361,39 +381,59 @@
 
     <!-- Filter Panel -->
     <div id="filter-panel" class="filter-panel">
-        <div class="filter-group-title">Kohandatud filtrid</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="md:col-span-2">
+                <div class="filter-group-title">Kohandatud filtrid</div>
 
-        <div id="filter-container">
-            <!-- Initial filter row -->
-            <div class="filter-row" data-id="1">
-                <select class="filter-select filter-field">
-                    <option value="">Vali veerg...</option>
-                    <!-- Column options will be added dynamically -->
-                </select>
+                <div id="filter-container">
+                    <!-- Initial filter row -->
+                    <div class="filter-row" data-id="1">
+                        <select class="filter-select filter-field" onchange="updateFilterOperators(this)">
+                            <option value="">Vali veerg...</option>
+                            <!-- Column options will be added dynamically -->
+                        </select>
 
-                <select class="filter-select filter-operator">
-                    <option value="contains">Sisaldab</option>
-                    <option value="equals">Võrdub</option>
-                    <option value="starts">Algab</option>
-                    <option value="ends">Lõpeb</option>
-                    <option value="greater">Suurem kui</option>
-                    <option value="less">Väiksem kui</option>
-                </select>
+                        <select class="filter-select filter-operator" onchange="updateFilterValueInput($(this).closest('.filter-row'))">
+                            <option value="contains">Sisaldab</option>
+                            <option value="equals">Võrdub</option>
+                            <option value="notEqual">Ei võrdu</option>
+                            <option value="startsWith">Algab</option>
+                            <option value="endsWith">Lõpeb</option>
+                            <option value="blank">Tühi</option>
+                            <option value="notBlank">Mitte tühi</option>
+                        </select>
 
-                <input type="text" class="filter-input" placeholder="Filtri väärtus">
+                        <div class="filter-value-container">
+                            <input type="text" class="filter-input" placeholder="Filtri väärtus">
+                        </div>
 
-                <button class="filter-remove-btn">
-                    <i class="fas fa-times"></i>
-                </button>
+                        <button class="filter-remove-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add filter button -->
+                <div class="mt-4 mb-3">
+                    <button id="add-filter-row" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i>
+                        <span>Lisa filtritingimus</span>
+                    </button>
+
+                    <div class="mt-2 flex items-center">
+                        <input type="checkbox" id="auto-close-filters" class="mr-2" checked>
+                        <label for="auto-close-filters" class="text-sm text-gray-600 dark:text-gray-400">Sulge filtrimenüü pärast rakendamist</label>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Add filter button -->
-        <div class="mt-4 mb-3">
-            <button id="add-filter-row" class="btn btn-secondary">
-                <i class="fas fa-plus"></i>
-                <span>Lisa filtritingimus</span>
-            </button>
+            <div>
+                <div class="filter-group-title">Salvestatud filtrid</div>
+                <div id="saved-filters-list" class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                    <!-- Saved filters will be loaded here -->
+                    <div class="p-4 text-center text-gray-500 dark:text-gray-400">Filtrite laadimine...</div>
+                </div>
+            </div>
         </div>
 
         <!-- Filter actions -->
@@ -455,6 +495,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Saved Filter Modal -->
+    <div id="save-filter-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="save-filter-modal-backdrop"></div>
+        <div class="modal-content w-full max-w-md z-10 relative bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold dark:text-white">Salvesta filter</h3>
+                <button id="close-filter-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" onclick="$('#save-filter-modal').addClass('hidden')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="input-group">
+                    <label for="filter-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filtri nimi *</label>
+                    <input type="text" id="filter-name" class="input-control" placeholder="Kõik aktiivsed..." required>
+                </div>
+
+                <div class="input-group">
+                    <label for="filter-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kirjeldus</label>
+                    <textarea id="filter-description" class="input-control" placeholder="Filtri kirjeldus..." rows="2"></textarea>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="filter-public" class="checkbox-control mr-2">
+                    <label for="filter-public" class="text-sm text-gray-700 dark:text-gray-300">Avalik filter (nähtav kõigile kasutajatele)</label>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="save-filter-button" class="btn btn-primary">
+                    <i class="fas fa-save mr-2"></i>
+                    <span>Salvesta filter</span>
+                </button>
+                <button id="cancel-save-filter" class="btn btn-secondary">
+                    <i class="fas fa-times mr-2"></i>
+                    <span>Tühista</span>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Application Script -->
@@ -492,6 +573,7 @@
 </script>
 
 <script src="../static/js/edit.js"></script>
+<script src="../static/js/enhanced-filters.js"></script>
 
 </body>
 </html>

@@ -1,6 +1,6 @@
 # app/models/column_settings.py
 from sqlalchemy import Column, Integer, String, Boolean
-from app.core.user_db import UserBase as Base
+from app.core.db_base import UserBase as Base
 
 class ColumnSetting(Base):
     __tablename__ = "column_settings"

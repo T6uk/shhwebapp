@@ -1,6 +1,6 @@
 # app/models/data_change.py
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
-from app.core.user_db import UserBase as Base
+from app.core.db_base import UserBase as Base
 
 class DataChange(Base):
     __tablename__ = "data_changes"

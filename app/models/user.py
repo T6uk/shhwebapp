@@ -1,10 +1,11 @@
 # app/models/user.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, func
+from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 import uuid
 
-from app.core.user_db import UserBase as Base
+from app.core.db_base import UserBase as Base  # Import from new module
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -30,6 +31,9 @@ class User(Base):
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
     user_preferences = Column(Text, nullable=True)  # JSON-encoded preferences
+
+    # Add relationship to SavedFilter model
+    saved_filters = relationship("SavedFilter", back_populates="user", cascade="all, delete-orphan")
 
     @staticmethod
     def verify_password(plain_password, hashed_password):

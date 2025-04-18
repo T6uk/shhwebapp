@@ -1,6 +1,6 @@
 # app/models/change_log.py
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
-from app.core.user_db import UserBase as Base
+from app.core.db_base import UserBase as Base
 
 class ChangeLog(Base):
     __tablename__ = "change_logs"
