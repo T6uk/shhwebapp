@@ -3,11 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toomas</title>
+    <title>Suur Andmetabel</title>
+    <meta name="description" content="Andmete haldamise süsteem">
 
-    <!-- Inter font - modern, clean typography -->
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+    <!-- Favicon and PWA icons -->
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Preload critical fonts and styles -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
 
     <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,18 +50,10 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- PWA support -->
-    <link rel="manifest" href="../static/manifest.json">
-    <meta name="theme-color" content="#3b82f6">
-    <link rel="apple-touch-icon" href="../static/icons/icon-192x192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Custom Styles - legacy styles first, then enhanced styles -->
+    <link rel="stylesheet" href="/static/css/enhanced-ui.css">
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="../static/css/styles.css">
-    <link rel="stylesheet" href="../static/css/custom.css">
-    <link rel="stylesheet" href="../static/css/compact-ui.css">
-
+    <!-- Preload key styles for faster rendering -->
     <script>
         // Check for dark mode preference and apply immediately to prevent flash
         (function () {
@@ -60,132 +62,145 @@
                 document.body.classList.add('dark-mode');
                 document.body.style.backgroundColor = '#111827';
                 document.body.style.color = '#f3f4f6';
-
-                const style = document.createElement('style');
-                style.textContent = `
-                .card, .dropdown-menu, .loading-card, .filter-panel, .modal-content {
-                    background-color: #1f2937 !important;
-                    border-color: #374151 !important;
-                    color: #f3f4f6 !important;
-                }
-                .btn-secondary:not(.bg-yellow-500):not(.bg-red-500):not(.bg-green-500) {
-                    background-color: #374151 !important;
-                    color: #f3f4f6 !important;
-                    border-color: #4b5563 !important;
-                }
-                input, select, .input-control, .filter-select, .filter-input {
-                    background-color: #374151 !important;
-                    color: #f3f4f6 !important;
-                    border-color: #4b5563 !important;
-                }
-                .loading-overlay {
-                    background-color: rgba(17, 24, 39, 0.8) !important;
-                }
-                .ag-theme-alpine {
-                    --ag-background-color: #1f2937;
-                    --ag-header-background-color: #111827;
-                    --ag-foreground-color: #f3f4f6;
-                }
-            `;
-                document.head.appendChild(style);
             }
         })();
     </script>
 </head>
-<body>
+<body class="antialiased">
 <div class="container mx-auto px-3 sm:px-4 py-3">
-    <!-- Compact Header with User Info and App Controls -->
-    <div id="compact-header"
-         class="flex justify-between items-center mb-2 px-2 py-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        <div class="flex items-center gap-2">
-            <div class="w-7 h-7 bg-primary rounded-md flex items-center justify-center text-white">
-                <i class="fa fa-table text-xs"></i>
+    <!-- Enhanced Header with User Info and App Controls -->
+    <header id="compact-header" class="enhanced-card mb-3 px-3 py-2">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-white">
+                    <i class="fa fa-table"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-semibold">Suur Andmetabel</h1>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Andmete haldamise süsteem</div>
+                </div>
             </div>
-            <div class="text-sm font-semibold">Andmetabel</div>
-        </div>
 
-        <div class="flex items-center gap-3">
-            <!-- Hide UI button repositioned to header -->
-            <button id="toggle-ui-btn"
-                    class="compact-btn btn-ghost rounded-full w-7 h-7 flex items-center justify-center"
-                    title="Toggle UI elements">
-                <i class="fas fa-compress-alt text-xs"></i>
-            </button>
-
-            {% if current_user %}
-            <div class="dropdown">
-                <button id="user-dropdown-toggle" class="compact-btn btn-ghost flex items-center gap-1">
-                    <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white">
-                        <i class="fas fa-user text-xs"></i>
-                    </div>
-                    <span class="text-xs font-medium truncate max-w-[100px]">{{ current_user.username }}</span>
-                    <i class="fas fa-chevron-down text-xs opacity-70"></i>
+            <div class="flex items-center gap-3">
+                <!-- Hide UI button -->
+                <button id="toggle-ui-btn"
+                        class="btn-modern btn-modern--secondary rounded-full w-8 h-8 flex items-center justify-center"
+                        title="Peida/näita kasutajaliidese elemendid" aria-label="Toggle UI elements">
+                    <i class="fas fa-compress-alt"></i>
                 </button>
-                <div id="user-dropdown-menu" class="dropdown-menu compact-dropdown">
-                    <div class="py-2 px-3">
-                        <div class="text-xs font-medium">{{ current_user.full_name or current_user.username }}</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                            {% if current_user.is_admin %}Admin{% else %}Kasutaja{% endif %}
+
+                <!-- User profile -->
+                {% if current_user %}
+                <div class="dropdown-modern">
+                    <button id="user-dropdown-toggle" class="btn-modern btn-modern--secondary flex items-center gap-2 rounded-lg" data-dropdown="user-dropdown-menu" aria-expanded="false" aria-haspopup="true">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-sm">
+                            {% if current_user.full_name %}
+                                <span class="text-sm font-semibold">{{ current_user.full_name[0] | upper }}</span>
+                            {% else %}
+                                <span class="text-sm font-semibold">{{ current_user.username[0] | upper }}</span>
+                            {% endif %}
                         </div>
+                        <div class="flex flex-col items-start">
+                            <span class="text-sm font-medium truncate max-w-[120px]">{{ current_user.username }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {% if current_user.is_admin %}Administraator{% else %}Kasutaja{% endif %}
+                            </span>
+                        </div>
+                        <i class="fas fa-chevron-down text-xs opacity-70 ml-1"></i>
+                    </button>
+                    <div id="user-dropdown-menu" class="hidden" role="menu" aria-hidden="true">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-sm">
+                                    {% if current_user.full_name %}
+                                        <span class="text-base font-semibold">{{ current_user.full_name[0] | upper }}</span>
+                                    {% else %}
+                                        <span class="text-base font-semibold">{{ current_user.username[0] | upper }}</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-semibold">{{ current_user.full_name or current_user.username }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ current_user.email or "" }}</div>
+                                </div>
+                            </div>
+                            {% if current_user.last_login %}
+                            <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                                Viimane sisselogimine: {{ current_user.formatted_last_login }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if current_user and current_user.is_admin %}
+                        <a href="/auth/admin" class="dropdown-modern__item" role="menuitem">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                        {% endif %}
+
+                        <a href="#" class="dropdown-modern__item" role="menuitem" onclick="window.modalSystem?.create({
+                            title: 'Kasutaja seaded',
+                            content: '<p>Kasutaja seadete funktsioon on arendamisel.</p>',
+                            footer: '<button class=\'btn-modern btn-modern--secondary\' data-modal-close>Sulge</button>'
+                        }).open()">
+                            <i class="fas fa-cog"></i>
+                            <span>Seaded</span>
+                        </a>
+
+                        <div class="dropdown-modern__divider"></div>
+
+                        <a href="/auth/logout" class="dropdown-modern__item" role="menuitem">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logi välja</span>
+                        </a>
                     </div>
-                    <div class="dropdown-divider"></div>
-                    {% if current_user and current_user.is_admin %}
-                    <a href="/auth/admin" class="dropdown-item py-1.5">
-                        <i class="fas fa-user-shield"></i>
-                        <span>Admin Panel</span>
-                    </a>
-                    {% endif %}
-                    <a href="/auth/logout" class="dropdown-item py-1.5">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logi välja</span>
-                    </a>
                 </div>
+                {% else %}
+                <a href="/auth/login" class="btn-modern btn-modern--primary">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Logi sisse</span>
+                </a>
+                {% endif %}
             </div>
-            {% else %}
-            <a href="/auth/login" class="compact-btn btn-primary">
-                <i class="fas fa-sign-in-alt text-xs"></i>
-                <span class="text-xs">Logi sisse</span>
-            </a>
-            {% endif %}
         </div>
-    </div>
+    </header>
 
-    <!-- Main Toolbar - Improved layout with search on left, buttons on right -->
-    <div id="toolbar-container" class="card rounded-lg shadow-sm p-2 mb-2">
-        <div class="toolbar flex justify-between items-center">
-            <!-- Left section: search -->
-            <div class="search-bar flex-grow max-w-md flex items-center gap-1">
-                <div class="input-group relative flex-grow">
-                    <i class="input-icon fas fa-search text-xs"></i>
-                    <input type="text" id="search-input" class="compact-input pl-7" placeholder="Otsi...">
+    <!-- Main Toolbar with enhanced design -->
+    <div id="toolbar-container" class="enhanced-card mb-3">
+        <div class="toolbar-modern">
+            <!-- Left section: search with improved layout -->
+            <div class="search-bar flex-grow max-w-md flex items-center gap-2">
+                <div class="relative flex-grow">
+                    <i class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 fas fa-search text-sm"></i>
+                    <input type="text" id="search-input" class="input-modern pl-9" placeholder="Otsi andmebaasist..." aria-label="Search">
                 </div>
-                <button id="search-button" class="compact-btn btn-primary">
-                    <i class="fas fa-search text-xs"></i>
+                <button id="search-button" class="btn-modern btn-modern--primary" aria-label="Search">
+                    <i class="fas fa-search"></i>
+                    <span>Otsi</span>
                 </button>
-                <button id="reset-button" class="compact-btn btn-secondary">
-                    <i class="fas fa-times text-xs"></i>
+                <button id="reset-button" class="btn-modern btn-modern--secondary" aria-label="Clear search">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- Right section: action buttons -->
+            <!-- Right section: action buttons with improved design -->
             <div class="flex items-center flex-wrap gap-2">
                 <!-- Edit mode button -->
                 <div id="edit-mode-container" class="hidden">
-                    <button id="edit-mode-btn" class="compact-btn edit-mode-inactive">
-                        <i class="fas fa-edit text-xs"></i>
-                        <span class="text-xs">Redigeeri</span>
+                    <button id="edit-mode-btn" class="btn-modern edit-mode-inactive">
+                        <i class="fas fa-edit"></i>
+                        <span>Redigeeri</span>
                     </button>
                 </div>
 
                 <!-- Quick links dropdown -->
-                <div class="dropdown">
-                    <button id="links-dropdown-toggle" class="compact-btn btn-secondary">
-                        <i class="fas fa-link text-xs"></i>
-                        <span class="text-xs">Kiirlingid</span>
+                <div class="dropdown-modern">
+                    <button id="links-dropdown-toggle" class="btn-modern btn-modern--secondary" data-dropdown="links-dropdown-menu" aria-expanded="false" aria-haspopup="true">
+                        <i class="fas fa-link"></i>
+                        <span>Kiirlingid</span>
                     </button>
-                    <div id="links-dropdown-menu" class="dropdown-menu compact-dropdown">
-                        <div class="dropdown-title text-xs">Veergude kiirlingid</div>
-                        <div class="quick-links-grid" id="column-quick-links">
+                    <div id="links-dropdown-menu" class="hidden" role="menu" aria-hidden="true">
+                        <div class="text-sm font-medium border-b border-gray-200 dark:border-gray-700 px-3 py-2 mb-1">Veergude kiirlingid</div>
+                        <div class="quick-links-grid p-2" id="column-quick-links">
                             <!-- Quick links will be inserted here dynamically -->
                             <div class="text-gray-400 text-xs italic p-2">Veergude laadimine...</div>
                         </div>
@@ -193,20 +208,20 @@
                 </div>
 
                 <!-- Filter button -->
-                <button id="filter-toggle" class="compact-btn btn-secondary">
-                    <i class="fas fa-filter text-xs"></i>
-                    <span class="text-xs">Filter</span>
+                <button id="filter-toggle" class="btn-modern btn-modern--secondary">
+                    <i class="fas fa-filter"></i>
+                    <span>Filter</span>
                 </button>
 
                 <!-- Filters saved dropdown -->
-                <div class="dropdown">
-                    <button id="filters-dropdown-toggle" class="compact-btn btn-secondary">
-                        <i class="fas fa-sliders-h text-xs"></i>
-                        <span class="text-xs">Filtrid</span>
+                <div class="dropdown-modern">
+                    <button id="filters-dropdown-toggle" class="btn-modern btn-modern--secondary" data-dropdown="filters-dropdown-menu" aria-expanded="false" aria-haspopup="true">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Filtrid</span>
                     </button>
-                    <div id="filters-dropdown-menu" class="dropdown-menu compact-dropdown">
-                        <div class="dropdown-title text-xs">Salvestatud filtrid</div>
-                        <div id="saved-filters-menu">
+                    <div id="filters-dropdown-menu" class="hidden" role="menu" aria-hidden="true">
+                        <div class="text-sm font-medium border-b border-gray-200 dark:border-gray-700 px-3 py-2 mb-1">Salvestatud filtrid</div>
+                        <div id="saved-filters-menu" class="px-2 py-1">
                             <!-- Saved filters will be loaded here -->
                             <div class="text-gray-400 text-xs italic p-2">Filtrite laadimine...</div>
                         </div>
@@ -214,31 +229,31 @@
                 </div>
 
                 <!-- Tools dropdown -->
-                <div class="dropdown">
-                    <button id="tools-dropdown-toggle" class="compact-btn btn-secondary">
-                        <i class="fas fa-tools text-xs"></i>
-                        <span class="text-xs">Tööriistad</span>
+                <div class="dropdown-modern">
+                    <button id="tools-dropdown-toggle" class="btn-modern btn-modern--secondary" data-dropdown="tools-dropdown-menu" aria-expanded="false" aria-haspopup="true">
+                        <i class="fas fa-tools"></i>
+                        <span>Tööriistad</span>
                     </button>
-                    <div id="tools-dropdown-menu" class="dropdown-menu compact-dropdown">
-                        <div class="dropdown-title text-xs">Tööriistad</div>
-                        <div class="dropdown-item compact-item" id="view-file">
+                    <div id="tools-dropdown-menu" class="hidden" role="menu" aria-hidden="true">
+                        <div class="text-sm font-medium border-b border-gray-200 dark:border-gray-700 px-3 py-2 mb-1">Tööriistad</div>
+                        <div class="dropdown-modern__item" id="view-file" role="menuitem">
                             <i class="fas fa-folder-open"></i>
                             <span>Vaata toimikut</span>
                         </div>
-                        <div class="dropdown-item compact-item" id="virtual-file">
+                        <div class="dropdown-modern__item" id="virtual-file" role="menuitem">
                             <i class="fas fa-folder"></i>
                             <span>Virtuaaltoimik</span>
                         </div>
-                        <div class="dropdown-item compact-item" id="receipts-report">
+                        <div class="dropdown-modern__item" id="receipts-report" role="menuitem">
                             <i class="fas fa-file-invoice-dollar"></i>
                             <span>Laekumiste aruanne</span>
                         </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item compact-item" id="export-excel">
+                        <div class="dropdown-modern__divider"></div>
+                        <div class="dropdown-modern__item" id="export-excel" role="menuitem">
                             <i class="fas fa-file-excel"></i>
                             <span>Ekspordi Excelisse</span>
                         </div>
-                        <div class="dropdown-item compact-item" id="export-pdf">
+                        <div class="dropdown-modern__item" id="export-pdf" role="menuitem">
                             <i class="fas fa-file-pdf"></i>
                             <span>Ekspordi PDF-ina</span>
                         </div>
@@ -246,28 +261,28 @@
                 </div>
 
                 <!-- Settings dropdown -->
-                <div class="dropdown">
-                    <button id="settings-dropdown-toggle" class="compact-btn btn-secondary">
-                        <i class="fas fa-cog text-xs"></i>
-                        <span class="text-xs">Seaded</span>
+                <div class="dropdown-modern">
+                    <button id="settings-dropdown-toggle" class="btn-modern btn-modern--secondary" data-dropdown="settings-dropdown-menu" aria-expanded="false" aria-haspopup="true">
+                        <i class="fas fa-cog"></i>
+                        <span>Seaded</span>
                     </button>
-                    <div id="settings-dropdown-menu" class="dropdown-menu compact-dropdown">
-                        <div class="dropdown-title text-xs">Tabeli seaded</div>
-                        <div class="dropdown-item compact-item" id="toggle-columns">
+                    <div id="settings-dropdown-menu" class="hidden" role="menu" aria-hidden="true">
+                        <div class="text-sm font-medium border-b border-gray-200 dark:border-gray-700 px-3 py-2 mb-1">Tabeli seaded</div>
+                        <div class="dropdown-modern__item" id="toggle-columns" role="menuitem">
                             <i class="fas fa-eye"></i>
                             <span>Näita/peida veerud</span>
                         </div>
-                        <div class="dropdown-item compact-item" id="save-column-layout">
+                        <div class="dropdown-modern__item" id="save-column-layout" role="menuitem">
                             <i class="fas fa-columns"></i>
                             <span>Salvesta veergude paigutus</span>
                         </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item compact-item" id="toggle-dark-mode">
+                        <div class="dropdown-modern__divider"></div>
+                        <div class="dropdown-modern__item" id="toggle-dark-mode" role="menuitem">
                             <i class="fas fa-moon"></i>
                             <span>Tume režiim</span>
                         </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item compact-item" id="keyboard-shortcuts">
+                        <div class="dropdown-modern__divider"></div>
+                        <div class="dropdown-modern__item" id="keyboard-shortcuts" role="menuitem">
                             <i class="fas fa-keyboard"></i>
                             <span>Kiirklahvid</span>
                         </div>
@@ -275,101 +290,107 @@
                 </div>
 
                 <!-- Widgets dropdown -->
-                <div class="dropdown">
-                    <button id="widgets-dropdown-toggle" class="compact-btn btn-secondary">
-                        <i class="fas fa-puzzle-piece text-xs"></i>
-                        <span class="text-xs">Vidinad</span>
+                <div class="dropdown-modern">
+                    <button id="widgets-dropdown-toggle" class="btn-modern btn-modern--secondary" data-dropdown="widgets-dropdown-menu" aria-expanded="false" aria-haspopup="true">
+                        <i class="fas fa-puzzle-piece"></i>
+                        <span>Vidinad</span>
                     </button>
-                    <div id="widgets-dropdown-menu" class="dropdown-menu compact-dropdown">
-                        <div class="dropdown-title text-xs">Vidinad</div>
-                        <div class="dropdown-item compact-item" id="save-view">
+                    <div id="widgets-dropdown-menu" class="hidden" role="menu" aria-hidden="true">
+                        <div class="text-sm font-medium border-b border-gray-200 dark:border-gray-700 px-3 py-2 mb-1">Vidinad</div>
+                        <div class="dropdown-modern__item" id="save-view" role="menuitem">
                             <i class="fas fa-save"></i>
                             <span>Salvesta vaade</span>
                         </div>
-                        <div class="dropdown-item compact-item" id="load-view">
+                        <div class="dropdown-modern__item" id="load-view" role="menuitem">
                             <i class="fas fa-folder-open"></i>
                             <span>Lae vaade</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Quick refresh button -->
-                <button id="refresh-button" class="compact-btn btn-secondary relative" onclick="refreshData()">
-                    <div class="badge-container absolute top-0 right-0"></div>
-                    <i class="fas fa-sync-alt text-xs"></i>
-                    <span class="text-xs">Värskenda</span>
+                <!-- Quick refresh button with improved animation -->
+                <button id="refresh-button" class="btn-modern btn-modern--secondary relative" onclick="refreshData()" aria-label="Refresh data">
+                    <div class="badge-container absolute -top-1 -right-1"></div>
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Värskenda</span>
                 </button>
 
+                <!-- Loading indicator -->
                 <div id="mini-loading-indicator" class="hidden">
-                    <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div class="spinner-modern spinner-modern--sm"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Active filters bar -->
-        <div id="active-filters-container" class="px-2 py-1 mt-2 hidden">
-            <div class="flex flex-wrap gap-1.5 items-center">
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Filtrid:</span>
+        <!-- Active filters bar with improved design -->
+        <div id="active-filters-container" class="px-3 py-2 mt-1 border-t border-gray-200 dark:border-gray-700 hidden">
+            <div class="flex flex-wrap gap-2 items-center">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Aktiivsed filtrid:</span>
                 <div id="active-filters" class="flex flex-wrap gap-1.5"></div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Panel - Simplified -->
-    <div id="filter-panel" class="filter-panel rounded-lg shadow-sm">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+    <!-- Filter Panel - Improved Design -->
+    <div id="filter-panel" class="enhanced-card mb-3 p-4 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
-                <div class="filter-group-title text-xs font-medium">Kohandatud filtrid</div>
-
-                <div id="filter-container" class="space-y-2 mt-2">
-                    <!-- Initial filter row -->
-                    <div class="filter-row" data-id="1">
-                        <select class="compact-select filter-field" onchange="updateFilterOperators(this)">
-                            <option value="">Vali veerg...</option>
-                            <!-- Column options will be added dynamically -->
-                        </select>
-
-                        <select class="compact-select filter-operator"
-                                onchange="updateFilterValueInput($(this).closest('.filter-row'))">
-                            <option value="contains">Sisaldab</option>
-                            <option value="equals">Võrdub</option>
-                            <option value="notEqual">Ei võrdu</option>
-                            <option value="startsWith">Algab</option>
-                            <option value="endsWith">Lõpeb</option>
-                            <option value="blank">Tühi</option>
-                            <option value="notBlank">Mitte tühi</option>
-                        </select>
-
-                        <div class="filter-value-container">
-                            <input type="text" class="compact-input" placeholder="Filtri väärtus">
-                        </div>
-
-                        <button class="compact-filter-remove-btn">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Add filter button -->
-                <div class="mt-3 mb-2">
-                    <button id="add-filter-row" class="compact-btn btn-secondary text-xs">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Kohandatud filtrid</h3>
+                    <button id="add-filter-row" class="btn-modern btn-modern--outline text-xs">
                         <i class="fas fa-plus text-xs"></i>
                         <span>Lisa filter</span>
                     </button>
+                </div>
 
-                    <div class="mt-2 flex items-center">
-                        <input type="checkbox" id="auto-close-filters" class="mr-1" checked>
+                <div id="filter-container" class="space-y-2">
+                    <!-- Initial filter row -->
+                    <div class="filter-row p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" data-id="1">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <select class="input-modern filter-field" onchange="updateFilterOperators(this)">
+                                <option value="">Vali veerg...</option>
+                                <!-- Column options will be added dynamically -->
+                            </select>
+
+                            <select class="input-modern filter-operator" onchange="updateFilterValueInput($(this).closest('.filter-row'))">
+                                <option value="contains">Sisaldab</option>
+                                <option value="equals">Võrdub</option>
+                                <option value="notEqual">Ei võrdu</option>
+                                <option value="startsWith">Algab</option>
+                                <option value="endsWith">Lõpeb</option>
+                                <option value="blank">Tühi</option>
+                                <option value="notBlank">Mitte tühi</option>
+                            </select>
+
+                            <div class="filter-value-container relative">
+                                <input type="text" class="input-modern" placeholder="Filtri väärtus">
+                                <button class="filter-remove-btn absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 transition-colors">
+                                    <i class="fas fa-times text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Options and Settings -->
+                <div class="mt-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="auto-close-filters" class="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary-light dark:focus:ring-offset-gray-800" checked>
                         <label for="auto-close-filters" class="text-xs text-gray-600 dark:text-gray-400">
                             Sulge filtrimenüü pärast rakendamist
                         </label>
                     </div>
+
+                    <button id="save-filter" class="btn-modern btn-modern--outline text-xs">
+                        <i class="fas fa-save text-xs"></i>
+                        <span>Salvesta filter</span>
+                    </button>
                 </div>
             </div>
 
             <div>
-                <div class="filter-group-title text-xs font-medium">Salvestatud filtrid</div>
-                <div id="saved-filters-list"
-                     class="max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Salvestatud filtrid</h3>
+                <div id="saved-filters-list" class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
                     <!-- Saved filters will be loaded here -->
                     <div class="p-3 text-center text-xs text-gray-500 dark:text-gray-400">Filtrite laadimine...</div>
                 </div>
@@ -377,190 +398,283 @@
         </div>
 
         <!-- Filter actions -->
-        <div class="filter-actions flex justify-end gap-2">
-            <button id="apply-filters" class="compact-btn btn-primary text-xs">
-                <i class="fas fa-check text-xs"></i>
-                <span>Rakenda</span>
-            </button>
-            <button id="clear-filters" class="compact-btn btn-secondary text-xs">
+        <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <button id="clear-filters" class="btn-modern btn-modern--secondary text-xs">
                 <i class="fas fa-times text-xs"></i>
                 <span>Tühista</span>
             </button>
-            <button id="save-filter" class="compact-btn btn-secondary text-xs">
-                <i class="fas fa-save text-xs"></i>
-                <span>Salvesta</span>
+            <button id="apply-filters" class="btn-modern btn-modern--primary text-xs">
+                <i class="fas fa-check text-xs"></i>
+                <span>Rakenda</span>
             </button>
         </div>
     </div>
 
     <!-- Table Container with AG Grid -->
-    <div id="table-container" class="card rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg">
-        <div id="data-table" class="ag-theme-alpine"></div>
+    <div id="table-container" class="enhanced-card ag-grid-modern">
+        <div id="data-table" class="ag-theme-alpine h-full w-full"></div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay fixed inset-0 flex items-center justify-center z-50">
-        <div class="loading-card rounded-lg shadow-xl">
-            <div class="spinner mb-3"></div>
-            <p class="text-base font-medium mb-1">Laadimine...</p>
-            <p class="text-xs text-secondary-color dark:text-gray-400">Andmete hankimine</p>
+    <!-- Loading Overlay with improved design -->
+    <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-200 dark:border-gray-700 text-center">
+            <div class="spinner-modern spinner-modern--lg mx-auto mb-4"></div>
+            <p class="text-base font-medium mb-1">Andmete laadimine...</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Palun oodake</p>
         </div>
     </div>
 
     <!-- Column Visibility Modal (hidden by default) -->
-    <div id="column-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="column-modal-backdrop"></div>
-        <div class="modal-content w-full max-w-lg z-10 relative">
-            <div class="flex justify-between items-center mb-3 px-1">
-                <h3 class="text-base font-semibold">Veergude nähtavus</h3>
-                <button id="close-column-modal"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+    <div id="column-modal" class="modal-modern hidden" role="dialog" aria-modal="true" aria-labelledby="column-modal-title">
+        <div class="modal-modern__backdrop" data-modal-close></div>
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h2 id="column-modal-title" class="modal-modern__title">Veergude nähtavus</h2>
+                <button class="modal-modern__close" data-modal-close aria-label="Close">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-
-            <div id="column-checkboxes" class="max-h-60 overflow-y-auto">
-                <!-- Column checkboxes will be added here dynamically -->
+            <div class="modal-modern__body">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Vali veerud, mida soovid tabelis näha. Saad veergude järjestust muuta neid lohistades.
+                </p>
+                <div id="column-checkboxes" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <!-- Column checkboxes will be added here dynamically -->
+                </div>
             </div>
-
-            <div class="flex justify-end gap-2 mt-3">
-                <button id="apply-column-changes" class="compact-btn btn-primary">
-                    <i class="fas fa-check text-xs"></i>
-                    <span class="text-xs">Rakenda</span>
+            <div class="modal-modern__footer">
+                <button id="cancel-column-changes" class="btn-modern btn-modern--secondary" data-modal-close>
+                    <i class="fas fa-times"></i>
+                    <span>Tühista</span>
                 </button>
-                <button id="cancel-column-changes" class="compact-btn btn-secondary">
-                    <i class="fas fa-times text-xs"></i>
-                    <span class="text-xs">Tühista</span>
+                <button id="apply-column-changes" class="btn-modern btn-modern--primary">
+                    <i class="fas fa-check"></i>
+                    <span>Rakenda</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Saved Filter Modal -->
-    <div id="save-filter-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="save-filter-modal-backdrop"></div>
-        <div class="modal-content w-full max-w-md z-10 relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border border-gray-200 dark:border-gray-700">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="text-base font-semibold dark:text-white">Salvesta filter</h3>
-                <button id="close-filter-modal"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                        onclick="$('#save-filter-modal').addClass('hidden')">
+    <!-- Save Filter Modal -->
+    <div id="save-filter-modal" class="modal-modern hidden" role="dialog" aria-modal="true" aria-labelledby="save-filter-title">
+        <div class="modal-modern__backdrop" data-modal-close></div>
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h2 id="save-filter-title" class="modal-modern__title">Salvesta filter</h2>
+                <button class="modal-modern__close" data-modal-close aria-label="Close">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+            <div class="modal-modern__body">
+                <div class="space-y-4">
+                    <div>
+                        <label for="filter-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Filtri nimi <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="filter-name" class="input-modern" placeholder="Kõik aktiivsed..." required>
+                    </div>
 
-            <div class="space-y-3">
-                <div class="input-group">
-                    <label for="filter-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Filtri nimi *
-                    </label>
-                    <input type="text" id="filter-name" class="compact-input" placeholder="Kõik aktiivsed..." required>
-                </div>
+                    <div>
+                        <label for="filter-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Kirjeldus
+                        </label>
+                        <textarea id="filter-description" class="input-modern" placeholder="Filtri kirjeldus..." rows="2"></textarea>
+                    </div>
 
-                <div class="input-group">
-                    <label for="filter-description"
-                           class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Kirjeldus
-                    </label>
-                    <textarea id="filter-description" class="compact-input" placeholder="Filtri kirjeldus..."
-                              rows="2"></textarea>
-                </div>
-
-                <div class="flex items-center">
-                    <input type="checkbox" id="filter-public" class="mr-1.5">
-                    <label for="filter-public" class="text-xs text-gray-700 dark:text-gray-300">
-                        Avalik filter (nähtav kõigile kasutajatele)
-                    </label>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="filter-public" class="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary-light dark:focus:ring-offset-gray-800">
+                        <label for="filter-public" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            Avalik filter (nähtav kõigile kasutajatele)
+                        </label>
+                    </div>
                 </div>
             </div>
-
-            <div class="flex justify-end gap-2 mt-4">
-                <button id="save-filter-button" class="compact-btn btn-primary">
-                    <i class="fas fa-save text-xs mr-1"></i>
-                    <span class="text-xs">Salvesta</span>
+            <div class="modal-modern__footer">
+                <button id="cancel-save-filter" class="btn-modern btn-modern--secondary" data-modal-close>
+                    <i class="fas fa-times"></i>
+                    <span>Tühista</span>
                 </button>
-                <button id="cancel-save-filter" class="compact-btn btn-secondary">
-                    <i class="fas fa-times text-xs mr-1"></i>
-                    <span class="text-xs">Tühista</span>
+                <button id="save-filter-button" class="btn-modern btn-modern--primary">
+                    <i class="fas fa-save"></i>
+                    <span>Salvesta</span>
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Edit History Panel - More compact -->
-    <div id="edit-history-panel"
-         class="fixed bottom-3 right-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 max-w-xs hidden z-50">
+    <div id="edit-history-panel" class="fixed bottom-4 right-4 enhanced-card p-3 max-w-sm hidden z-50">
         <div class="flex justify-between items-center mb-2">
-            <h3 class="text-xs font-bold text-gray-900 dark:text-white">Viimased muudatused</h3>
-            <button id="close-history-panel"
-                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <i class="fas fa-times text-xs"></i>
+            <h3 class="text-sm font-semibold">Viimased muudatused</h3>
+            <button id="close-history-panel" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <i class="fas fa-times"></i>
             </button>
         </div>
-        <div id="changes-list" class="max-h-48 overflow-y-auto text-xs">
+        <div id="changes-list" class="max-h-48 overflow-y-auto text-xs border border-gray-200 dark:border-gray-700 rounded-lg p-2 mb-2">
             <!-- Changes will be added here dynamically -->
             <div class="text-gray-500 dark:text-gray-400 italic">Muudatusi pole veel</div>
         </div>
-        <div class="mt-2 flex justify-end gap-1">
-            <button id="undo-all-btn" class="compact-btn btn-secondary text-xs py-0.5 px-1.5" disabled>
-                <i class="fas fa-undo text-xs"></i>
-                <span>Tagasi</span>
+        <div class="flex justify-end gap-2">
+            <button id="undo-all-btn" class="btn-modern btn-modern--secondary text-xs" disabled>
+                <i class="fas fa-undo"></i>
+                <span>Võta kõik tagasi</span>
             </button>
-            <button id="show-history-btn" class="compact-btn btn-secondary text-xs py-0.5 px-1.5">
-                <i class="fas fa-history text-xs"></i>
-                <span>Ajalugu</span>
+            <button id="show-history-btn" class="btn-modern btn-modern--outline text-xs">
+                <i class="fas fa-history"></i>
+                <span>Näita ajalugu</span>
             </button>
         </div>
     </div>
 
-    <!-- Notification container -->
-    <div id="notification-container" class="fixed bottom-3 left-3 z-50">
-        <!-- Notifications will be added here dynamically -->
+    <!-- Status Bar -->
+    <div id="status-bar" class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between z-40">
+        <div class="flex items-center gap-2">
+            <span id="status" class="text-xs text-gray-600 dark:text-gray-400">Andmete laadimine...</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500 dark:text-gray-400" id="last-updated"></span>
+        </div>
+    </div>
+
+    <!-- Notification container for enhanced toasts -->
+    <div id="notification-container" class="fixed bottom-4 left-4 z-50 flex flex-col items-start">
+        <!-- Toast notifications will be added here dynamically -->
     </div>
 </div>
 
-<!-- Application Script -->
+<!-- Application Scripts -->
 <script src="/static/js/app.js"></script>
-<script src="../static/js/edit.js"></script>
-<script src="../static/js/enhanced-filters.js"></script>
+<script src="/static/js/edit.js"></script>
+<script src="/static/js/enhanced-filters.js"></script>
 
-<!-- Additional script for dropdown toggling with the new UI -->
+<!-- New Enhanced UI Scripts -->
+<script src="/static/js/toast-modern.js"></script>
+<script src="/static/js/dropdown-modern.js"></script>
+<script src="/static/js/modal-modern.js"></script>
+
+<!-- Dropdown Fix Script -->
 <script>
-    $(document).ready(function () {
-        // Toggle user dropdown
-        $("#user-dropdown-toggle").click(function (e) {
-            e.stopPropagation();
-            $("#user-dropdown-menu").toggleClass("show");
-            // Hide other dropdowns
-            $("#tools-dropdown-menu").removeClass("show");
-        });
+// Simple jQuery fallback for dropdowns
+$(document).ready(function() {
+  // Map of toggles to menus
+  const dropdownMap = {
+    "#tools-dropdown-toggle": "#tools-dropdown-menu",
+    "#widgets-dropdown-toggle": "#widgets-dropdown-menu",
+    "#settings-dropdown-toggle": "#settings-dropdown-menu",
+    "#filters-dropdown-toggle": "#filters-dropdown-menu",
+    "#links-dropdown-toggle": "#links-dropdown-menu",
+    "#user-dropdown-toggle": "#user-dropdown-menu"
+  };
 
-        // Update column visibility modal function to use compact styles
-        window.showColumnVisibilityModal = function () {
-            if (!columnDefs || columnDefs.length === 0) return;
+  // Handle toggle clicks
+  $.each(dropdownMap, function(toggleSelector, menuSelector) {
+    $(toggleSelector).off('click').on('click', function(e) {
+      e.stopPropagation();
 
-            const container = $("#column-checkboxes");
-            container.empty();
+      // Close all other dropdowns
+      $.each(dropdownMap, function(otherToggle, otherMenu) {
+        if (otherMenu !== menuSelector) {
+          $(otherMenu).addClass('hidden').removeClass('dropdown-modern__menu--show');
+        }
+      });
 
-            columnDefs.forEach(function (col) {
-                const isVisible = columnVisibility[col.field];
+      // Toggle this dropdown
+      $(menuSelector).toggleClass('hidden').toggleClass('dropdown-modern__menu--show');
 
-                const checkbox = $(`
-                    <div class="compact-checkbox-item flex items-center p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        <input type="checkbox" id="col-${col.field}"
-                            data-field="${col.field}"
-                            class="column-toggle mr-2"
-                            ${isVisible ? 'checked' : ''}>
-                        <label for="col-${col.field}" class="text-xs">${col.headerName}</label>
-                    </div>
-                `);
-
-                container.append(checkbox);
-            });
-
-            $("#column-modal").removeClass("hidden");
-        };
+      // Update ARIA attributes
+      const isOpen = !$(menuSelector).hasClass('hidden');
+      $(toggleSelector).attr('aria-expanded', isOpen);
+      $(menuSelector).attr('aria-hidden', !isOpen);
     });
+  });
+
+  // Close when clicking outside
+  $(document).on('click', function(e) {
+    $.each(dropdownMap, function(toggleSelector, menuSelector) {
+      const $toggle = $(toggleSelector);
+      const $menu = $(menuSelector);
+
+      if (!$menu.hasClass('hidden') &&
+          !$menu.is(e.target) &&
+          $menu.has(e.target).length === 0 &&
+          !$toggle.is(e.target) &&
+          $toggle.has(e.target).length === 0) {
+        $menu.addClass('hidden').removeClass('dropdown-modern__menu--show');
+        $toggle.attr('aria-expanded', false);
+        $menu.attr('aria-hidden', true);
+      }
+    });
+  });
+});
+
+// Initialize enhanced components
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize modals
+    const modalSystem = new ModalModern();
+    window.modalSystem = modalSystem;
+
+    // Update the last updated timestamp
+    function updateLastUpdated() {
+        const now = new Date();
+        const formattedTime = now.toLocaleTimeString('et-EE', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        document.getElementById('last-updated').textContent =
+            `Viimati uuendatud: ${formattedTime}`;
+    }
+
+    // Update timestamp on page load
+    updateLastUpdated();
+
+    // Update timestamp when data is refreshed
+    const originalRefreshData = window.refreshData;
+    if (originalRefreshData) {
+        window.refreshData = function() {
+            originalRefreshData();
+            updateLastUpdated();
+        };
+    }
+
+    // Update column modal to use the new modal system
+    const originalShowColumnVisibilityModal = window.showColumnVisibilityModal;
+    if (originalShowColumnVisibilityModal) {
+        window.showColumnVisibilityModal = function() {
+            if (originalShowColumnVisibilityModal) {
+                originalShowColumnVisibilityModal();
+            }
+            modalSystem.open('column-modal');
+        };
+    }
+
+    // Update save filter modal to use the new modal system
+    const originalShowSaveFilterModal = window.showSaveFilterModal;
+    if (originalShowSaveFilterModal) {
+        window.showSaveFilterModal = function() {
+            if (originalShowSaveFilterModal) {
+                originalShowSaveFilterModal();
+            }
+            modalSystem.open('save-filter-modal');
+        };
+    }
+});
+</script>
+
+<!-- Service Worker Registration -->
+<script>
+// Register Service Worker for offline support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(err => {
+                console.error('ServiceWorker registration failed: ', err);
+            });
+    });
+}
 </script>
 </body>
 </html>
