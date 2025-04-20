@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toomas</title>
+
+    <!-- Inter font - modern, clean typography -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', 'sans-serif'],
+                },
+                extend: {
+                    colors: {
+                        'primary': '#3b82f6',
+                        'primary-dark': '#2563eb',
+                        'primary-light': '#dbeafe',
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- AG Grid CSS and JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/styles/ag-theme-alpine.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.1/dist/ag-grid-community.min.js"></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PWA support -->
+    <link rel="manifest" href="../static/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="../static/icons/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="../static/css/styles.css">
+    <link rel="stylesheet" href="../static/css/custom.css">
+    <link rel="stylesheet" href="../static/css/compact-ui.css">
+
+    <script>
+        // Check for dark mode preference and apply immediately to prevent flash
+        (function () {
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark-mode');
+                document.body.style.backgroundColor = '#111827';
+                document.body.style.color = '#f3f4f6';
+
+                const style = document.createElement('style');
+                style.textContent = `
+                .card, .dropdown-menu, .loading-card, .filter-panel, .modal-content {
+                    background-color: #1f2937 !important;
+                    border-color: #374151 !important;
+                    color: #f3f4f6 !important;
+                }
+                .btn-secondary:not(.bg-yellow-500):not(.bg-red-500):not(.bg-green-500) {
+                    background-color: #374151 !important;
+                    color: #f3f4f6 !important;
+                    border-color: #4b5563 !important;
+                }
+                input, select, .input-control, .filter-select, .filter-input {
+                    background-color: #374151 !important;
+                    color: #f3f4f6 !important;
+                    border-color: #4b5563 !important;
+                }
+                .loading-overlay {
+                    background-color: rgba(17, 24, 39, 0.8) !important;
+                }
+                .ag-theme-alpine {
+                    --ag-background-color: #1f2937;
+                    --ag-header-background-color: #111827;
+                    --ag-foreground-color: #f3f4f6;
+                }
+            `;
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
+</head>
+<body>
+<div class="container mx-auto px-3 sm:px-4 py-3">
+    <!-- Compact Header with User Info and App Controls -->
+    <div id="compact-header"
+         class="flex justify-between items-center mb-2 px-2 py-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 bg-primary rounded-md flex items-center justify-center text-white">
+                <i class="fa fa-table text-xs"></i>
+            </div>
+            <div class="text-sm font-semibold">Andmetabel</div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Hide UI button repositioned to header -->
+            <button id="toggle-ui-btn"
+                    class="compact-btn btn-ghost rounded-full w-7 h-7 flex items-center justify-center"
+                    title="Toggle UI elements">
+                <i class="fas fa-compress-alt text-xs"></i>
+            </button>
+
+            {% if current_user %}
+            <div class="dropdown">
+                <button id="user-dropdown-toggle" class="compact-btn btn-ghost flex items-center gap-1">
+                    <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white">
+                        <i class="fas fa-user text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium truncate max-w-[100px]">{{ current_user.username }}</span>
+                    <i class="fas fa-chevron-down text-xs opacity-70"></i>
+                </button>
+                <div id="user-dropdown-menu" class="dropdown-menu compact-dropdown">
+                    <div class="py-2 px-3">
+                        <div class="text-xs font-medium">{{ current_user.full_name or current_user.username }}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            {% if current_user.is_admin %}Admin{% else %}Kasutaja{% endif %}
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    {% if current_user and current_user.is_admin %}
+                    <a href="/auth/admin" class="dropdown-item py-1.5">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Admin Panel</span>
+                    </a>
+                    {% endif %}
+                    <a href="/auth/logout" class="dropdown-item py-1.5">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logi välja</span>
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <a href="/auth/login" class="compact-btn btn-primary">
+                <i class="fas fa-sign-in-alt text-xs"></i>
+                <span class="text-xs">Logi sisse</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Toolbar - Improved layout with search on left, buttons on right -->
+    <div id="toolbar-container" class="card rounded-lg shadow-sm p-2 mb-2">
+        <div class="toolbar flex justify-between items-center">
+            <!-- Left section: search -->
+            <div class="search-bar flex-grow max-w-md flex items-center gap-1">
+                <div class="input-group relative flex-grow">
+                    <i class="input-icon fas fa-search text-xs"></i>
+                    <input type="text" id="search-input" class="compact-input pl-7" placeholder="Otsi...">
+                </div>
+                <button id="search-button" class="compact-btn btn-primary">
+                    <i class="fas fa-search text-xs"></i>
+                </button>
+                <button id="reset-button" class="compact-btn btn-secondary">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Right section: action buttons -->
+            <div class="flex items-center flex-wrap gap-2">
+                <!-- Edit mode button -->
+                <div id="edit-mode-container" class="hidden">
+                    <button id="edit-mode-btn" class="compact-btn edit-mode-inactive">
+                        <i class="fas fa-edit text-xs"></i>
+                        <span class="text-xs">Redigeeri</span>
+                    </button>
+                </div>
+
+                <!-- Quick links dropdown -->
+                <div class="dropdown">
+                    <button id="links-dropdown-toggle" class="compact-btn btn-secondary">
+                        <i class="fas fa-link text-xs"></i>
+                        <span class="text-xs">Kiirlingid</span>
+                    </button>
+                    <div id="links-dropdown-menu" class="dropdown-menu compact-dropdown">
+                        <div class="dropdown-title text-xs">Veergude kiirlingid</div>
+                        <div class="quick-links-grid" id="column-quick-links">
+                            <!-- Quick links will be inserted here dynamically -->
+                            <div class="text-gray-400 text-xs italic p-2">Veergude laadimine...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter button -->
+                <button id="filter-toggle" class="compact-btn btn-secondary">
+                    <i class="fas fa-filter text-xs"></i>
+                    <span class="text-xs">Filter</span>
+                </button>
+
+                <!-- Filters saved dropdown -->
+                <div class="dropdown">
+                    <button id="filters-dropdown-toggle" class="compact-btn btn-secondary">
+                        <i class="fas fa-sliders-h text-xs"></i>
+                        <span class="text-xs">Filtrid</span>
+                    </button>
+                    <div id="filters-dropdown-menu" class="dropdown-menu compact-dropdown">
+                        <div class="dropdown-title text-xs">Salvestatud filtrid</div>
+                        <div id="saved-filters-menu">
+                            <!-- Saved filters will be loaded here -->
+                            <div class="text-gray-400 text-xs italic p-2">Filtrite laadimine...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tools dropdown -->
+                <div class="dropdown">
+                    <button id="tools-dropdown-toggle" class="compact-btn btn-secondary">
+                        <i class="fas fa-tools text-xs"></i>
+                        <span class="text-xs">Tööriistad</span>
+                    </button>
+                    <div id="tools-dropdown-menu" class="dropdown-menu compact-dropdown">
+                        <div class="dropdown-title text-xs">Tööriistad</div>
+                        <div class="dropdown-item compact-item" id="view-file">
+                            <i class="fas fa-folder-open"></i>
+                            <span>Vaata toimikut</span>
+                        </div>
+                        <div class="dropdown-item compact-item" id="virtual-file">
+                            <i class="fas fa-folder"></i>
+                            <span>Virtuaaltoimik</span>
+                        </div>
+                        <div class="dropdown-item compact-item" id="receipts-report">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Laekumiste aruanne</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item compact-item" id="export-excel">
+                            <i class="fas fa-file-excel"></i>
+                            <span>Ekspordi Excelisse</span>
+                        </div>
+                        <div class="dropdown-item compact-item" id="export-pdf">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Ekspordi PDF-ina</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings dropdown -->
+                <div class="dropdown">
+                    <button id="settings-dropdown-toggle" class="compact-btn btn-secondary">
+                        <i class="fas fa-cog text-xs"></i>
+                        <span class="text-xs">Seaded</span>
+                    </button>
+                    <div id="settings-dropdown-menu" class="dropdown-menu compact-dropdown">
+                        <div class="dropdown-title text-xs">Tabeli seaded</div>
+                        <div class="dropdown-item compact-item" id="toggle-columns">
+                            <i class="fas fa-eye"></i>
+                            <span>Näita/peida veerud</span>
+                        </div>
+                        <div class="dropdown-item compact-item" id="save-column-layout">
+                            <i class="fas fa-columns"></i>
+                            <span>Salvesta veergude paigutus</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item compact-item" id="toggle-dark-mode">
+                            <i class="fas fa-moon"></i>
+                            <span>Tume režiim</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item compact-item" id="keyboard-shortcuts">
+                            <i class="fas fa-keyboard"></i>
+                            <span>Kiirklahvid</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Widgets dropdown -->
+                <div class="dropdown">
+                    <button id="widgets-dropdown-toggle" class="compact-btn btn-secondary">
+                        <i class="fas fa-puzzle-piece text-xs"></i>
+                        <span class="text-xs">Vidinad</span>
+                    </button>
+                    <div id="widgets-dropdown-menu" class="dropdown-menu compact-dropdown">
+                        <div class="dropdown-title text-xs">Vidinad</div>
+                        <div class="dropdown-item compact-item" id="save-view">
+                            <i class="fas fa-save"></i>
+                            <span>Salvesta vaade</span>
+                        </div>
+                        <div class="dropdown-item compact-item" id="load-view">
+                            <i class="fas fa-folder-open"></i>
+                            <span>Lae vaade</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick refresh button -->
+                <button id="refresh-button" class="compact-btn btn-secondary relative" onclick="refreshData()">
+                    <div class="badge-container absolute top-0 right-0"></div>
+                    <i class="fas fa-sync-alt text-xs"></i>
+                    <span class="text-xs">Värskenda</span>
+                </button>
+
+                <div id="mini-loading-indicator" class="hidden">
+                    <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active filters bar -->
+        <div id="active-filters-container" class="px-2 py-1 mt-2 hidden">
+            <div class="flex flex-wrap gap-1.5 items-center">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Filtrid:</span>
+                <div id="active-filters" class="flex flex-wrap gap-1.5"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Panel - Simplified -->
+    <div id="filter-panel" class="filter-panel rounded-lg shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <div class="md:col-span-2">
+                <div class="filter-group-title text-xs font-medium">Kohandatud filtrid</div>
+
+                <div id="filter-container" class="space-y-2 mt-2">
+                    <!-- Initial filter row -->
+                    <div class="filter-row" data-id="1">
+                        <select class="compact-select filter-field" onchange="updateFilterOperators(this)">
+                            <option value="">Vali veerg...</option>
+                            <!-- Column options will be added dynamically -->
+                        </select>
+
+                        <select class="compact-select filter-operator"
+                                onchange="updateFilterValueInput($(this).closest('.filter-row'))">
+                            <option value="contains">Sisaldab</option>
+                            <option value="equals">Võrdub</option>
+                            <option value="notEqual">Ei võrdu</option>
+                            <option value="startsWith">Algab</option>
+                            <option value="endsWith">Lõpeb</option>
+                            <option value="blank">Tühi</option>
+                            <option value="notBlank">Mitte tühi</option>
+                        </select>
+
+                        <div class="filter-value-container">
+                            <input type="text" class="compact-input" placeholder="Filtri väärtus">
+                        </div>
+
+                        <button class="compact-filter-remove-btn">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add filter button -->
+                <div class="mt-3 mb-2">
+                    <button id="add-filter-row" class="compact-btn btn-secondary text-xs">
+                        <i class="fas fa-plus text-xs"></i>
+                        <span>Lisa filter</span>
+                    </button>
+
+                    <div class="mt-2 flex items-center">
+                        <input type="checkbox" id="auto-close-filters" class="mr-1" checked>
+                        <label for="auto-close-filters" class="text-xs text-gray-600 dark:text-gray-400">
+                            Sulge filtrimenüü pärast rakendamist
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="filter-group-title text-xs font-medium">Salvestatud filtrid</div>
+                <div id="saved-filters-list"
+                     class="max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                    <!-- Saved filters will be loaded here -->
+                    <div class="p-3 text-center text-xs text-gray-500 dark:text-gray-400">Filtrite laadimine...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter actions -->
+        <div class="filter-actions flex justify-end gap-2">
+            <button id="apply-filters" class="compact-btn btn-primary text-xs">
+                <i class="fas fa-check text-xs"></i>
+                <span>Rakenda</span>
+            </button>
+            <button id="clear-filters" class="compact-btn btn-secondary text-xs">
+                <i class="fas fa-times text-xs"></i>
+                <span>Tühista</span>
+            </button>
+            <button id="save-filter" class="compact-btn btn-secondary text-xs">
+                <i class="fas fa-save text-xs"></i>
+                <span>Salvesta</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Container with AG Grid -->
+    <div id="table-container" class="card rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg">
+        <div id="data-table" class="ag-theme-alpine"></div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay fixed inset-0 flex items-center justify-center z-50">
+        <div class="loading-card rounded-lg shadow-xl">
+            <div class="spinner mb-3"></div>
+            <p class="text-base font-medium mb-1">Laadimine...</p>
+            <p class="text-xs text-secondary-color dark:text-gray-400">Andmete hankimine</p>
+        </div>
+    </div>
+
+    <!-- Column Visibility Modal (hidden by default) -->
+    <div id="column-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="column-modal-backdrop"></div>
+        <div class="modal-content w-full max-w-lg z-10 relative">
+            <div class="flex justify-between items-center mb-3 px-1">
+                <h3 class="text-base font-semibold">Veergude nähtavus</h3>
+                <button id="close-column-modal"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="column-checkboxes" class="max-h-60 overflow-y-auto">
+                <!-- Column checkboxes will be added here dynamically -->
+            </div>
+
+            <div class="flex justify-end gap-2 mt-3">
+                <button id="apply-column-changes" class="compact-btn btn-primary">
+                    <i class="fas fa-check text-xs"></i>
+                    <span class="text-xs">Rakenda</span>
+                </button>
+                <button id="cancel-column-changes" class="compact-btn btn-secondary">
+                    <i class="fas fa-times text-xs"></i>
+                    <span class="text-xs">Tühista</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saved Filter Modal -->
+    <div id="save-filter-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="save-filter-modal-backdrop"></div>
+        <div class="modal-content w-full max-w-md z-10 relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-base font-semibold dark:text-white">Salvesta filter</h3>
+                <button id="close-filter-modal"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        onclick="$('#save-filter-modal').addClass('hidden')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="input-group">
+                    <label for="filter-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Filtri nimi *
+                    </label>
+                    <input type="text" id="filter-name" class="compact-input" placeholder="Kõik aktiivsed..." required>
+                </div>
+
+                <div class="input-group">
+                    <label for="filter-description"
+                           class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Kirjeldus
+                    </label>
+                    <textarea id="filter-description" class="compact-input" placeholder="Filtri kirjeldus..."
+                              rows="2"></textarea>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="filter-public" class="mr-1.5">
+                    <label for="filter-public" class="text-xs text-gray-700 dark:text-gray-300">
+                        Avalik filter (nähtav kõigile kasutajatele)
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button id="save-filter-button" class="compact-btn btn-primary">
+                    <i class="fas fa-save text-xs mr-1"></i>
+                    <span class="text-xs">Salvesta</span>
+                </button>
+                <button id="cancel-save-filter" class="compact-btn btn-secondary">
+                    <i class="fas fa-times text-xs mr-1"></i>
+                    <span class="text-xs">Tühista</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit History Panel - More compact -->
+    <div id="edit-history-panel"
+         class="fixed bottom-3 right-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 max-w-xs hidden z-50">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-bold text-gray-900 dark:text-white">Viimased muudatused</h3>
+            <button id="close-history-panel"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <i class="fas fa-times text-xs"></i>
+            </button>
+        </div>
+        <div id="changes-list" class="max-h-48 overflow-y-auto text-xs">
+            <!-- Changes will be added here dynamically -->
+            <div class="text-gray-500 dark:text-gray-400 italic">Muudatusi pole veel</div>
+        </div>
+        <div class="mt-2 flex justify-end gap-1">
+            <button id="undo-all-btn" class="compact-btn btn-secondary text-xs py-0.5 px-1.5" disabled>
+                <i class="fas fa-undo text-xs"></i>
+                <span>Tagasi</span>
+            </button>
+            <button id="show-history-btn" class="compact-btn btn-secondary text-xs py-0.5 px-1.5">
+                <i class="fas fa-history text-xs"></i>
+                <span>Ajalugu</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification container -->
+    <div id="notification-container" class="fixed bottom-3 left-3 z-50">
+        <!-- Notifications will be added here dynamically -->
+    </div>
+</div>
+
+<!-- Application Script -->
+<script src="/static/js/app.js"></script>
+<script src="../static/js/edit.js"></script>
+<script src="../static/js/enhanced-filters.js"></script>
+
+<!-- Additional script for dropdown toggling with the new UI -->
+<script>
+    $(document).ready(function () {
+        // Toggle user dropdown
+        $("#user-dropdown-toggle").click(function (e) {
+            e.stopPropagation();
+            $("#user-dropdown-menu").toggleClass("show");
+            // Hide other dropdowns
+            $("#tools-dropdown-menu").removeClass("show");
+        });
+
+        // Update column visibility modal function to use compact styles
+        window.showColumnVisibilityModal = function () {
+            if (!columnDefs || columnDefs.length === 0) return;
+
+            const container = $("#column-checkboxes");
+            container.empty();
+
+            columnDefs.forEach(function (col) {
+                const isVisible = columnVisibility[col.field];
+
+                const checkbox = $(`
+                    <div class="compact-checkbox-item flex items-center p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <input type="checkbox" id="col-${col.field}"
+                            data-field="${col.field}"
+                            class="column-toggle mr-2"
+                            ${isVisible ? 'checked' : ''}>
+                        <label for="col-${col.field}" class="text-xs">${col.headerName}</label>
+                    </div>
+                `);
+
+                container.append(checkbox);
+            });
+
+            $("#column-modal").removeClass("hidden");
+        };
+    });
+</script>
+</body>
+</html>

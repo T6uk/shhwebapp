@@ -1,0 +1,12 @@
+/* app/static/css/dark-edit.css */
+/* Dark mode styles for editable cells */
+
+body.dark-mode .ag-theme-alpine .ag-cell.editable-cell {
+    background-color: rgba(37, 99, 235, 0.3) !important; /* Dark blue with transparency */
+    color: #e2e8f0 !important; /* Light text color */
+    border: 1px dashed rgba(59, 130, 246, 0.5) !important; /* Subtle border */
+}
+
+body.dark-mode .ag-theme-alpine .ag-row:hover .ag-cell.editable-cell {
+    background-color: rgba(37, 99, 235, 0.5) !important; /* Slightly darker on hover */
+}
