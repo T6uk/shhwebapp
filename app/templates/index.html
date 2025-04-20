@@ -155,16 +155,18 @@
         <div class="toolbar flex justify-between items-center">
             <!-- Left section: search -->
             <div class="search-bar flex-grow max-w-md flex items-center gap-1">
-                <div class="input-group relative flex-grow">
-                    <i class="input-icon fas fa-search text-xs"></i>
-                    <input type="text" id="search-input" class="compact-input pl-7" placeholder="Otsi...">
+                <div class="relative flex-grow flex items-center">
+                    <i class="fas fa-search text-xs absolute left-2 text-gray-400"></i>
+                    <input type="text" id="search-input" class="compact-input pl-7 pr-16 w-full" placeholder="Otsi...">
+                    <div class="absolute right-0 flex">
+                        <button id="search-button" class="compact-btn btn-primary h-full rounded-none rounded-l">
+                            <i class="fas fa-search text-xs"></i>
+                        </button>
+                        <button id="reset-button" class="compact-btn btn-secondary h-full rounded-none rounded-r">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    </div>
                 </div>
-                <button id="search-button" class="compact-btn btn-primary">
-                    <i class="fas fa-search text-xs"></i>
-                </button>
-                <button id="reset-button" class="compact-btn btn-secondary">
-                    <i class="fas fa-times text-xs"></i>
-                </button>
             </div>
 
             <!-- Right section: action buttons -->
@@ -195,23 +197,8 @@
                 <!-- Filter button -->
                 <button id="filter-toggle" class="compact-btn btn-secondary">
                     <i class="fas fa-filter text-xs"></i>
-                    <span class="text-xs">Filter</span>
+                    <span class="text-xs">Filtrid</span>
                 </button>
-
-                <!-- Filters saved dropdown -->
-                <div class="dropdown">
-                    <button id="filters-dropdown-toggle" class="compact-btn btn-secondary">
-                        <i class="fas fa-sliders-h text-xs"></i>
-                        <span class="text-xs">Filtrid</span>
-                    </button>
-                    <div id="filters-dropdown-menu" class="dropdown-menu compact-dropdown">
-                        <div class="dropdown-title text-xs">Salvestatud filtrid</div>
-                        <div id="saved-filters-menu">
-                            <!-- Saved filters will be loaded here -->
-                            <div class="text-gray-400 text-xs italic p-2">Filtrite laadimine...</div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Tools dropdown -->
                 <div class="dropdown">
@@ -294,10 +281,11 @@
                 </div>
 
                 <!-- Quick refresh button -->
-                <button id="refresh-button" class="compact-btn btn-secondary relative" onclick="refreshData()">
-                    <div class="badge-container absolute top-0 right-0"></div>
+                <button id="refresh-button"
+                        class="compact-btn btn-secondary p-2 relative w-8 h-8 flex items-center justify-center"
+                        onclick="refreshData()" title="Värskenda andmeid">
+                    <div class="badge-container absolute -top-1 -right-1"></div>
                     <i class="fas fa-sync-alt text-xs"></i>
-                    <span class="text-xs">Värskenda</span>
                 </button>
 
                 <div id="mini-loading-indicator" class="hidden">
