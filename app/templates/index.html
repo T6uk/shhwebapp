@@ -52,6 +52,76 @@
     <link rel="stylesheet" href="../static/css/custom.css">
     <link rel="stylesheet" href="../static/css/compact-ui.css">
 
+    <style>
+        /* Additional responsive CSS utilities */
+        @media (max-width: 480px) {
+            .xs\:inline-block {
+                display: inline-block;
+            }
+
+            .xs\:hidden {
+                display: none;
+            }
+        }
+
+        /* Optimize dropdown positioning for mobile */
+        @media (max-width: 640px) {
+            .dropdown-menu {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                top: auto;
+                margin: 0;
+                width: 100%;
+                max-height: 80vh;
+                border-radius: 1rem 1rem 0 0;
+                box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+                z-index: 50;
+            }
+
+            .filter-row {
+                margin-bottom: 0.75rem;
+            }
+
+            .compact-filter-remove-btn {
+                align-self: flex-end;
+            }
+        }
+
+        /* Larger screen optimizations */
+        @media (min-width: 1280px) {
+            #table-container {
+                min-height: 600px;
+            }
+
+            .container {
+                max-width: 1400px;
+            }
+        }
+
+        /* Make buttons more compact on mobile but keep them usable */
+        @media (max-width: 640px) {
+            .compact-btn {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                min-width: 2rem;
+            }
+        }
+
+        /* Search bar specific styles */
+        .search-bar .compact-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+
+        .search-bar .compact-btn {
+            height: 100%;
+            min-width: 32px;
+        }
+    </style>
+
     <script>
         // Check for dark mode preference and apply immediately to prevent flash
         (function () {
@@ -94,7 +164,7 @@
 </head>
 <body>
 <div class="container mx-auto px-3 sm:px-4 py-3">
-    <!-- Compact Header with User Info and App Controls -->
+    <!-- Compact Header with User Info and App Controls - Improved for responsiveness -->
     <div id="compact-header"
          class="flex justify-between items-center mb-2 px-2 py-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <div class="flex items-center gap-2">
@@ -104,7 +174,7 @@
             <div class="text-sm font-semibold">Andmetabel</div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
             <!-- Hide UI button repositioned to header -->
             <button id="toggle-ui-btn"
                     class="compact-btn btn-ghost rounded-full w-7 h-7 flex items-center justify-center"
@@ -118,7 +188,7 @@
                     <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white">
                         <i class="fas fa-user text-xs"></i>
                     </div>
-                    <span class="text-xs font-medium truncate max-w-[100px]">{{ current_user.username }}</span>
+                    <span class="hidden xs:inline-block text-xs font-medium truncate max-w-[100px]">{{ current_user.username }}</span>
                     <i class="fas fa-chevron-down text-xs opacity-70"></i>
                 </button>
                 <div id="user-dropdown-menu" class="dropdown-menu compact-dropdown">
@@ -144,46 +214,56 @@
             {% else %}
             <a href="/auth/login" class="compact-btn btn-primary">
                 <i class="fas fa-sign-in-alt text-xs"></i>
-                <span class="text-xs">Logi sisse</span>
+                <span class="hidden xs:inline-block text-xs">Logi sisse</span>
             </a>
             {% endif %}
         </div>
     </div>
 
-    <!-- Main Toolbar - Improved layout with search on left, buttons on right -->
+    {% if using_local_db %}
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 mb-2 rounded shadow-sm">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <p class="text-xs">
+                Olete võrguta režiimis. Kasutate kohalikku andmebaasi.
+                <span class="hidden sm:inline">Mõned funktsioonid võivad olla piiratud.</span>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Toolbar - Improved responsive layout -->
     <div id="toolbar-container" class="card rounded-lg shadow-sm p-2 mb-2">
-        <div class="toolbar flex justify-between items-center">
-            <!-- Left section: search -->
-            <div class="search-bar flex-grow max-w-md flex items-center gap-1">
-                <div class="relative flex-grow flex items-center">
-                    <i class="fas fa-search text-xs absolute left-2 text-gray-400"></i>
-                    <input type="text" id="search-input" class="compact-input pl-7 pr-16 w-full" placeholder="Otsi...">
-                    <div class="absolute right-0 flex">
-                        <button id="search-button" class="compact-btn btn-primary h-full rounded-none rounded-l">
-                            <i class="fas fa-search text-xs"></i>
-                        </button>
-                        <button id="reset-button" class="compact-btn btn-secondary h-full rounded-none rounded-r">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                    </div>
+        <div class="toolbar flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+            <!-- Left section: improved search bar with outside buttons -->
+            <div class="search-bar w-full md:max-w-md flex items-center gap-1">
+                <div class="relative flex-grow">
+                    <i class="fas fa-search text-xs absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="search-input" class="compact-input pl-7 w-full" placeholder="Otsi...">
                 </div>
+                <button id="search-button" class="compact-btn btn-primary !px-2 sm:!px-3">
+                    <i class="fas fa-search text-xs"></i>
+                </button>
+                <button id="reset-button" class="compact-btn btn-secondary !px-2 sm:!px-3">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
             </div>
 
             <!-- Right section: action buttons -->
-            <div class="flex items-center flex-wrap gap-2">
+            <div class="flex items-center flex-wrap gap-1 sm:gap-2">
                 <!-- Edit mode button -->
                 <div id="edit-mode-container" class="hidden">
                     <button id="edit-mode-btn" class="compact-btn edit-mode-inactive">
                         <i class="fas fa-edit text-xs"></i>
-                        <span class="text-xs">Redigeeri</span>
+                        <span class="hidden sm:inline-block text-xs">Redigeeri</span>
                     </button>
                 </div>
 
                 <!-- Quick links dropdown -->
                 <div class="dropdown">
-                    <button id="links-dropdown-toggle" class="compact-btn btn-secondary">
+                    <button id="links-dropdown-toggle" class="compact-btn btn-secondary !px-2 sm:!px-3">
                         <i class="fas fa-link text-xs"></i>
-                        <span class="text-xs">Kiirlingid</span>
+                        <span class="hidden sm:inline-block text-xs">Kiirlingid</span>
                     </button>
                     <div id="links-dropdown-menu" class="dropdown-menu compact-dropdown">
                         <div class="dropdown-title text-xs">Veergude kiirlingid</div>
@@ -195,16 +275,16 @@
                 </div>
 
                 <!-- Filter button -->
-                <button id="filter-toggle" class="compact-btn btn-secondary">
+                <button id="filter-toggle" class="compact-btn btn-secondary !px-2 sm:!px-3">
                     <i class="fas fa-filter text-xs"></i>
-                    <span class="text-xs">Filtrid</span>
+                    <span class="hidden sm:inline-block text-xs">Filtrid</span>
                 </button>
 
                 <!-- Tools dropdown -->
                 <div class="dropdown">
-                    <button id="tools-dropdown-toggle" class="compact-btn btn-secondary">
+                    <button id="tools-dropdown-toggle" class="compact-btn btn-secondary !px-2 sm:!px-3">
                         <i class="fas fa-tools text-xs"></i>
-                        <span class="text-xs">Tööriistad</span>
+                        <span class="hidden sm:inline-block text-xs">Tööriistad</span>
                     </button>
                     <div id="tools-dropdown-menu" class="dropdown-menu compact-dropdown">
                         <div class="dropdown-title text-xs">Tööriistad</div>
@@ -234,9 +314,9 @@
 
                 <!-- Settings dropdown -->
                 <div class="dropdown">
-                    <button id="settings-dropdown-toggle" class="compact-btn btn-secondary">
+                    <button id="settings-dropdown-toggle" class="compact-btn btn-secondary !px-2 sm:!px-3">
                         <i class="fas fa-cog text-xs"></i>
-                        <span class="text-xs">Seaded</span>
+                        <span class="hidden sm:inline-block text-xs">Seaded</span>
                     </button>
                     <div id="settings-dropdown-menu" class="dropdown-menu compact-dropdown">
                         <div class="dropdown-title text-xs">Tabeli seaded</div>
@@ -263,9 +343,9 @@
 
                 <!-- Widgets dropdown -->
                 <div class="dropdown">
-                    <button id="widgets-dropdown-toggle" class="compact-btn btn-secondary">
+                    <button id="widgets-dropdown-toggle" class="compact-btn btn-secondary !px-2 sm:!px-3">
                         <i class="fas fa-puzzle-piece text-xs"></i>
-                        <span class="text-xs">Vidinad</span>
+                        <span class="hidden sm:inline-block text-xs">Vidinad</span>
                     </button>
                     <div id="widgets-dropdown-menu" class="dropdown-menu compact-dropdown">
                         <div class="dropdown-title text-xs">Vidinad</div>
@@ -280,7 +360,7 @@
                     </div>
                 </div>
 
-                <!-- Quick refresh button -->
+                <!-- Quick refresh button - icon only -->
                 <button id="refresh-button"
                         class="compact-btn btn-secondary p-2 relative w-8 h-8 flex items-center justify-center"
                         onclick="refreshData()" title="Värskenda andmeid">
@@ -303,21 +383,22 @@
         </div>
     </div>
 
-    <!-- Filter Panel - Simplified -->
+    <!-- Filter Panel - Improved for responsiveness -->
     <div id="filter-panel" class="filter-panel rounded-lg shadow-sm">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-            <div class="md:col-span-2">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+            <div class="lg:col-span-2">
                 <div class="filter-group-title text-xs font-medium">Kohandatud filtrid</div>
 
                 <div id="filter-container" class="space-y-2 mt-2">
-                    <!-- Initial filter row -->
-                    <div class="filter-row" data-id="1">
-                        <select class="compact-select filter-field" onchange="updateFilterOperators(this)">
+                    <!-- Initial filter row - improved for mobile -->
+                    <div class="filter-row flex flex-col sm:flex-row gap-2" data-id="1">
+                        <select class="compact-select filter-field w-full sm:w-auto"
+                                onchange="updateFilterOperators(this)">
                             <option value="">Vali veerg...</option>
                             <!-- Column options will be added dynamically -->
                         </select>
 
-                        <select class="compact-select filter-operator"
+                        <select class="compact-select filter-operator w-full sm:w-auto"
                                 onchange="updateFilterValueInput($(this).closest('.filter-row'))">
                             <option value="contains">Sisaldab</option>
                             <option value="equals">Võrdub</option>
@@ -328,11 +409,11 @@
                             <option value="notBlank">Mitte tühi</option>
                         </select>
 
-                        <div class="filter-value-container">
-                            <input type="text" class="compact-input" placeholder="Filtri väärtus">
+                        <div class="filter-value-container flex-grow">
+                            <input type="text" class="compact-input w-full" placeholder="Filtri väärtus">
                         </div>
 
-                        <button class="compact-filter-remove-btn">
+                        <button class="compact-filter-remove-btn sm:ml-auto">
                             <i class="fas fa-times text-xs"></i>
                         </button>
                     </div>
@@ -365,7 +446,7 @@
         </div>
 
         <!-- Filter actions -->
-        <div class="filter-actions flex justify-end gap-2">
+        <div class="filter-actions flex flex-wrap justify-end gap-2">
             <button id="apply-filters" class="compact-btn btn-primary text-xs">
                 <i class="fas fa-check text-xs"></i>
                 <span>Rakenda</span>
@@ -512,15 +593,52 @@
 <script src="../static/js/edit.js"></script>
 <script src="../static/js/enhanced-filters.js"></script>
 
-<!-- Additional script for dropdown toggling with the new UI -->
+<!-- Additional script for improved table container sizing -->
 <script>
+    // Updated resizeTableContainer function
+    function resizeTableContainer() {
+        const windowHeight = $(window).height();
+        const headerHeight = $("#compact-header").outerHeight(true) || 0;
+        const toolbarHeight = $("#toolbar-container").is(":visible") ? $("#toolbar-container").outerHeight(true) : 0;
+        const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
+
+        // Add some breathing room on smaller screens
+        const padding = window.innerWidth < 640 ? 16 : 24;
+
+        // Make sure we have a minimum height on larger screens
+        let tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
+
+        // Ensure minimum height on mobile
+        tableHeight = Math.max(tableHeight, 300);
+
+        // Maximum height for very large screens to prevent excessive space
+        if (window.innerHeight > 1200) {
+            tableHeight = Math.min(tableHeight, window.innerHeight * 0.7);
+        }
+
+        $("#table-container").css("height", tableHeight + "px");
+
+        if ($("#edit-history-panel").is(":visible")) {
+            // Adjust based on screen size
+            const historyPanelOffset = window.innerWidth < 640 ? 80 : 40;
+            $("#table-container").css("height", (tableHeight - historyPanelOffset) + "px");
+        }
+
+        // If grid API exists, resize columns to fit
+        if (gridApi) {
+            setTimeout(() => {
+                gridApi.sizeColumnsToFit();
+            }, 50);
+        }
+    }
+
     $(document).ready(function () {
         // Toggle user dropdown
         $("#user-dropdown-toggle").click(function (e) {
             e.stopPropagation();
             $("#user-dropdown-menu").toggleClass("show");
             // Hide other dropdowns
-            $("#tools-dropdown-menu").removeClass("show");
+            $(".dropdown-menu").not("#user-dropdown-menu").removeClass("show");
         });
 
         // Update column visibility modal function to use compact styles
@@ -548,6 +666,9 @@
 
             $("#column-modal").removeClass("hidden");
         };
+
+        // Call resizeTableContainer once layout is ready
+        setTimeout(resizeTableContainer, 100);
     });
 </script>
 </body>

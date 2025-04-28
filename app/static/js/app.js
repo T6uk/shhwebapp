@@ -291,19 +291,32 @@ function setupDropdowns() {
 }
 
 // Function to resize the table container
+// Update the resizeTableContainer function
 function resizeTableContainer() {
     const windowHeight = $(window).height();
     const headerHeight = $("#compact-header").outerHeight(true) || 0;
     const toolbarHeight = $("#toolbar-container").is(":visible") ? $("#toolbar-container").outerHeight(true) : 0;
     const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
-    const padding = 24; // Less padding for more space
 
-    const tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
+    // Add some breathing room on smaller screens
+    const padding = window.innerWidth < 640 ? 16 : 24;
+
+    // Make sure we have a minimum height on larger screens
+    let tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
+
+    // Ensure minimum height on mobile
+    tableHeight = Math.max(tableHeight, 300);
+
+    // Maximum height for very large screens to prevent excessive space
+    if (window.innerHeight > 1200) {
+        tableHeight = Math.min(tableHeight, window.innerHeight * 0.7);
+    }
+
     $("#table-container").css("height", tableHeight + "px");
 
     if ($("#edit-history-panel").is(":visible")) {
-        // Don't subtract the whole height - just give a bit of space
-        const historyPanelOffset = 40;
+        // Adjust based on screen size
+        const historyPanelOffset = window.innerWidth < 640 ? 80 : 40;
         $("#table-container").css("height", (tableHeight - historyPanelOffset) + "px");
     }
 

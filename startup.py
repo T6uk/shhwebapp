@@ -65,6 +65,28 @@ def launch_browser(url, delay=2):
             webbrowser.open(url)
 
 
+def check_database_availability():
+    """Check database availability and set environment variable accordingly"""
+    import asyncio
+
+    try:
+        # Create a temporary event loop for database check
+        loop = asyncio.new_event_loop()
+
+        # Import the check function
+        from app.core.db import create_db_engine
+
+        # Try to establish database connection
+        engines = loop.run_until_complete(create_db_engine())
+        loop.close()
+
+        print("Database connection successful")
+        return True
+    except Exception as e:
+        print(f"Database connection check failed: {e}")
+        return False
+
+
 def start_server():
     """Start the FastAPI server with optimized settings"""
     print("Starting application server...")
@@ -74,13 +96,30 @@ def start_server():
     env["PYTHONOPTIMIZE"] = "1"  # Enable optimizations
     env["PYTHONUNBUFFERED"] = "1"  # Unbuffered output
 
+    # Check local database availability
+    local_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "local_data.db")
+    if os.path.exists(local_db_path):
+        print(f"Local database found at: {local_db_path}")
+
+        # Check if we should use it (either through explicit setting or test connection)
+        if os.environ.get("USE_LOCAL_DB", "").lower() in ("true", "1", "yes"):
+            print("Using local database (explicitly set via environment variable)")
+            env["USE_LOCAL_DB"] = "true"
+        else:
+            # Test PostgreSQL connection
+            if not check_database_availability():
+                print("PostgreSQL unavailable, switching to local database")
+                env["USE_LOCAL_DB"] = "true"
+    else:
+        print(f"Warning: Local database not found at {local_db_path}")
+
     # Start uvicorn with optimal settings
     cmd = [
         sys.executable, "-m", "uvicorn",
         "app.main:app",
         "--host", "127.0.0.1",
         "--port", "8000",
-        "--workers", "4",  # Single worker for desktop mode
+        "--workers", "4",  # Use appropriate number of workers
         "--http", "httptools",
         "--log-level", "warning",
         "--no-access-log"  # Disable access logging for better performance

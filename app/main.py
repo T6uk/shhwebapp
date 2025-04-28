@@ -199,6 +199,11 @@ async def index(request: Request):
     # Get token from request
     token = extract_token_from_request(request)
     current_user = None
+    using_local_db = False
+
+    # Check if using local database
+    from app.core.db import is_using_local_db
+    using_local_db = is_using_local_db()
 
     if token:
         try:
@@ -229,7 +234,11 @@ async def index(request: Request):
 
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "current_user": current_user}
+        {
+            "request": request,
+            "current_user": current_user,
+            "using_local_db": using_local_db
+        }
     )
 
 

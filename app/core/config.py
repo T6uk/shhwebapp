@@ -120,6 +120,22 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     PROFILE_QUERIES: bool = False  # Set to True to log query performance
 
+    # Local database settings
+    LOCAL_DB_PATH: Path = DATA_DIR / "local_data.db"
+    USE_LOCAL_DB: bool = os.getenv("USE_LOCAL_DB", "false").lower() in ("true", "1", "yes")
+    LOCAL_DB_TIMEOUT: int = 5  # Seconds before connection times out
+    FALLBACK_TO_LOCAL: bool = True  # Whether to auto-fallback to local DB
+
+    @property
+    def SQLALCHEMY_LOCAL_DATABASE_URI(self) -> str:
+        """Build SQLAlchemy database URI for SQLite local backup"""
+        return f"sqlite:///{self.LOCAL_DB_PATH}"
+
+    @property
+    def SQLALCHEMY_ASYNC_LOCAL_DATABASE_URI(self) -> str:
+        """Build async SQLAlchemy database URI for SQLite local backup"""
+        return f"sqlite+aiosqlite:///{self.LOCAL_DB_PATH}"
+
     # Property getters
     @property
     def get_data_dir(self) -> Path:

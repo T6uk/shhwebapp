@@ -65,6 +65,10 @@ async def get_table_data(
     """
     start_time = time.time()
     try:
+        # Detect database type
+        from app.core.db import is_using_local_db
+        using_sqlite = is_using_local_db()
+
         # Build SQL query components
         where_clauses = []
         query_params = {}
@@ -72,22 +76,35 @@ async def get_table_data(
         # Get column data types for proper type conversion - cache this to improve performance
         column_types = {}
         try:
-            # Get table column information including data types
-            schema_query = """
-                SELECT column_name, data_type, udt_name 
-                FROM information_schema.columns 
-                WHERE table_name = :table_name
-            """
-            schema_result = await db.execute(text(schema_query), {"table_name": BigTable.name})
+            if using_sqlite:
+                # Get column types from SQLite
+                schema_query = "PRAGMA table_info('taitur_data')"
+                schema_result = await db.execute(text(schema_query))
 
-            for row in schema_result:
-                column_name = row[0]
-                data_type = row[1]
-                udt_name = row[2]
-                column_types[column_name] = {
-                    "data_type": data_type,
-                    "udt_name": udt_name
-                }
+                for row in schema_result:
+                    column_name = row[1]  # name is at index 1
+                    data_type = row[2]  # type is at index 2
+                    column_types[column_name] = {
+                        "data_type": data_type.lower(),
+                        "udt_name": data_type.lower()
+                    }
+            else:
+                # Get table column information including data types from PostgreSQL
+                schema_query = """
+                    SELECT column_name, data_type, udt_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = :table_name
+                """
+                schema_result = await db.execute(text(schema_query), {"table_name": BigTable.name})
+
+                for row in schema_result:
+                    column_name = row[0]
+                    data_type = row[1]
+                    udt_name = row[2]
+                    column_types[column_name] = {
+                        "data_type": data_type,
+                        "udt_name": udt_name
+                    }
 
             logger.info(f"Retrieved column types: {column_types}")
         except Exception as e:
@@ -102,24 +119,40 @@ async def get_table_data(
             search_value = f"%{search}%"
             query_params["search_value"] = search_value
 
-            # Get text columns for searching
-            text_cols_query = """
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = :table_name
-                AND data_type IN ('character varying', 'text', 'character', 'varchar')
-            """
-            text_cols_result = await db.execute(text(text_cols_query), {"table_name": BigTable.name})
-            text_cols = [row[0] for row in text_cols_result.fetchall()]
+            if using_sqlite:
+                # For SQLite, we search on all columns
+                # Get column names from PRAGMA
+                columns_query = "PRAGMA table_info('taitur_data')"
+                cols_result = await db.execute(text(columns_query))
+                all_columns = [row[1] for row in cols_result.fetchall()]  # column name is at index 1
 
-            if text_cols:
-                search_conditions = [f'"{col}"::text ILIKE :search_value' for col in text_cols]
-                where_clauses.append(f"({' OR '.join(search_conditions)})")
+                # Build search conditions for all columns
+                search_conditions = []
+                for col in all_columns:
+                    # SQLite uses || for concatenation
+                    search_conditions.append(f'"{col}" LIKE :search_value')
+
+                if search_conditions:
+                    where_clauses.append(f"({' OR '.join(search_conditions)})")
+            else:
+                # For PostgreSQL, search on text columns
+                text_cols_query = """
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = :table_name
+                    AND data_type IN ('character varying', 'text', 'character', 'varchar')
+                """
+                text_cols_result = await db.execute(text(text_cols_query), {"table_name": BigTable.name})
+                text_cols = [row[0] for row in text_cols_result.fetchall()]
+
+                if text_cols:
+                    search_conditions = [f'"{col}"::text ILIKE :search_value' for col in text_cols]
+                    where_clauses.append(f"({' OR '.join(search_conditions)})")
 
         # Process filter model if provided
         if filter_model:
             try:
-                # Try to parse the filter model
+                # Parse the filter model
                 try:
                     filters = json.loads(filter_model)
                 except json.JSONDecodeError:
@@ -147,11 +180,9 @@ async def get_table_data(
                         # Get column type info
                         col_type_info = column_types.get(field, {})
                         col_type = col_type_info.get("data_type", "").lower()
-                        udt_name = col_type_info.get("udt_name", "").lower()
 
                         # Convert value based on column type
-                        if field == "id" or col_type in ("integer", "bigint", "smallint") or udt_name in (
-                        "int4", "int8", "int2"):
+                        if field == "id" or col_type in ("integer", "int", "bigint", "smallint"):
                             # Handle integer types
                             if filter_value is not None and filter_value != "":
                                 if isinstance(filter_value, dict):  # For inRange
@@ -163,8 +194,7 @@ async def get_table_data(
                                 else:
                                     converted_value = int(filter_value)
 
-                        elif col_type in ("numeric", "decimal", "real", "double precision", "float") or udt_name in (
-                        "numeric", "float4", "float8"):
+                        elif col_type in ("numeric", "decimal", "real", "double", "float"):
                             # Handle float types
                             if filter_value is not None and filter_value != "":
                                 if isinstance(filter_value, dict):  # For inRange
@@ -176,7 +206,6 @@ async def get_table_data(
                                 else:
                                     converted_value = float(filter_value)
 
-                        # Date types will be handled as strings but with proper formatting
                     except (ValueError, TypeError) as e:
                         logger.warning(f"Error converting value for {field}: {e}")
                         # Continue with the original value
@@ -190,10 +219,13 @@ async def get_table_data(
                         except (ValueError, TypeError):
                             logger.warning(f"Cannot convert ID value {filter_value} to integer")
 
-                    # Handle each filter type
+                    # Handle operator based on DB type (SQLite vs PostgreSQL)
+                    cast_expr = "" if using_sqlite else "::text"  # PostgreSQL needs ::text cast for LIKE operations
+
+                    # Handle each filter type, adapting for SQLite or PostgreSQL
                     if filter_type == 'contains':
                         param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
+                        where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
                         query_params[param_name] = f"%{filter_value}%"
                         filter_idx += 1
 
@@ -211,13 +243,13 @@ async def get_table_data(
 
                     elif filter_type == 'startsWith':
                         param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
+                        where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
                         query_params[param_name] = f"{filter_value}%"
                         filter_idx += 1
 
                     elif filter_type == 'endsWith':
                         param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}"::text ILIKE :{param_name}')
+                        where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
                         query_params[param_name] = f"%{filter_value}"
                         filter_idx += 1
 
@@ -342,7 +374,7 @@ async def get_columns(
         response: Response = None
 ):
     """
-    Get table columns metadata for frontend
+    Get table columns metadata for frontend with support for both PostgreSQL and SQLite
     """
     start_time = time.time()
     try:
@@ -359,39 +391,64 @@ async def get_columns(
                 headers={"Cache-Control": "public, max-age=86400"}
             )
 
-        # Get column information directly from information_schema
-        sql = f"""
-            SELECT 
-                column_name,
-                data_type,
-                column_default,
-                is_nullable
-            FROM 
-                information_schema.columns
-            WHERE 
-                table_name = '{BigTable.name}'
-            ORDER BY 
-                ordinal_position
-        """
-
-        result = await db.execute(text(sql))
-        rows = result.fetchall()
+        # Detect database type by checking connection driver
+        from app.core.db import is_using_local_db
+        using_sqlite = is_using_local_db()
 
         columns = []
-        for row in rows:
-            column_name = row[0]
-            data_type = row[1]
-            column_default = row[2]
-            is_nullable = row[3]
 
-            column_info = {
-                "field": column_name,
-                "title": column_name.capitalize().replace("_", " "),
-                "type": data_type,
-                "nullable": is_nullable == "YES",
-                "hasDefault": column_default is not None
-            }
-            columns.append(column_info)
+        if using_sqlite:
+            # SQLite schema query using PRAGMA
+            sql = "PRAGMA table_info('taitur_data')"
+            result = await db.execute(text(sql))
+            rows = result.fetchall()
+
+            # Process SQLite column info
+            # PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+            for row in rows:
+                column_info = {
+                    "field": row[1],  # name
+                    "title": row[1].capitalize().replace("_", " "),
+                    "type": row[2],  # type
+                    "nullable": row[3] == 0,  # notnull (0 = nullable, 1 = not null)
+                    "hasDefault": row[4] is not None,  # dflt_value
+                    "primary_key": row[5] == 1  # pk
+                }
+                columns.append(column_info)
+        else:
+            # PostgreSQL schema query using information_schema
+            sql = f"""
+                SELECT 
+                    column_name,
+                    data_type,
+                    column_default,
+                    is_nullable
+                FROM 
+                    information_schema.columns
+                WHERE 
+                    table_name = '{BigTable.name}'
+                ORDER BY 
+                    ordinal_position
+            """
+
+            result = await db.execute(text(sql))
+            rows = result.fetchall()
+
+            # Process PostgreSQL column info
+            for row in rows:
+                column_name = row[0]
+                data_type = row[1]
+                column_default = row[2]
+                is_nullable = row[3]
+
+                column_info = {
+                    "field": column_name,
+                    "title": column_name.capitalize().replace("_", " "),
+                    "type": data_type,
+                    "nullable": is_nullable == "YES",
+                    "hasDefault": column_default is not None
+                }
+                columns.append(column_info)
 
         logger.info(f"Returning {len(columns)} columns in {time.time() - start_time:.3f}s")
 

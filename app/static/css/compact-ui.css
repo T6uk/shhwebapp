@@ -312,3 +312,58 @@
     height: 100%;
     min-width: 32px;
 }
+
+@media (max-width: 480px) {
+    .xs\:inline-block {
+        display: inline-block;
+    }
+
+    .xs\:hidden {
+        display: none;
+    }
+}
+
+/* Optimize dropdown positioning for mobile */
+@media (max-width: 640px) {
+    .dropdown-menu {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        margin: 0;
+        width: 100%;
+        max-height: 80vh;
+        border-radius: 1rem 1rem 0 0;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+    }
+
+    .filter-row {
+        margin-bottom: 0.75rem;
+    }
+
+    .compact-filter-remove-btn {
+        align-self: flex-end;
+    }
+}
+
+/* Larger screen optimizations */
+@media (min-width: 1280px) {
+    #table-container {
+        min-height: 600px;
+    }
+
+    .container {
+        max-width: 1400px;
+    }
+}
+
+/* Make buttons more compact on mobile but keep them usable */
+@media (max-width: 640px) {
+    .compact-btn {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        min-width: 2rem;
+    }
+}
