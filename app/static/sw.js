@@ -10,7 +10,7 @@ const STATIC_ASSETS = [
   '/',
   '/static/css/styles.css',
   '/static/css/custom.css',
-  '/static/js/app.js',
+  // '/static/js/app.js',
   '/static/js/edit.js',
   '/static/manifest.json',
   '/static/icons/icon-192x192.png',

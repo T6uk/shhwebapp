@@ -588,8 +588,251 @@
     </div>
 </div>
 
+<!-- Virtuaaltoimik Modal -->
+<div id="virtuaaltoimik-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="virtuaaltoimik-backdrop"></div>
+    <div class="modal-content w-11/12 max-w-6xl z-10 relative max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center mb-2 bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg">
+            <h3 class="text-lg font-semibold flex items-center">
+                <i class="fas fa-folder-open mr-2"></i>
+                <span id="toimik-title">Virtuaaltoimik</span>
+            </h3>
+            <button id="close-virtuaaltoimik-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-auto p-3 min-h-[400px]">
+            <!-- Files table -->
+            <div id="files-table-container" class="w-full overflow-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-6"></th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Nimi
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Tüüp
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Suurus
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Muudetud
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                            Tegevused
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody id="files-table-body"
+                           class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                    <!-- Loading placeholder -->
+                    <tr>
+                        <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <div class="flex justify-center items-center space-x-2">
+                                <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                <span>Laadin faile...</span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div id="files-empty-state" class="hidden flex flex-col items-center justify-center py-12">
+                <div class="text-gray-400 dark:text-gray-600 mb-4">
+                    <i class="fas fa-folder-open text-6xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Kaust on tühi</h3>
+                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Kasutage "Kaust" nuppu failide lisamiseks</p>
+            </div>
+
+            <!-- Error state -->
+            <div id="files-error-state" class="hidden flex flex-col items-center justify-center py-12">
+                <div class="text-red-400 dark:text-red-600 mb-4">
+                    <i class="fas fa-exclamation-triangle text-6xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Viga failide laadimisel</h3>
+                <p id="files-error-message" class="text-sm text-gray-400 dark:text-gray-500 mt-1">Proovige lehte
+                    värskendada</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-b-lg flex flex-wrap items-center justify-between">
+            <!-- Left side buttons -->
+            <div class="flex space-x-2">
+                <button id="folder-open-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-folder-open text-xs mr-1"></i>
+                    <span>Kaust</span>
+                </button>
+                <button id="create-document-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-file-alt text-xs mr-1"></i>
+                    <span>Koosta dokument</span>
+                </button>
+            </div>
+
+            <!-- Middle section with archive button and search -->
+            <div class="flex space-x-2 mx-2 flex-grow justify-center">
+                <button id="archive-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-archive text-xs mr-1"></i>
+                    <span>Toimik arhiivist</span>
+                </button>
+                <div class="relative flex-grow max-w-md">
+                    <input type="text" id="files-search-input" class="compact-input w-full pl-8"
+                           placeholder="Otsi failide seast...">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-2">
+                        <i class="fas fa-search text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right side buttons -->
+            <div class="flex space-x-2">
+                <button id="filter-files-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-filter text-xs mr-1"></i>
+                    <span>Filter</span>
+                </button>
+                <button id="refresh-files-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-sync-alt text-xs mr-1"></i>
+                    <span>Uuenda</span>
+                </button>
+                <button id="exit-virtuaaltoimik-btn" class="compact-btn btn-primary">
+                    <i class="fas fa-times text-xs mr-1"></i>
+                    <span>Välju</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Document Templates Modal -->
+<div id="document-templates-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="document-templates-backdrop"></div>
+    <div class="modal-content w-11/12 max-w-5xl z-10 relative max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center mb-2 bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg">
+            <h3 class="text-lg font-semibold flex items-center">
+                <i class="fas fa-file-alt mr-2"></i>
+                <span>Dokumendipohjad</span>
+            </h3>
+            <button id="close-document-templates-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-auto p-3 min-h-[400px]">
+            <!-- Templates table -->
+            <div id="templates-table-container" class="w-full overflow-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-6"></th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Nimi
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Tüüp
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Suurus
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Muudetud
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                            Tegevused
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody id="templates-table-body"
+                           class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                    <!-- Loading placeholder -->
+                    <tr>
+                        <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <div class="flex justify-center items-center space-x-2">
+                                <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                <span>Laadin dokumendipohjad...</span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div id="templates-empty-state" class="hidden flex flex-col items-center justify-center py-12">
+                <div class="text-gray-400 dark:text-gray-600 mb-4">
+                    <i class="fas fa-file-alt text-6xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Dokumendipohjad puuduvad</h3>
+                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Lisa dokumendipohjad kausta
+                    C:/Taitemenetlus/uksikdokumendid/dokumendipohjad</p>
+            </div>
+
+            <!-- Error state -->
+            <div id="templates-error-state" class="hidden flex flex-col items-center justify-center py-12">
+                <div class="text-red-400 dark:text-red-600 mb-4">
+                    <i class="fas fa-exclamation-triangle text-6xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Viga dokumendipohjad laadimisel</h3>
+                <p id="templates-error-message" class="text-sm text-gray-400 dark:text-gray-500 mt-1">Proovige lehte
+                    värskendada</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-b-lg flex flex-wrap items-center justify-between">
+            <!-- Buttons as specified -->
+            <div class="flex space-x-2 flex-wrap gap-2">
+                <button id="create-doc-btn" class="compact-btn btn-primary">
+                    <i class="fas fa-file-alt text-xs mr-1"></i>
+                    <span>Koosta dokument</span>
+                </button>
+                <button id="drafts-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-file-signature text-xs mr-1"></i>
+                    <span>Mustandid</span>
+                </button>
+                <button id="create-pdf-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-file-pdf text-xs mr-1"></i>
+                    <span>Koosta PDF</span>
+                </button>
+                <button id="edit-doc-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-edit text-xs mr-1"></i>
+                    <span>Redigeeri dokumenti</span>
+                </button>
+                <button id="open-templates-folder-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-folder-open text-xs mr-1"></i>
+                    <span>Kaust</span>
+                </button>
+                <button id="exit-templates-btn" class="compact-btn btn-secondary ml-auto">
+                    <i class="fas fa-times text-xs mr-1"></i>
+                    <span>Välju</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Application Script -->
-<script src="/static/js/app.js"></script>
+<script src="../static/js/app.js?v=1.0.1"></script>
+<script src="../static/js/vaata_toimikut.js"></script>
+<script src="../static/js/virtuaaltoimik.js"></script>
+<script src="../static/js/dokumendi_pohjad.js"></script>
 <script src="../static/js/edit.js"></script>
 <script src="../static/js/enhanced-filters.js"></script>
 

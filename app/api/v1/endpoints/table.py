@@ -1,46 +1,44 @@
 # app/api/v1/endpoints/table.py
-from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Response
-from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from typing import Optional, Dict, Any, List
-import logging
-import time
-import orjson
-from fastapi import Form
-from datetime import datetime, date
-from sqlalchemy.orm import Session
 import json
+import logging
+import os
+import os
+from datetime import datetime
+import mimetypes
+from typing import List, Dict, Any
+import os
+import datetime
+import mimetypes
+from typing import List, Dict, Any
+import platform
+import re
+import subprocess
+import time
+import traceback
+import uuid
+from datetime import date
+from datetime import datetime
+from typing import Optional
+
+import orjson
+from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request, Form
 from sqlalchemy import or_
-from app.models.saved_filter import SavedFilter
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session  # Add this import
+
 from app.api.dependencies import get_current_active_user
-from app.models.user import User
+from app.core.cache import get_cache, set_cache
+from app.core.db import get_db
 from app.core.user_db import get_user_db
+from app.models.saved_filter import SavedFilter
+from app.models.table import BigTable
+from app.models.user import User
 from app.services.edit_service import (
     verify_edit_permission, get_editable_columns, update_cell_value,
     get_session_changes, undo_change, check_for_changes
 )
-from fastapi import Depends, Form, Query
-from typing import Optional
-from datetime import datetime
-import uuid
-
-from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request, Form
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session  # Add this import
-from sqlalchemy import text
-from typing import Optional, Dict, Any, List, Tuple
-import logging
-import time
-import orjson
-import uuid
-from datetime import datetime
-
-from app.core.db import get_db
-from app.models.table import BigTable
-from app.core.cache import get_cache, set_cache, compute_cache_key
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -759,3 +757,331 @@ async def delete_saved_filter(
     except Exception as e:
         logger.exception(f"Error deleting filter: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting filter: {str(e)}")
+
+
+@router.get("/open-folder/{toimiku_nr}")
+async def open_folder(
+        toimiku_nr: str,
+        current_user: User = Depends(get_current_active_user)
+):
+    """Open a folder for the specified toimiku_nr with improved path sanitization"""
+    try:
+        # Log input parameter
+        logger.info(f"Received request to open folder for toimiku_nr: {toimiku_nr}")
+
+        # Sanitize the toimiku_nr to ensure valid folder name
+        # Replace any characters not allowed in Windows filenames
+        sanitized_nr = re.sub(r'[\\/:*?"<>|]', '_', toimiku_nr)
+        logger.info(f"Sanitized toimiku_nr: {sanitized_nr}")
+
+        # Create the folder path ensuring correct Windows path format
+        folder_path = os.path.join("c:\\", "virtuaaltoimik", sanitized_nr)
+        logger.info(f"Target folder path: {folder_path}")
+
+        # Check if folder exists
+        if not os.path.exists(folder_path):
+            logger.info(f"Folder does not exist, attempting to create: {folder_path}")
+            try:
+                os.makedirs(folder_path, exist_ok=True)
+                logger.info(f"Successfully created folder: {folder_path}")
+            except Exception as folder_error:
+                error_msg = f"Failed to create folder: {str(folder_error)}"
+                logger.error(error_msg)
+                return {"success": False, "message": error_msg, "path": folder_path}
+        else:
+            logger.info(f"Folder already exists: {folder_path}")
+
+        # Get system info for debugging
+        system = platform.system()
+        logger.info(f"Operating system: {system}")
+
+        # Open the folder based on platform
+        try:
+            if system == "Windows":
+                logger.info(f"Using os.startfile() to open folder on Windows")
+                os.startfile(folder_path)
+            elif system == "Darwin":  # macOS
+                logger.info(f"Using 'open' command to open folder on macOS")
+                result = subprocess.Popen(["open", folder_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = result.communicate()
+                logger.info(f"Command output - stdout: {stdout}, stderr: {stderr}")
+            elif system == "Linux":
+                logger.info(f"Using 'xdg-open' command to open folder on Linux")
+                result = subprocess.Popen(["xdg-open", folder_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = result.communicate()
+                logger.info(f"Command output - stdout: {stdout}, stderr: {stderr}")
+            else:
+                error_msg = f"Unsupported platform: {system}"
+                logger.error(error_msg)
+                return {"success": False, "message": error_msg, "path": folder_path}
+
+            logger.info(f"Successfully opened folder: {folder_path}")
+            return {
+                "success": True,
+                "message": f"Folder opened: {folder_path}",
+                "path": folder_path,
+                "system": system
+            }
+
+        except Exception as open_error:
+            error_detail = f"Error opening folder: {str(open_error)}"
+            logger.error(error_detail)
+            logger.error(traceback.format_exc())
+            return {
+                "success": False,
+                "message": error_detail,
+                "path": folder_path,
+                "system": system,
+                "error": str(open_error)
+            }
+
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        logger.exception(f"Unexpected error in open_folder endpoint: {str(e)}")
+        logger.error(error_trace)
+        return {
+            "success": False,
+            "message": f"Unexpected error: {str(e)}",
+            "trace": error_trace
+        }
+
+
+@router.get("/folder-contents/{toimiku_nr}")
+async def get_folder_contents(
+        toimiku_nr: str,
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get the contents of a specific toimiku folder"""
+    try:
+        # Sanitize the toimiku_nr to ensure valid folder name
+        sanitized_nr = re.sub(r'[\\/:*?"<>|]', '_', toimiku_nr)
+        logger.info(f"Getting contents for folder: {sanitized_nr}")
+
+        # Create the folder path
+        folder_path = os.path.join("c:\\", "virtuaaltoimik", sanitized_nr)
+
+        # Create folder if it doesn't exist
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path, exist_ok=True)
+            logger.info(f"Created folder: {folder_path}")
+
+        # Get list of files and directories
+        items = []
+
+        try:
+            for item in os.listdir(folder_path):
+                item_path = os.path.join(folder_path, item)
+                is_directory = os.path.isdir(item_path)
+
+                # Get file stats
+                stats = os.stat(item_path)
+
+                # Guess the mime type if it's a file
+                mime_type = None
+                if not is_directory:
+                    mime_type, _ = mimetypes.guess_type(item_path)
+
+                # Format the modified time - using strftime instead of fromisoformat
+                modified_time = datetime.fromtimestamp(stats.st_mtime).strftime("%d.%m.%Y %H:%M")
+
+                # Add item info to the list
+                items.append({
+                    "name": item,
+                    "is_directory": is_directory,
+                    "size": stats.st_size if not is_directory else 0,
+                    "formatted_size": format_file_size(stats.st_size) if not is_directory else "",
+                    "modified": modified_time,
+                    "extension": os.path.splitext(item)[1].lower() if not is_directory else "",
+                    "mime_type": mime_type,
+                    "path": item_path
+                })
+
+            # Sort items: directories first, then files alphabetically
+            items.sort(key=lambda x: (not x["is_directory"], x["name"].lower()))
+
+            return {
+                "success": True,
+                "path": folder_path,
+                "toimiku_nr": sanitized_nr,
+                "items": items
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing directory: {str(e)}")
+            return {
+                "success": False,
+                "path": folder_path,
+                "toimiku_nr": sanitized_nr,
+                "error": str(e),
+                "items": []
+            }
+
+    except Exception as e:
+        logger.exception(f"Error in get_folder_contents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting folder contents: {str(e)}")
+
+
+def format_file_size(size_bytes):
+    """Format file size in human-readable format"""
+    # Fix: Make sure we're comparing with a numeric type
+    if not isinstance(size_bytes, (int, float)):
+        try:
+            size_bytes = int(size_bytes)
+        except (ValueError, TypeError):
+            return "Unknown size"
+
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
+@router.post("/file-operation")
+async def file_operation(
+        operation: str = Form(...),
+        path: str = Form(...),
+        new_name: Optional[str] = Form(None),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Perform a file operation (delete, rename, etc.)"""
+    try:
+        logger.info(f"File operation: {operation} on path: {path}")
+
+        # Verify the path is within the virtuaaltoimik directory for security
+        if not path.startswith(r'c:\virtuaaltoimik'):
+            return {
+                "success": False,
+                "message": "Keelatud operatsioon: vale kaust"
+            }
+
+        # Check if path exists
+        if not os.path.exists(path):
+            return {
+                "success": False,
+                "message": f"Faili või kausta ei leitud: {path}"
+            }
+
+        # Perform the requested operation
+        if operation == "delete":
+            if os.path.isdir(path):
+                import shutil
+                shutil.rmtree(path)
+                logger.info(f"Deleted directory: {path}")
+            else:
+                os.remove(path)
+                logger.info(f"Deleted file: {path}")
+
+            return {
+                "success": True,
+                "message": "Fail või kaust kustutatud"
+            }
+
+        elif operation == "rename" and new_name:
+            # Sanitize the new name
+            sanitized_name = re.sub(r'[\\/:*?"<>|]', '_', new_name)
+
+            # Create the new path
+            directory = os.path.dirname(path)
+            new_path = os.path.join(directory, sanitized_name)
+
+            # Check if target already exists
+            if os.path.exists(new_path):
+                return {
+                    "success": False,
+                    "message": f"Fail või kaust '{sanitized_name}' on juba olemas"
+                }
+
+            # Rename the file or directory
+            os.rename(path, new_path)
+            logger.info(f"Renamed: {path} to {new_path}")
+
+            return {
+                "success": True,
+                "message": "Fail või kaust ümbernimetatud",
+                "new_path": new_path
+            }
+
+        else:
+            return {
+                "success": False,
+                "message": f"Tundmatu operatsioon: {operation}"
+            }
+
+    except Exception as e:
+        logger.exception(f"Error in file operation: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Viga failioperatsioonis: {str(e)}"
+        }
+
+
+@router.get("/document-templates")
+async def get_document_templates(
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get document templates from the templates directory"""
+    try:
+        # Define templates directory
+        templates_dir = r"C:\Taitemenetlus\uksikdokumendid\dokumendipohjad"
+        logger.info(f"Getting document templates from: {templates_dir}")
+
+        # Create directory if it doesn't exist
+        if not os.path.exists(templates_dir):
+            os.makedirs(templates_dir, exist_ok=True)
+            logger.info(f"Created templates directory: {templates_dir}")
+
+        # Get list of template files
+        templates = []
+
+        try:
+            for item in os.listdir(templates_dir):
+                item_path = os.path.join(templates_dir, item)
+
+                # Skip directories, we only want files
+                if os.path.isdir(item_path):
+                    continue
+
+                # Get file stats
+                stats = os.stat(item_path)
+
+                # Get file extension
+                _, extension = os.path.splitext(item)
+
+                # Format the modified time
+                modified_time = datetime.fromtimestamp(stats.st_mtime).strftime("%d.%m.%Y %H:%M")
+
+                # Add template info to the list
+                templates.append({
+                    "name": item,
+                    "path": item_path,
+                    "size": stats.st_size,
+                    "formatted_size": format_file_size(stats.st_size),
+                    "modified": modified_time,
+                    "extension": extension.lower()
+                })
+
+            # Sort templates by name
+            templates.sort(key=lambda x: x["name"].lower())
+
+            return {
+                "success": True,
+                "templates_dir": templates_dir,
+                "templates": templates
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing templates directory: {str(e)}")
+            return {
+                "success": False,
+                "templates_dir": templates_dir,
+                "error": str(e),
+                "templates": []
+            }
+
+    except Exception as e:
+        logger.exception(f"Error in get_document_templates: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting document templates: {str(e)}")

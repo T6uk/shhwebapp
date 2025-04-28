@@ -1923,12 +1923,6 @@ function setupEventHandlers() {
         e.stopPropagation();
     });
 
-    // Tööriistad (Tools) buttons
-    $("#view-file").click(function () {
-        alert("Funktsioon 'Vaata toimikut' on arendamisel.");
-        $("#tools-dropdown-menu").removeClass("show");
-    });
-
     $("#virtual-file").click(function () {
         alert("Funktsioon 'Virtuaaltoimik' on arendamisel.");
         $("#tools-dropdown-menu").removeClass("show");
