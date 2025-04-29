@@ -1,16 +1,10 @@
 # app/api/v1/endpoints/table.py
 
+import datetime
 import json
 import logging
-import os
-import os
-from datetime import datetime
 import mimetypes
-from typing import List, Dict, Any
 import os
-import datetime
-import mimetypes
-from typing import List, Dict, Any
 import platform
 import re
 import subprocess
@@ -1085,3 +1079,222 @@ async def get_document_templates(
     except Exception as e:
         logger.exception(f"Error in get_document_templates: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting document templates: {str(e)}")
+
+
+@router.get("/document-drafts")
+async def get_document_drafts(
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get document drafts from the drafts directory"""
+    try:
+        # Define drafts directory
+        drafts_dir = r"C:\Taitemenetlus\uksikdokumendid\mustandid"
+        logger.info(f"Getting document drafts from: {drafts_dir}")
+
+        # Create directory if it doesn't exist
+        if not os.path.exists(drafts_dir):
+            os.makedirs(drafts_dir, exist_ok=True)
+            logger.info(f"Created drafts directory: {drafts_dir}")
+
+        # Get list of draft files
+        drafts = []
+
+        try:
+            for item in os.listdir(drafts_dir):
+                item_path = os.path.join(drafts_dir, item)
+
+                # Skip directories, we only want files
+                if os.path.isdir(item_path):
+                    continue
+
+                # Get file stats
+                stats = os.stat(item_path)
+
+                # Get file extension
+                _, extension = os.path.splitext(item)
+
+                # Format the modified time
+                modified_time = datetime.fromtimestamp(stats.st_mtime).strftime("%d.%m.%Y %H:%M")
+
+                # Add draft info to the list
+                drafts.append({
+                    "name": item,
+                    "path": item_path,
+                    "size": stats.st_size,
+                    "formatted_size": format_file_size(stats.st_size),
+                    "modified": modified_time,
+                    "extension": extension.lower()
+                })
+
+            # Sort drafts by name
+            drafts.sort(key=lambda x: x["name"].lower())
+
+            return {
+                "success": True,
+                "drafts_dir": drafts_dir,
+                "drafts": drafts
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing drafts directory: {str(e)}")
+            return {
+                "success": False,
+                "drafts_dir": drafts_dir,
+                "error": str(e),
+                "drafts": []
+            }
+
+    except Exception as e:
+        logger.exception(f"Error in get_document_drafts: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting document drafts: {str(e)}")
+
+
+@router.post("/convert-to-pdf")
+async def convert_to_pdf(
+        source_path: str = Form(...),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Convert a Word document to PDF"""
+    try:
+        logger.info(f"Converting document to PDF: {source_path}")
+
+        # Verify the file exists
+        if not os.path.exists(source_path):
+            return {
+                "success": False,
+                "message": f"Faili ei leitud: {source_path}"
+            }
+
+        # Check if it's a Word document by extension
+        _, ext = os.path.splitext(source_path)
+        if ext.lower() not in ['.doc', '.docx', '.rtf']:
+            return {
+                "success": False,
+                "message": f"Fail ei ole Word dokument: {source_path}"
+            }
+
+        # Create PDF path (same name, different extension)
+        pdf_path = os.path.splitext(source_path)[0] + '.pdf'
+
+        # Try to convert the document using LibreOffice (if available)
+        try:
+            # Check if LibreOffice is available
+            libreoffice_paths = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                "soffice"  # for Linux/macOS
+            ]
+
+            libreoffice_path = None
+            for path in libreoffice_paths:
+                if os.path.exists(path) or path == "soffice":
+                    libreoffice_path = path
+                    break
+
+            if libreoffice_path:
+                # Convert using LibreOffice
+                logger.info(f"Converting with LibreOffice: {libreoffice_path}")
+                process = subprocess.Popen([
+                    libreoffice_path,
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', os.path.dirname(source_path),
+                    source_path
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                stdout, stderr = process.communicate()
+                logger.info(f"LibreOffice output: {stdout.decode('utf-8', errors='ignore')}")
+                if stderr:
+                    logger.warning(f"LibreOffice errors: {stderr.decode('utf-8', errors='ignore')}")
+
+                # Check if the PDF was created
+                if os.path.exists(pdf_path):
+                    return {
+                        "success": True,
+                        "message": "PDF dokument edukalt loodud",
+                        "pdf_path": pdf_path
+                    }
+                else:
+                    raise Exception("PDF file was not created by LibreOffice")
+            else:
+                raise Exception("LibreOffice not found")
+
+        except Exception as e:
+            logger.error(f"Error using LibreOffice for conversion: {str(e)}")
+
+            # Fallback: Try to use Word via COM automation (Windows only)
+            try:
+                import win32com.client
+
+                logger.info("Attempting conversion using Word COM automation")
+                word = win32com.client.Dispatch("Word.Application")
+                word.Visible = False
+
+                doc = word.Documents.Open(source_path)
+                doc.SaveAs(pdf_path, FileFormat=17)  # 17 is the PDF format code
+                doc.Close()
+                word.Quit()
+
+                return {
+                    "success": True,
+                    "message": "PDF dokument edukalt loodud",
+                    "pdf_path": pdf_path
+                }
+
+            except Exception as com_error:
+                logger.error(f"Error using Word COM automation: {str(com_error)}")
+                return {
+                    "success": False,
+                    "message": f"PDF konverteerimine ebaõnnestus: {str(e)}. Word COM viga: {str(com_error)}"
+                }
+
+    except Exception as e:
+        logger.exception(f"Error converting to PDF: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Viga PDF konverteerimisel: {str(e)}"
+        }
+
+
+@router.post("/open-for-editing")
+async def open_for_editing(
+        file_path: str = Form(...),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Open a document for editing in its default application"""
+    try:
+        logger.info(f"Opening file for editing: {file_path}")
+
+        # Verify the file exists
+        if not os.path.exists(file_path):
+            return {
+                "success": False,
+                "message": f"Faili ei leitud: {file_path}"
+            }
+
+        # Open the file with the default application
+        system = platform.system()
+
+        if system == "Windows":
+            os.startfile(file_path)
+        elif system == "Darwin":  # macOS
+            subprocess.Popen(["open", file_path])
+        elif system == "Linux":
+            subprocess.Popen(["xdg-open", file_path])
+        else:
+            return {
+                "success": False,
+                "message": f"Tundmatu operatsioonisüsteem: {system}"
+            }
+
+        return {
+            "success": True,
+            "message": "Fail avatud redigeerimiseks"
+        }
+
+    except Exception as e:
+        logger.exception(f"Error opening file for editing: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Viga faili avamisel: {str(e)}"
+        }

@@ -605,60 +605,59 @@ function showDataChangeNotification(changes) {
 }
 
 // Näita teavitust
-function showToast(title, message, type = "info") {
-    // Determine if in dark mode
-    const isDark = document.body.classList.contains('dark-mode');
-
-    // Define colors for light and dark mode
-    let colors = {
-        "success": isDark ? "bg-green-900 text-green-100 border border-green-800" : "bg-green-100 text-green-800 border border-green-200",
-        "error": isDark ? "bg-red-900 text-red-100 border border-red-800" : "bg-red-100 text-red-800 border border-red-200",
-        "info": isDark ? "bg-blue-900 text-blue-100 border border-blue-800" : "bg-blue-100 text-blue-800 border border-blue-200",
-        "warning": isDark ? "bg-yellow-900 text-yellow-100 border border-yellow-800" : "bg-yellow-100 text-yellow-800 border border-yellow-200"
-    };
-
-    let icons = {
-        "success": "fas fa-check-circle",
-        "error": "fas fa-exclamation-circle",
-        "info": "fas fa-info-circle",
-        "warning": "fas fa-exclamation-triangle"
-    };
-
-    // Create the toast element with enhanced styling
+function showToast(title, message, type, duration = 3000) {
     const toast = $(`
-        <div class="toast-notification ${colors[type]} p-3 rounded-lg shadow-lg mb-3 transform transition-all duration-300 opacity-0 translate-y-10">
+        <div class="notification ${type} mb-2">
             <div class="flex items-center">
-                <i class="${icons[type]} mr-2"></i>
-                <div>
-                    <div class="font-medium">${title}</div>
-                    <div class="text-sm">${message}</div>
+                <div class="notification-icon">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
                 </div>
-                <button class="close-toast ml-4 text-gray-400 hover:text-gray-200">
-                    <i class="fas fa-times"></i>
-                </button>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium">${title}</h3>
+                    <div class="mt-1 text-xs">${message}</div>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button class="notification-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
         </div>
-    `);
+    `).appendTo("#notification-container");
 
-    // Add to the notifications container
-    $("#notification-container").append(toast);
+    // Add animation class
+    setTimeout(() => toast.addClass('show'), 10);
 
-    // Show with animation
-    setTimeout(() => {
-        toast.removeClass("opacity-0 translate-y-10");
-    }, 10);
-
-    // Add click handler for close button
-    toast.find(".close-toast").click(function () {
-        toast.addClass("opacity-0 translate-y-10");
-        setTimeout(() => toast.remove(), 300);
+    // Set up close button
+    toast.find('.notification-close').on('click', function() {
+        closeToast(toast);
     });
 
-    // Auto-close after 5 seconds
-    setTimeout(function () {
-        toast.addClass("opacity-0 translate-y-10");
+    // Auto-close after duration (if not -1)
+    let timeoutId = null;
+    if (duration !== -1) {
+        timeoutId = setTimeout(() => closeToast(toast), duration);
+    }
+
+    // Store the timeout ID for possible cancellation
+    toast.data('timeout-id', timeoutId);
+
+    // Add hide method to the toast
+    toast.hide = function() {
+        closeToast(toast);
+    };
+
+    return toast;
+
+    function closeToast(toast) {
+        // Clear any existing timeout
+        const timeoutId = toast.data('timeout-id');
+        if (timeoutId) clearTimeout(timeoutId);
+
+        // Hide with animation
+        toast.removeClass('show');
         setTimeout(() => toast.remove(), 300);
-    }, 5000);
+    }
 }
 
 // Kohandatud lahtri stiil redigeeritavate lahtrite jaoks - integreerib AG Grid'iga
