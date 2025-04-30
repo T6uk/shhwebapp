@@ -7,6 +7,39 @@ import threading
 import time
 import signal
 import platform
+import hashlib
+import json
+from datetime import datetime
+
+
+def generate_cache_version():
+    """Generate a unique cache version for static assets"""
+    import hashlib
+    from datetime import datetime
+
+    # Generate version
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    random_component = os.urandom(4).hex()
+    cache_version = f"{timestamp}-{random_component}"
+
+    try:
+        # Save to file for service worker access
+        cache_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "app", "static", "cache_version.json")
+
+        os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                "version": cache_version,
+                "timestamp": int(time.time())
+            }, f)
+
+        print(f"Generated new cache version: {cache_version}")
+    except Exception as e:
+        print(f"Warning: Could not save cache version to file: {e}")
+
+    return cache_version
 
 
 def is_server_running(port):
@@ -28,6 +61,10 @@ def launch_browser(url, delay=2):
 
     print(f"Opening {url} in app mode...")
 
+    # Add cache-busting parameter to URL
+    cache_buster = f"?cache_bust={int(time.time())}"
+    url_with_cache_buster = f"{url}{cache_buster}"
+
     # Different approaches based on platform
     if platform.system() == 'Windows':
         # Use Edge on Windows in app mode
@@ -35,34 +72,37 @@ def launch_browser(url, delay=2):
         if os.path.exists(edge_path):
             subprocess.Popen([
                 edge_path,
-                f"--app={url}",
+                f"--app={url_with_cache_buster}",
                 "--edge-kiosk-type=normal",
                 "--disable-features=TranslateUI",
                 "--disable-plugins-discovery",
                 "--autoplay-policy=no-user-gesture-required",
-                "--profile-directory=Default"
+                "--profile-directory=Default",
+                "--disk-cache-size=1"  # Minimal disk cache
             ])
         else:
-            webbrowser.open(url)
+            webbrowser.open(url_with_cache_buster)
     elif platform.system() == 'Darwin':  # macOS
         # Try Chrome for macOS in app mode
         try:
             subprocess.Popen([
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                f"--app={url}",
-                "--disable-features=TranslateUI"
+                f"--app={url_with_cache_buster}",
+                "--disable-features=TranslateUI",
+                "--disk-cache-size=1"  # Minimal disk cache
             ])
         except:
-            webbrowser.open(url)
+            webbrowser.open(url_with_cache_buster)
     else:  # Linux and others
         try:
             subprocess.Popen([
                 "google-chrome",
-                f"--app={url}",
-                "--disable-features=TranslateUI"
+                f"--app={url_with_cache_buster}",
+                "--disable-features=TranslateUI",
+                "--disk-cache-size=1"  # Minimal disk cache
             ])
         except:
-            webbrowser.open(url)
+            webbrowser.open(url_with_cache_buster)
 
 
 def check_database_availability():
@@ -87,14 +127,93 @@ def check_database_availability():
         return False
 
 
+def clear_browser_cache():
+    """Clear browser cache directories if possible"""
+    if platform.system() == 'Windows':
+        import subprocess
+        try:
+            # Try to clear Edge cache
+            subprocess.run([
+                "RunDll32.exe", "InetCpl.cpl,ClearMyTracksByProcess", "8"
+            ], capture_output=True)
+            print("Browser cache clearing attempted")
+        except Exception as e:
+            print(f"Failed to clear browser cache: {e}")
+
+
+def update_service_worker(cache_version=None):
+    """Update the service worker file with new cache version"""
+    sw_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "app", "static", "sw.js")
+
+    if not cache_version:
+        cache_version = generate_cache_version()
+
+    if os.path.exists(sw_path):
+        try:
+            # Read the file with explicit UTF-8 encoding
+            with open(sw_path, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+
+            # Check if the file contains the replacement target
+            if "const CACHE_VERSION = '" in content:
+                # Update cache version in service worker
+                updated_content = content.replace(
+                    "const CACHE_VERSION = '",
+                    f"const CACHE_VERSION = '{cache_version}-"
+                )
+
+                # Write with the same encoding
+                with open(sw_path, 'w', encoding='utf-8') as f:
+                    f.write(updated_content)
+
+                print(f"Updated service worker with cache version: {cache_version}")
+                return cache_version
+            else:
+                print("Warning: Service worker doesn't contain expected version string, skipping update")
+                print("Please make sure your sw.js file contains: const CACHE_VERSION = 'v1';")
+                return cache_version
+
+        except Exception as e:
+            print(f"Error updating service worker: {e}")
+            return cache_version  # Return the cache version even if update fails
+    else:
+        print(f"Warning: Service worker file not found at {sw_path}")
+        return cache_version
+
+
 def start_server():
     """Start the FastAPI server with optimized settings"""
     print("Starting application server...")
+
+    # Generate cache version only once and use it consistently
+    cache_version = generate_cache_version()
+
+    try:
+        # Update service worker with the same cache version
+        update_service_worker(cache_version)
+    except Exception as e:
+        print(f"Warning: Failed to update service worker: {e}")
+
+    try:
+        # Attempt to clear browser cache
+        clear_browser_cache()
+    except Exception as e:
+        print(f"Warning: Failed to clear browser cache: {e}")
 
     # Set environment variables for better performance
     env = os.environ.copy()
     env["PYTHONOPTIMIZE"] = "1"  # Enable optimizations
     env["PYTHONUNBUFFERED"] = "1"  # Unbuffered output
+    env["CACHE_VERSION"] = cache_version  # Set cache version for app
+
+    try:
+        # Set cache version for app
+        env["CACHE_VERSION"] = generate_cache_version()
+    except Exception as e:
+        print(f"Warning: Failed to generate cache version: {e}")
+        # Fallback to timestamp if generation fails
+        env["CACHE_VERSION"] = str(int(time.time()))
 
     # Check local database availability
     local_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "local_data.db")
@@ -122,7 +241,8 @@ def start_server():
         "--workers", "4",  # Use appropriate number of workers
         "--http", "httptools",
         "--log-level", "warning",
-        "--no-access-log"  # Disable access logging for better performance
+        "--no-access-log",  # Disable access logging for better performance
+        "--reload"  # Add reload to ensure static files are reloaded
     ]
 
     process = subprocess.Popen(cmd, env=env)

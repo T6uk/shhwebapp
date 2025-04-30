@@ -27,7 +27,7 @@ $(document).ready(function () {
         let toimikuNr = null;
         let volgnikName = null;
 
-// Find Võlgnik name
+        // Find Võlgnik name
         const volgnikColumns = ['Võlgnik', 'võlgnik'];
         for (const col of volgnikColumns) {
             if (selectedRow[col] !== undefined && selectedRow[col] !== null) {
@@ -37,7 +37,7 @@ $(document).ready(function () {
             }
         }
 
-// Find toimiku_nr
+        // Find toimiku_nr
         const toimikuColumns = ['toimiku_nr', 'toimikunr', 'toimiku nr'];
         for (const col of toimikuColumns) {
             if (selectedRow[col] !== undefined && selectedRow[col] !== null) {
@@ -59,14 +59,14 @@ $(document).ready(function () {
             return;
         }
 
-// Sanitize the toimiku_nr for path usage
+        // Sanitize the toimiku_nr for path usage
         const sanitizedToimikuNr = String(toimikuNr).replace(/[\/\\:*?"<>|]/g, '_');
         console.log("Sanitized toimiku_nr:", sanitizedToimikuNr);
 
-// Save current toimiku number
+        // Save current toimiku number
         currentToimikuNr = sanitizedToimikuNr;
 
-// Set the title with both the toimiku number and võlgnik name
+        // Set the title with both the toimiku number and võlgnik name
         $("#toimik-title").text(`Virtuaaltoimik: ${sanitizedToimikuNr} (${volgnikName})`);
 
         // Show modal
@@ -426,21 +426,36 @@ $(document).ready(function () {
         }
     });
 
+    // Update the create document button click handler
     $("#create-document-btn").off('click').on('click', function () {
         console.log("Create document button clicked from virtuaaltoimik");
 
-        // Get the current toimiku info from the title
-        const toimikuInfo = $("#toimik-title").text();
+        // Get the current toimiku info from the toimik-title element
+        const toimikTitle = $("#toimik-title").text();
+
+        // Extract the toimiku information - format is "Virtuaaltoimik: number (name)"
+        let toimikuInfo = "";
+        if (toimikTitle.includes(":")) {
+            // Extract the part after the colon
+            toimikuInfo = toimikTitle.split(":")[1].trim();
+        } else {
+            toimikuInfo = toimikTitle;
+        }
+
+        console.log("Extracted toimiku info:", toimikuInfo);
 
         // Show document templates modal
         $("#document-templates-modal").removeClass("hidden");
 
-        // Set the title with toimiku info
-        $("#document-templates-modal h3 span").text(`Dokumendipohjad - ${toimikuInfo}`);
+        // Store the toimiku info as data attribute for persistence
+        $("#document-templates-modal").data("toimiku-info", toimikuInfo);
 
-        // Reset to templates view if needed (in case it was previously showing drafts)
-        if (window.viewingDrafts) {
-            window.viewingDrafts = false;
+        // Set the title with toimiku info - using the correct ID
+        $("#doc-pohjad-title").text(`Dokumendipõhjad: ${toimikuInfo}`);
+
+        // Reset to templates view if needed
+        if (typeof viewingDrafts !== 'undefined' && viewingDrafts) {
+            viewingDrafts = false;
             $("#drafts-btn").html('<i class="fas fa-file-signature text-xs mr-1"></i><span>Mustandid</span>');
         }
 

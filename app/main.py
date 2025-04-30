@@ -1,4 +1,4 @@
-# app/main.py (partial, showing the updated startup section)
+# app/main.py
 import json
 
 from fastapi import FastAPI, Request, Depends, Response, Cookie, HTTPException, status
@@ -12,13 +12,16 @@ from sqlalchemy.future import select
 import os
 import json
 from typing import Optional
-import os
 import logging
 from jose import jwt, JWTError
 from typing import Optional
 from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect, Depends, Query
 from app.core.websocket import connect_client, disconnect_client, broadcast_message
+import time
+
+# Import cache manager
+from app.utils.cache_utils import cache_manager
 
 from app.core.config import settings
 from app.core.db import get_db, init_db
@@ -51,6 +54,10 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Set up Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
+# Add versioned_static helper function to templates
+templates.env.globals["cache_manager"] = cache_manager
+templates.env.globals["versioned_static"] = lambda path: f"/static/{path}?v={cache_manager.get_version()}"
+
 # Include API routers
 app.include_router(table.router, prefix=settings.API_V1_STR)
 app.include_router(auth_router)
@@ -70,7 +77,8 @@ async def auth_middleware(request: Request, call_next):
         "/static/",
         "/favicon.ico",
         "/sw.js",
-        "/manifest.json"
+        "/manifest.json",
+        "/api/v1/cache-version"  # Add our new cache version endpoint as public
     ]
 
     # Check if the path is public
@@ -254,12 +262,21 @@ async def service_worker():
     return FileResponse("app/static/sw.js")
 
 
+@app.get("/api/v1/cache-version")
+async def get_cache_version():
+    """Return the current cache version for client-side validation"""
+    return {"version": cache_manager.get_version(), "timestamp": int(time.time())}
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize resources on startup with better error handling and optimization"""
     import time
     start_time = time.time()
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
+
+    # Log cache version for static assets
+    logger.info(f"Using cache version: {cache_manager.get_version()}")
 
     # Setup process ID and create required directories
     import os

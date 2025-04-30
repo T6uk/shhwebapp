@@ -16,24 +16,24 @@ $(document).ready(function () {
         // Toggle between drafts and templates
         viewingDrafts = !viewingDrafts;
 
-        // Get the current title text to preserve toimiku info
-        const currentTitle = $("#document-templates-modal h3 span").text();
+        // Retrieve stored toimiku info
+        const toimikuInfo = $("#document-templates-modal").data("toimiku-info") || "";
 
-        // Extract the toimiku info if present (anything after " - ")
-        let titleBase = viewingDrafts ? "Dokumendimustandid" : "Dokumendipohjad";
-        let toimikuInfo = "";
+        // Set base title and add toimiku info if available
+        let titleBase = viewingDrafts ? "Dokumendi mustandid" : "Dokumendipõhjad";
+        let fullTitle = titleBase;
 
-        if (currentTitle.includes(" - ")) {
-            toimikuInfo = " - " + currentTitle.split(" - ")[1];
+        if (toimikuInfo) {
+            fullTitle += ` - ${toimikuInfo}`;
         }
 
         // Update button text and title
         if (viewingDrafts) {
             $(this).html('<i class="fas fa-file-alt text-xs mr-1"></i><span>Põhjad</span>');
-            $("#document-templates-modal h3 span").text(titleBase + toimikuInfo);
+            $("#doc-pohjad-title").text(fullTitle);
         } else {
             $(this).html('<i class="fas fa-file-signature text-xs mr-1"></i><span>Mustandid</span>');
-            $("#document-templates-modal h3 span").text(titleBase + toimikuInfo);
+            $("#doc-pohjad-title").text(fullTitle);
         }
 
         // Load the appropriate content
@@ -584,26 +584,10 @@ $(document).ready(function () {
         };
     }
 
-    // Hook into the create-document-btn from the Virtuaaltoimik modal
-    $("#create-document-btn").off('click').on('click', function () {
-        console.log("Create document button clicked from virtuaaltoimik");
-
-        // Show document templates modal and load templates
-        $("#document-templates-modal").removeClass("hidden");
-
-        // Reset to templates view if previously showing drafts
-        if (viewingDrafts) {
-            viewingDrafts = false;
-            $("#drafts-btn").html('<i class="fas fa-file-signature text-xs mr-1"></i><span>Mustandid</span>');
-            $("#document-templates-modal h3 span").text("Dokumendipohjad");
-        }
-
-        // Load templates
-        loadDocumentTemplates();
-    });
-
     // Document templates modal close handlers
     $("#close-document-templates-modal, #exit-templates-btn").on('click', function () {
+        // Clear the stored toimiku info when closing
+        $("#document-templates-modal").removeData("toimiku-info");
         $("#document-templates-modal").addClass("hidden");
     });
 

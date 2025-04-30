@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="et">
+<html lang="et" data-cache-version="{{ cache_manager.get_version() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,9 +48,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="../static/css/styles.css?v=1.0.2">
-    <link rel="stylesheet" href="../static/css/custom.css?v=1.0.2">
-    <link rel="stylesheet" href="../static/css/compact-ui.css?v=1.0.2">
+    <link rel="stylesheet" href="{{ versioned_static('css/styles.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/custom.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/compact-ui.css') }}">
 
     <style>
         /* Additional responsive CSS utilities */
@@ -722,7 +722,7 @@
         <div class="flex justify-between items-center mb-2 bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg">
             <h3 class="text-lg font-semibold flex items-center">
                 <i class="fas fa-file-alt mr-2"></i>
-                <span>Dokumendipohjad</span>
+                <span id="doc-pohjad-title">Dokumendipohjad</span>
             </h3>
             <button id="close-document-templates-modal"
                     class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
@@ -829,12 +829,13 @@
 </div>
 
 <!-- Application Script -->
-<script src="../static/js/app.js?v=1.0.2"></script>
-<script src="../static/js/vaata_toimikut.js?v=1.0.2"></script>
-<script src="../static/js/virtuaaltoimik.js?v=1.0.2"></script>
-<script src="../static/js/dokumendi_pohjad.js?v=1.0.2"></script>
-<script src="../static/js/edit.js?v=1.0.2"></script>
-<script src="../static/js/enhanced-filters.js?v=1.0.2"></script>
+<script src="{{ versioned_static('js/app.js') }}"></script>
+<script src="{{ versioned_static('js/vaata_toimikut.js') }}"></script>
+<script src="{{ versioned_static('js/virtuaaltoimik.js') }}"></script>
+<script src="{{ versioned_static('js/dokumendi_pohjad.js') }}"></script>
+<script src="{{ versioned_static('js/edit.js') }}"></script>
+<script src="{{ versioned_static('js/enhanced-filters.js') }}"></script>
+<script src="{{ versioned_static('js/version-checker.js') }}"></script>
 
 <!-- Additional script for improved table container sizing -->
 <script>

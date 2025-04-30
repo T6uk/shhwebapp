@@ -1,9 +1,30 @@
 // app/static/sw.js
 // Optimized Service Worker for better caching and offline support
-const CACHE_NAME = 'big-table-app-v3';
-const STATIC_CACHE = 'big-table-static-v3';
-const API_CACHE = 'big-table-api-v3';
-const FONT_CACHE = 'big-table-fonts-v3';
+
+// Fetch the dynamic cache version from the server
+const CACHE_BASE_NAME = 'big-table-app';
+const CACHE_VERSION = '20250430132830-e2595de0-20250430132700-083a487c-20250430132459-465d48e5-20250430130415-47a52b4d-20250430125911-706b14ca-v1';
+
+// Try to get the current cache version from cache_version.json
+fetch('/static/cache_version.json')
+  .then(response => {
+    if (response.ok) return response.json();
+    throw new Error('Failed to load cache version');
+  })
+  .then(data => {
+    if (data && data.version) {
+      CACHE_VERSION = data.version;
+      console.log(`Using cache version: ${CACHE_VERSION}`);
+    }
+  })
+  .catch(error => {
+    console.warn('Could not fetch cache version, using default:', error);
+  });
+
+// Dynamic cache names
+const STATIC_CACHE = `${CACHE_BASE_NAME}-static-${CACHE_VERSION}`;
+const API_CACHE = `${CACHE_BASE_NAME}-api-${CACHE_VERSION}`;
+const FONT_CACHE = `${CACHE_BASE_NAME}-fonts-${CACHE_VERSION}`;
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
