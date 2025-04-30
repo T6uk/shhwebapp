@@ -7,9 +7,9 @@ const FONT_CACHE = 'big-table-fonts-v3';
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
-  '/',
-  '/static/css/styles.css',
-  '/static/css/custom.css',
+  // '/',
+  // '/static/css/styles.css',
+  // '/static/css/custom.css',
   // '/static/js/app.js',
   '/static/js/edit.js',
   '/static/manifest.json',

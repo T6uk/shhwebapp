@@ -16,13 +16,24 @@ $(document).ready(function () {
         // Toggle between drafts and templates
         viewingDrafts = !viewingDrafts;
 
-        // Update button text
+        // Get the current title text to preserve toimiku info
+        const currentTitle = $("#document-templates-modal h3 span").text();
+
+        // Extract the toimiku info if present (anything after " - ")
+        let titleBase = viewingDrafts ? "Dokumendimustandid" : "Dokumendipohjad";
+        let toimikuInfo = "";
+
+        if (currentTitle.includes(" - ")) {
+            toimikuInfo = " - " + currentTitle.split(" - ")[1];
+        }
+
+        // Update button text and title
         if (viewingDrafts) {
             $(this).html('<i class="fas fa-file-alt text-xs mr-1"></i><span>Põhjad</span>');
-            $("#document-templates-modal h3 span").text("Dokumendimustandid");
+            $("#document-templates-modal h3 span").text(titleBase + toimikuInfo);
         } else {
             $(this).html('<i class="fas fa-file-signature text-xs mr-1"></i><span>Mustandid</span>');
-            $("#document-templates-modal h3 span").text("Dokumendipohjad");
+            $("#document-templates-modal h3 span").text(titleBase + toimikuInfo);
         }
 
         // Load the appropriate content
@@ -173,8 +184,8 @@ $(document).ready(function () {
 
         // Disable the create document button until a template is selected
         $("#create-doc-btn").addClass("opacity-50 cursor-not-allowed")
-                           .removeClass("bg-green-500 hover:bg-green-600")
-                           .prop("disabled", true);
+            .removeClass("bg-green-500 hover:bg-green-600")
+            .prop("disabled", true);
 
         // Call API to get document templates
         $.ajax({
@@ -238,8 +249,8 @@ $(document).ready(function () {
 
         // Disable the create document button until a template is selected
         $("#create-doc-btn").addClass("opacity-50 cursor-not-allowed")
-                           .removeClass("bg-green-500 hover:bg-green-600")
-                           .prop("disabled", true);
+            .removeClass("bg-green-500 hover:bg-green-600")
+            .prop("disabled", true);
 
         // Call API to get document drafts
         $.ajax({

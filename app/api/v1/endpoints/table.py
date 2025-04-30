@@ -769,7 +769,7 @@ async def open_folder(
         logger.info(f"Sanitized toimiku_nr: {sanitized_nr}")
 
         # Create the folder path ensuring correct Windows path format
-        folder_path = os.path.join("c:\\", "virtuaaltoimik", sanitized_nr)
+        folder_path = os.path.join("c:\\", "virtuaaltoimik", toimiku_nr)
         logger.info(f"Target folder path: {folder_path}")
 
         # Check if folder exists

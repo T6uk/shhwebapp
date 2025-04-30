@@ -23,16 +23,34 @@ $(document).ready(function () {
         // Log all column names for debugging
         console.log("All available columns:", Object.keys(selectedRow));
 
-        // Try common variations to find the toimiku_nr
+        // Try to find Võlgnik and toimiku_nr separately
         let toimikuNr = null;
-        const possibleColumns = ['toimiku_nr', 'toimikunr', 'document_nr', 'dokumendi_nr', 'id', 'number', 'nr'];
+        let volgnikName = null;
 
-        for (const col of possibleColumns) {
+// Find Võlgnik name
+        const volgnikColumns = ['Võlgnik', 'võlgnik'];
+        for (const col of volgnikColumns) {
             if (selectedRow[col] !== undefined && selectedRow[col] !== null) {
-                toimikuNr = selectedRow[col];
-                console.log(`Found value in column '${col}':`, toimikuNr);
+                volgnikName = selectedRow[col];
+                console.log(`Found võlgnik in column '${col}':`, volgnikName);
                 break;
             }
+        }
+
+// Find toimiku_nr
+        const toimikuColumns = ['toimiku_nr', 'toimikunr', 'toimiku nr'];
+        for (const col of toimikuColumns) {
+            if (selectedRow[col] !== undefined && selectedRow[col] !== null) {
+                toimikuNr = selectedRow[col];
+                console.log(`Found toimiku_nr in column '${col}':`, toimikuNr);
+                break;
+            }
+        }
+
+        if (!volgnikName) {
+            showToast("Viga", "Võlgnikku ei leitud valitud real", "error");
+            $("#tools-dropdown-menu").removeClass("show");
+            return;
         }
 
         if (!toimikuNr) {
@@ -41,15 +59,15 @@ $(document).ready(function () {
             return;
         }
 
-        // Sanitize the toimiku_nr for path usage
+// Sanitize the toimiku_nr for path usage
         const sanitizedToimikuNr = String(toimikuNr).replace(/[\/\\:*?"<>|]/g, '_');
         console.log("Sanitized toimiku_nr:", sanitizedToimikuNr);
 
-        // Save current toimiku number
+// Save current toimiku number
         currentToimikuNr = sanitizedToimikuNr;
 
-        // Set the title with the current toimiku number
-        $("#toimik-title").text(`Virtuaaltoimik: ${sanitizedToimikuNr}`);
+// Set the title with both the toimiku number and võlgnik name
+        $("#toimik-title").text(`Virtuaaltoimik: ${sanitizedToimikuNr} (${volgnikName})`);
 
         // Show modal
         $("#virtuaaltoimik-modal").removeClass("hidden");
@@ -209,52 +227,52 @@ $(document).ready(function () {
     }
 
     function deleteFileOrFolder(path, row) {
-    // Show loading indicator
-    const loadingToast = showToast("Kustutamine", "Kustutan faili...", "info", -1); // -1 for no auto-hide
+        // Show loading indicator
+        const loadingToast = showToast("Kustutamine", "Kustutan faili...", "info", -1); // -1 for no auto-hide
 
-    // Call the API to delete the file
-    $.ajax({
-        url: "/api/v1/table/file-operation",
-        method: "POST",
-        data: {
-            operation: "delete",
-            path: path
-        },
-        success: function(response) {
-            console.log("Delete response:", response);
+        // Call the API to delete the file
+        $.ajax({
+            url: "/api/v1/table/file-operation",
+            method: "POST",
+            data: {
+                operation: "delete",
+                path: path
+            },
+            success: function (response) {
+                console.log("Delete response:", response);
 
-            // Close the loading toast
-            if (loadingToast) loadingToast.hide();
+                // Close the loading toast
+                if (loadingToast) loadingToast.hide();
 
-            if (response.success) {
-                // Remove the row from the table
-                row.fadeOut(300, function() {
-                    $(this).remove();
+                if (response.success) {
+                    // Remove the row from the table
+                    row.fadeOut(300, function () {
+                        $(this).remove();
 
-                    // If no more files, show empty state
-                    if ($("#files-table-body tr.file-row").length === 0) {
-                        $("#files-empty-state").removeClass("hidden");
-                    }
-                });
+                        // If no more files, show empty state
+                        if ($("#files-table-body tr.file-row").length === 0) {
+                            $("#files-empty-state").removeClass("hidden");
+                        }
+                    });
 
-                // Show success message
-                showToast("Kustutatud", "Fail edukalt kustutatud", "success");
-            } else {
+                    // Show success message
+                    showToast("Kustutatud", "Fail edukalt kustutatud", "success");
+                } else {
+                    // Show error message
+                    showToast("Viga", response.message || "Kustutamine ebaõnnestus", "error");
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Error deleting file:", error);
+
+                // Close the loading toast
+                if (loadingToast) loadingToast.hide();
+
                 // Show error message
-                showToast("Viga", response.message || "Kustutamine ebaõnnestus", "error");
+                showToast("Viga", "Kustutamine ebaõnnestus: " + (xhr.responseJSON?.detail || error), "error");
             }
-        },
-        error: function(xhr, status, error) {
-            console.error("Error deleting file:", error);
-
-            // Close the loading toast
-            if (loadingToast) loadingToast.hide();
-
-            // Show error message
-            showToast("Viga", "Kustutamine ebaõnnestus: " + (xhr.responseJSON?.detail || error), "error");
-        }
-    });
-}
+        });
+    }
 
     // Helper function to get file icon based on extension
     function getFileIcon(extension) {
@@ -341,7 +359,29 @@ $(document).ready(function () {
 
     // Function to open a file directly
     function openFileDirectly(path) {
-        showToast("Funktsioon arendamisel", "Failide avamise funktsioon on arendamisel", "info");
+        // Show loading notification
+        const loadingToast = showToast("Faili avamine", "Avan faili...", "info", 1000);
+
+        // Call API to open the file
+        $.ajax({
+            url: "/api/v1/table/open-for-editing",
+            method: "POST",
+            data: {
+                file_path: path
+            },
+            success: function (response) {
+                console.log("Open file response:", response);
+                if (response.success) {
+                    showToast("Fail avatud", "Fail avati edukalt", "success");
+                } else {
+                    showToast("Viga", response.message || "Faili avamine ebaõnnestus", "error");
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Error opening file:", error);
+                showToast("Viga", xhr.responseJSON?.message || "Faili avamine ebaõnnestus", "error");
+            }
+        });
     }
 
     // Helper function to escape HTML
@@ -386,17 +426,34 @@ $(document).ready(function () {
         }
     });
 
-    // Other buttons - placeholder functionality for now
-    $("#create-document-btn").on('click', function () {
-        showToast("Funktsioon arendamisel", "Dokumendi koostamise funktsioon on arendamisel", "info");
+    $("#create-document-btn").off('click').on('click', function () {
+        console.log("Create document button clicked from virtuaaltoimik");
+
+        // Get the current toimiku info from the title
+        const toimikuInfo = $("#toimik-title").text();
+
+        // Show document templates modal
+        $("#document-templates-modal").removeClass("hidden");
+
+        // Set the title with toimiku info
+        $("#document-templates-modal h3 span").text(`Dokumendipohjad - ${toimikuInfo}`);
+
+        // Reset to templates view if needed (in case it was previously showing drafts)
+        if (window.viewingDrafts) {
+            window.viewingDrafts = false;
+            $("#drafts-btn").html('<i class="fas fa-file-signature text-xs mr-1"></i><span>Mustandid</span>');
+        }
+
+        // Load templates if the function exists
+        if (typeof loadDocumentTemplates === 'function') {
+            loadDocumentTemplates();
+        } else {
+            console.error("loadDocumentTemplates function not found");
+        }
     });
 
     $("#archive-btn").on('click', function () {
         showToast("Funktsioon arendamisel", "Arhiivi funktsioon on arendamisel", "info");
-    });
-
-    $("#filter-files-btn").on('click', function () {
-        showToast("Funktsioon arendamisel", "Filtreerimine on arendamisel", "info");
     });
 });
 
