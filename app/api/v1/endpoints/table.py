@@ -1298,3 +1298,325 @@ async def open_for_editing(
             "success": False,
             "message": f"Viga faili avamisel: {str(e)}"
         }
+
+
+@router.post("/generate-document")
+async def generate_document(
+        template_path: str = Form(...),
+        row_data_json: str = Form(...),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Generate a document from a template, replacing placeholders with row data values"""
+    try:
+        logger.info(f"Generating document from template: {template_path}")
+
+        # Parse row data
+        try:
+            row_data = json.loads(row_data_json)
+            logger.info(f"Row data loaded successfully with {len(row_data)} fields")
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing row data JSON: {str(e)}")
+            return {
+                "success": False,
+                "message": f"Viga andmete töötlemisel: {str(e)}"
+            }
+
+        # Verify the template file exists
+        if not os.path.exists(template_path):
+            return {
+                "success": False,
+                "message": f"Malli faili ei leitud: {template_path}"
+            }
+
+        # Get template file extension
+        _, ext = os.path.splitext(template_path)
+        ext = ext.lower()
+
+        # Determine the target file name for the generated document
+        # Try different variations of võlgnik field if available
+        volgnik_value = None
+        volgnik_keys = ['võlgnik', 'volgnik', 'VÕLGNIK', 'Võlgnik']
+        for key in volgnik_keys:
+            if key in row_data and row_data[key]:
+                volgnik_value = row_data[key]
+                break
+
+        # Create a file name based on template name and võlgnik or timestamp
+        template_name = os.path.basename(template_path)
+        base_name, _ = os.path.splitext(template_name)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if volgnik_value:
+            # Sanitize the võlgnik value for use in a filename
+            volgnik_value = re.sub(r'[\\/:*?"<>|]', '_', str(volgnik_value))
+            # Truncate if too long
+            if len(volgnik_value) > 30:
+                volgnik_value = volgnik_value[:30]
+            file_name = f"{base_name}_{volgnik_value}_{timestamp}{ext}"
+        else:
+            file_name = f"{base_name}_{timestamp}{ext}"
+
+        # Define the drafts directory
+        drafts_dir = r"C:\Taitemenetlus\uksikdokumendid\mustandid"
+
+        # Create the directory if it doesn't exist
+        if not os.path.exists(drafts_dir):
+            os.makedirs(drafts_dir, exist_ok=True)
+            logger.info(f"Created drafts directory: {drafts_dir}")
+
+        # Define the output file path
+        output_path = os.path.join(drafts_dir, file_name)
+
+        # Process the document based on its type
+        success = False
+
+        if ext in ['.docx']:
+            # Handle DOCX files using python-docx
+            success = await process_docx_template(template_path, output_path, row_data)
+        elif ext in ['.doc', '.rtf']:
+            # Handle DOC/RTF files using COM automation
+            success = await process_doc_template(template_path, output_path, row_data)
+        elif ext in ['.txt', '.html', '.xml']:
+            # Handle text-based files
+            success = await process_text_template(template_path, output_path, row_data)
+        else:
+            return {
+                "success": False,
+                "message": f"Ebatoetatud failivorming: {ext}"
+            }
+
+        if success:
+            logger.info(f"Document generated successfully: {output_path}")
+            return {
+                "success": True,
+                "message": "Dokument edukalt loodud",
+                "file_path": output_path,
+                "file_name": file_name
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Dokumendi loomine ebaõnnestus. Kontrollige logisid."
+            }
+
+    except Exception as e:
+        logger.exception(f"Error generating document: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Viga dokumendi loomisel: {str(e)}"
+        }
+
+
+async def process_docx_template(template_path, output_path, row_data):
+    """Process a DOCX template, replacing placeholders with row data values"""
+    try:
+        # Try to import docx
+        try:
+            import docx
+        except ImportError:
+            logger.error("python-docx library not installed. Falling back to COM automation.")
+            return await process_doc_template(template_path, output_path, row_data)
+
+        # Load the document
+        doc = docx.Document(template_path)
+
+        # Track if any replacements were made
+        replacements_made = False
+
+        # Replace placeholders in paragraphs
+        for paragraph in doc.paragraphs:
+            if replace_text_in_paragraph(paragraph, row_data):
+                replacements_made = True
+
+        # Replace placeholders in tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        if replace_text_in_paragraph(paragraph, row_data):
+                            replacements_made = True
+
+        # Replace placeholders in headers and footers
+        for section in doc.sections:
+            # Process header
+            for paragraph in section.header.paragraphs:
+                if replace_text_in_paragraph(paragraph, row_data):
+                    replacements_made = True
+
+            # Process footer
+            for paragraph in section.footer.paragraphs:
+                if replace_text_in_paragraph(paragraph, row_data):
+                    replacements_made = True
+
+        # Save the document
+        doc.save(output_path)
+
+        logger.info(f"DOCX document processed with {'replacements' if replacements_made else 'no replacements'}")
+        return True
+
+    except Exception as e:
+        logger.exception(f"Error processing DOCX template: {str(e)}")
+        # Try the COM automation as a fallback
+        logger.info("Attempting to fall back to COM automation...")
+        return await process_doc_template(template_path, output_path, row_data)
+
+
+def replace_text_in_paragraph(paragraph, row_data):
+    """Replace all placeholders in a paragraph with values from row_data. Returns True if replacements were made."""
+    # Find all placeholders like <column_name>
+    placeholder_pattern = r'<([^>]+)>'
+
+    # Get the paragraph text
+    text = paragraph.text
+
+    # Find all matches
+    matches = re.findall(placeholder_pattern, text)
+
+    # If no matches, return early
+    if not matches:
+        return False
+
+    # Create a new text with replacements
+    new_text = text
+    replacements_made = False
+
+    # Replace each match with the corresponding value from row_data
+    for match in matches:
+        placeholder = f"<{match}>"
+
+        # Check if the column exists in row_data (case-insensitive search)
+        value = None
+        match_lower = match.lower()
+        for key, val in row_data.items():
+            if key.lower() == match_lower and val is not None:
+                value = str(val)
+                break
+
+        # If value found, replace it
+        if value is not None:
+            new_text = new_text.replace(placeholder, value)
+            replacements_made = True
+
+    # Set the new text back to the paragraph if changes were made
+    if replacements_made:
+        paragraph.text = new_text
+
+    return replacements_made
+
+
+async def process_doc_template(template_path, output_path, row_data):
+    """Process a DOC/RTF template using COM automation"""
+    try:
+        # First, copy the template to the output path
+        import shutil
+        shutil.copy2(template_path, output_path)
+
+        # Try to use Word COM automation
+        try:
+            import win32com.client
+        except ImportError:
+            logger.error("pywin32 not installed. Cannot process DOC/RTF files.")
+            return False
+
+        logger.info("Using COM automation to process document")
+        word = None
+        doc = None
+
+        try:
+            word = win32com.client.Dispatch("Word.Application")
+            word.Visible = False
+
+            # Open the copied document
+            doc = word.Documents.Open(output_path)
+
+            # Find and replace placeholders
+            replacements_count = 0
+            for key, value in row_data.items():
+                placeholder = f"<{key}>"
+                if value is not None:
+                    # Replace placeholder with value
+                    find_obj = word.Selection.Find
+                    find_obj.ClearFormatting()
+                    find_obj.Replacement.ClearFormatting()
+                    find_obj.Text = placeholder
+                    find_obj.Replacement.Text = str(value)
+                    find_obj.Forward = True
+                    find_obj.Wrap = 1  # wdFindContinue
+                    find_obj.Format = False
+                    find_obj.MatchCase = False
+                    find_obj.MatchWholeWord = False
+                    find_obj.MatchWildcards = False
+                    find_obj.MatchSoundsLike = False
+                    find_obj.MatchAllWordForms = False
+
+                    # Execute the replacement
+                    replacements_in_this_run = 0
+                    while find_obj.Execute(FindText=placeholder,
+                                           ReplaceWith=str(value),
+                                           Replace=1):  # wdReplaceOne
+                        replacements_in_this_run += 1
+                        replacements_count += 1
+
+            logger.info(f"COM automation: {replacements_count} replacements made")
+
+            # Save and close
+            doc.Save()
+            return True
+
+        finally:
+            # Clean up - properly close Word to avoid orphaned processes
+            if doc:
+                try:
+                    doc.Close(SaveChanges=True)
+                except Exception as e:
+                    logger.error(f"Error closing document: {str(e)}")
+
+            if word:
+                try:
+                    word.Quit()
+                except Exception as e:
+                    logger.error(f"Error quitting Word: {str(e)}")
+
+    except Exception as e:
+        logger.exception(f"Error processing DOC template: {str(e)}")
+        return False
+
+
+async def process_text_template(template_path, output_path, row_data):
+    """Process a text-based template file"""
+    try:
+        # Read the template
+        with open(template_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+
+        # Replace placeholders
+        placeholder_pattern = r'<([^>]+)>'
+        matches = re.findall(placeholder_pattern, content)
+
+        replacements_made = False
+        for match in matches:
+            placeholder = f"<{match}>"
+
+            # Check if the column exists in row_data (case-insensitive search)
+            value = None
+            match_lower = match.lower()
+            for key, val in row_data.items():
+                if key.lower() == match_lower and val is not None:
+                    value = str(val)
+                    break
+
+            # If value found, replace it
+            if value is not None:
+                content = content.replace(placeholder, value)
+                replacements_made = True
+
+        # Write the output
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        logger.info(f"Text document processed with {'replacements' if replacements_made else 'no replacements'}")
+        return True
+
+    except Exception as e:
+        logger.exception(f"Error processing text template: {str(e)}")
+        return False

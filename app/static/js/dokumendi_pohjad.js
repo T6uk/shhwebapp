@@ -1,15 +1,16 @@
 // Document templates and drafts functionality
-$(document).ready(function() {
+$(document).ready(function () {
     // Track current view mode - default to templates
     let viewingDrafts = false;
     let selectedTemplate = null;
+    let selectedTemplateInfo = null;
 
     // Document directories
     const templatesDir = "C:\\Taitemenetlus\\uksikdokumendid\\dokumendipohjad";
     const draftsDir = "C:\\Taitemenetlus\\uksikdokumendid\\mustandid";
 
     // Set up click handler for the "Mustandid" button - implement toggle
-    $("#drafts-btn").off('click').on('click', function() {
+    $("#drafts-btn").off('click').on('click', function () {
         console.log("Drafts button clicked, current state:", viewingDrafts);
 
         // Toggle between drafts and templates
@@ -33,7 +34,7 @@ $(document).ready(function() {
     });
 
     // Handler for "Koosta PDF" button
-    $("#create-pdf-btn").off('click').on('click', function() {
+    $("#create-pdf-btn").off('click').on('click', function () {
         console.log("Create PDF button clicked");
 
         // Check if a template is selected
@@ -59,7 +60,7 @@ $(document).ready(function() {
             data: {
                 source_path: selectedTemplate
             },
-            success: function(response) {
+            success: function (response) {
                 // Hide loading notification
                 loadingToast.hide();
 
@@ -78,7 +79,7 @@ $(document).ready(function() {
                     showToast("Viga", response.message || "PDF loomine ebaõnnestus", "error");
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 // Hide loading notification
                 loadingToast.hide();
 
@@ -89,7 +90,7 @@ $(document).ready(function() {
     });
 
     // Handler for "Redigeeri dokumenti" button
-    $("#edit-doc-btn").off('click').on('click', function() {
+    $("#edit-doc-btn").off('click').on('click', function () {
         console.log("Edit document button clicked");
 
         // Check if a template is selected
@@ -105,7 +106,7 @@ $(document).ready(function() {
             data: {
                 file_path: selectedTemplate
             },
-            success: function(response) {
+            success: function (response) {
                 console.log("Open for editing response:", response);
 
                 if (response.success) {
@@ -114,7 +115,7 @@ $(document).ready(function() {
                     showToast("Viga", response.message || "Dokumendi avamine ebaõnnestus", "error");
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error("Error opening document:", error);
                 showToast("Viga", xhr.responseJSON?.message || "Dokumendi avamine ebaõnnestus", "error");
             }
@@ -122,7 +123,7 @@ $(document).ready(function() {
     });
 
     // Handler for "Open templates folder" button
-    $("#open-templates-folder-btn").off('click').on('click', function() {
+    $("#open-templates-folder-btn").off('click').on('click', function () {
         // Determine which folder to open based on current view
         const folderPath = viewingDrafts ? draftsDir : templatesDir;
 
@@ -130,7 +131,7 @@ $(document).ready(function() {
         $.ajax({
             url: `/api/v1/table/open-folder/${encodeURIComponent(folderPath)}`,
             method: "GET",
-            success: function(response) {
+            success: function (response) {
                 console.log("Open folder response:", response);
                 if (response.success) {
                     showToast("Kaust avatud", `${viewingDrafts ? "Mustandite" : "Mallide"} kaust avati edukalt`, "success");
@@ -138,7 +139,7 @@ $(document).ready(function() {
                     showToast("Viga", response.message || "Kausta avamine ebaõnnestus", "error");
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error("Error opening folder:", error);
                 showToast("Viga", "Kausta avamine ebaõnnestus", "error");
             }
@@ -165,12 +166,21 @@ $(document).ready(function() {
 
         // Reset selected template
         selectedTemplate = null;
+        selectedTemplateInfo = null;
+
+        // Update status display
+        updateTemplateStatusDisplay();
+
+        // Disable the create document button until a template is selected
+        $("#create-doc-btn").addClass("opacity-50 cursor-not-allowed")
+                           .removeClass("bg-green-500 hover:bg-green-600")
+                           .prop("disabled", true);
 
         // Call API to get document templates
         $.ajax({
             url: "/api/v1/table/document-templates",
             method: "GET",
-            success: function(response) {
+            success: function (response) {
                 console.log("Document templates response:", response);
 
                 if (response.success) {
@@ -190,7 +200,7 @@ $(document).ready(function() {
                     $("#templates-error-message").text(response.error || "Proovige lehte värskendada");
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error("Error loading document templates:", error);
 
                 // Show error state
@@ -221,12 +231,21 @@ $(document).ready(function() {
 
         // Reset selected template
         selectedTemplate = null;
+        selectedTemplateInfo = null;
+
+        // Update status display
+        updateTemplateStatusDisplay();
+
+        // Disable the create document button until a template is selected
+        $("#create-doc-btn").addClass("opacity-50 cursor-not-allowed")
+                           .removeClass("bg-green-500 hover:bg-green-600")
+                           .prop("disabled", true);
 
         // Call API to get document drafts
         $.ajax({
             url: "/api/v1/table/document-drafts",
             method: "GET",
-            success: function(response) {
+            success: function (response) {
                 console.log("Document drafts response:", response);
 
                 if (response.success) {
@@ -248,7 +267,7 @@ $(document).ready(function() {
                     $("#templates-error-message").text(response.error || "Proovige lehte värskendada");
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error("Error loading document drafts:", error);
 
                 // Show error state
@@ -263,6 +282,15 @@ $(document).ready(function() {
     function renderTemplatesTable(items) {
         let tableHtml = '';
 
+        // Filter out any temporary files
+        items = items.filter(item => {
+            // Filter out any files that look like temporary (~ or ~ prefix, tmp extension, etc.)
+            return !item.name.startsWith('~') &&
+                !item.name.endsWith('.tmp') &&
+                !item.name.includes('~') &&
+                !item.name.match(/^\~\$/);
+        });
+
         items.forEach(item => {
             // Determine icon based on file extension
             let icon = getFileIcon(item.extension);
@@ -270,70 +298,137 @@ $(document).ready(function() {
             // Determine type display name
             let typeDisplay = getFileTypeDisplay(item.extension);
 
+            // Apply a specific class if this item is selected
+            const isSelected = selectedTemplate === item.path;
+            const rowClass = isSelected ?
+                "bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800" :
+                "hover:bg-gray-50 dark:hover:bg-gray-800";
+
             tableHtml += `
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer template-row" data-path="${escapeHtml(item.path)}">
-                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
-                        ${icon}
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                        ${escapeHtml(item.name)}
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        ${escapeHtml(typeDisplay)}
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        ${escapeHtml(item.formatted_size)}
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        ${escapeHtml(item.modified)}
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        <div class="flex space-x-2">
-                            <button class="text-blue-500 hover:text-blue-700 dark:text-blue-400 use-template-btn" title="Kasuta" data-path="${escapeHtml(item.path)}">
-                                <i class="fas fa-file-alt"></i>
-                            </button>
-                            <button class="text-green-500 hover:text-green-700 dark:text-green-400 preview-template-btn" title="Eelvaade" data-path="${escapeHtml(item.path)}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            <tr class="cursor-pointer template-row ${rowClass}" data-path="${escapeHtml(item.path)}" data-name="${escapeHtml(item.name)}">
+                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                    ${icon}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm font-medium ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-900 dark:text-gray-100"}">
+                    ${escapeHtml(item.name)}
+                    ${isSelected ? '<i class="fas fa-check text-green-500 ml-2"></i>' : ''}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    ${escapeHtml(typeDisplay)}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    ${escapeHtml(item.formatted_size)}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    ${escapeHtml(item.modified)}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <div class="flex space-x-2">
+                        <button class="text-blue-500 hover:text-blue-700 dark:text-blue-400 use-template-btn" title="Kasuta" data-path="${escapeHtml(item.path)}" data-name="${escapeHtml(item.name)}">
+                            <i class="fas fa-file-alt"></i>
+                        </button>
+                        <button class="text-green-500 hover:text-green-700 dark:text-green-400 preview-template-btn" title="Eelvaade" data-path="${escapeHtml(item.path)}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
         });
 
         // Update table body
         $("#templates-table-body").html(tableHtml);
 
         // Set up click handlers for template rows
-        $(".template-row").on('click', function() {
+        $(".template-row").on('click', function () {
             const path = $(this).data('path');
-            selectTemplate(path);
+            const name = $(this).data('name');
+            selectTemplate(path, name);
         });
 
         // Set up action button click handlers
-        $(".use-template-btn").on('click', function(e) {
+        $(".use-template-btn").on('click', function (e) {
             e.stopPropagation(); // Prevent row click
             const path = $(this).data('path');
-            selectTemplate(path);
+            const name = $(this).data('name');
+            selectTemplate(path, name);
         });
 
-        $(".preview-template-btn").on('click', function(e) {
+        $(".preview-template-btn").on('click', function (e) {
             e.stopPropagation(); // Prevent row click
             const path = $(this).data('path');
             previewTemplate(path);
         });
+
+        // Add status display at the footer of the modal
+        updateTemplateStatusDisplay();
+    }
+
+    // Function to update the template status display
+    function updateTemplateStatusDisplay() {
+        // Add or update the status display
+        if (!$("#template-status-display").length) {
+            $(".modal-content").append(`
+                <div id="template-status-display" class="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-2 text-xs">
+                    <div class="selected-template-info"></div>
+                </div>
+            `);
+        }
+
+        // Update the content
+        if (selectedTemplateInfo) {
+            $("#template-status-display .selected-template-info").html(`
+                <div class="flex items-center">
+                    <span class="font-semibold">Valitud mall:</span>
+                    <span class="ml-2">${escapeHtml(selectedTemplateInfo.name)}</span>
+                </div>
+            `);
+            $("#template-status-display").removeClass("hidden");
+        } else {
+            $("#template-status-display .selected-template-info").html(`
+                <div class="flex items-center text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <span>Palun valige dokumendimall</span>
+                </div>
+            `);
+            $("#template-status-display").removeClass("hidden");
+        }
     }
 
     // Function to select a template
-    function selectTemplate(path) {
+    function selectTemplate(path, name) {
         // Highlight the selected template row
-        $(".template-row").removeClass("bg-blue-50 dark:bg-blue-900");
-        $(`.template-row[data-path="${escapeHtmlAttr(path)}"]`).addClass("bg-blue-50 dark:bg-blue-900");
+        $(".template-row").removeClass("bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800")
+            .addClass("hover:bg-gray-50 dark:hover:bg-gray-800");
+        $(".template-row td:nth-child(2)").removeClass("text-blue-600 dark:text-blue-400")
+            .addClass("text-gray-900 dark:text-gray-100");
+        $(".template-row td:nth-child(2) i.fa-check").remove();
 
-        // Store selected template path for use with action buttons
+        // Add highlighting to the selected row
+        const selectedRow = $(`.template-row[data-path="${escapeHtmlAttr(path)}"]`);
+        selectedRow.removeClass("hover:bg-gray-50 dark:hover:bg-gray-800")
+            .addClass("bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800");
+        selectedRow.find("td:nth-child(2)")
+            .removeClass("text-gray-900 dark:text-gray-100")
+            .addClass("text-blue-600 dark:text-blue-400")
+            .append('<i class="fas fa-check text-green-500 ml-2"></i>');
+
+        // Store selected template path and name for use with action buttons
         selectedTemplate = path;
+        selectedTemplateInfo = {
+            path: path,
+            name: name
+        };
 
-        console.log("Selected template:", path);
+        console.log("Selected template:", path, name);
+
+        // Update status display
+        updateTemplateStatusDisplay();
+
+        // Enable the create document button
+        $("#create-doc-btn").removeClass("opacity-50 cursor-not-allowed")
+            .addClass("bg-green-500 hover:bg-green-600")
+            .prop("disabled", false);
     }
 
     // Function to preview a template
@@ -346,7 +441,7 @@ $(document).ready(function() {
                 data: {
                     file_path: path
                 },
-                success: function(response) {
+                success: function (response) {
                     console.log("Preview document response:", response);
 
                     if (response.success) {
@@ -355,7 +450,7 @@ $(document).ready(function() {
                         showToast("Viga", response.message || "Dokumendi avamine ebaõnnestus", "error");
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.error("Error previewing document:", error);
                     showToast("Viga", xhr.responseJSON?.message || "Dokumendi avamine ebaõnnestus", "error");
                 }
@@ -422,7 +517,7 @@ $(document).ready(function() {
 
     // Enhanced showToast function with duration control if it doesn't exist already
     if (typeof showToast !== 'function') {
-        window.showToast = function(title, message, type, duration = 3000) {
+        window.showToast = function (title, message, type, duration = 3000) {
             const toast = $(`
                 <div class="notification ${type} mb-2">
                     <div class="flex items-center">
@@ -446,7 +541,7 @@ $(document).ready(function() {
             setTimeout(() => toast.addClass('show'), 10);
 
             // Set up close button
-            toast.find('.notification-close').on('click', function() {
+            toast.find('.notification-close').on('click', function () {
                 closeToast(toast);
             });
 
@@ -460,7 +555,7 @@ $(document).ready(function() {
             toast.data('timeout-id', timeoutId);
 
             // Add hide method to the toast
-            toast.hide = function() {
+            toast.hide = function () {
                 closeToast(toast);
             };
 
@@ -479,7 +574,7 @@ $(document).ready(function() {
     }
 
     // Hook into the create-document-btn from the Virtuaaltoimik modal
-    $("#create-document-btn").off('click').on('click', function() {
+    $("#create-document-btn").off('click').on('click', function () {
         console.log("Create document button clicked from virtuaaltoimik");
 
         // Show document templates modal and load templates
@@ -497,17 +592,130 @@ $(document).ready(function() {
     });
 
     // Document templates modal close handlers
-    $("#close-document-templates-modal, #exit-templates-btn").on('click', function() {
+    $("#close-document-templates-modal, #exit-templates-btn").on('click', function () {
         $("#document-templates-modal").addClass("hidden");
     });
 
     // Close modal when clicking backdrop
-    $("#document-templates-backdrop").on('click', function() {
+    $("#document-templates-backdrop").on('click', function () {
         $("#document-templates-modal").addClass("hidden");
     });
 
     // Prevent closing when clicking modal content
-    $("#document-templates-modal .modal-content").on('click', function(e) {
+    $("#document-templates-modal .modal-content").on('click', function (e) {
         e.stopPropagation();
     });
+
+    // Handler for "Koosta dokument" button
+    $("#create-doc-btn").off('click').on('click', function () {
+        console.log("Create document button clicked");
+
+        // Check if a template is selected
+        if (!selectedTemplate) {
+            showToast("Viga", "Palun valige dokumendipõhi enne dokumendi koostamist", "error");
+            return;
+        }
+
+        // Get selected row from the main grid
+        let selectedRows = [];
+        try {
+            // Check if gridApi is accessible (it should be a global variable from app.js)
+            if (typeof gridApi !== 'undefined' && gridApi) {
+                selectedRows = gridApi.getSelectedRows();
+            } else {
+                console.error("gridApi is not accessible");
+            }
+        } catch (e) {
+            console.error("Error accessing gridApi:", e);
+        }
+
+        if (!selectedRows || selectedRows.length === 0) {
+            showToast("Viga", "Palun valige andmete tabelist rida enne dokumendi koostamist", "error");
+            return;
+        }
+
+        // Get the first selected row data
+        const rowData = selectedRows[0];
+        console.log("Selected row data for document:", rowData);
+
+        // Check if 'võlgnik' column exists in any form
+        let hasVolgnik = rowData.hasOwnProperty('võlgnik') ||
+            rowData.hasOwnProperty('Võlgnik') ||
+            rowData.hasOwnProperty('VÕLGNIK');
+
+        if (!hasVolgnik) {
+            console.warn("Warning: No 'võlgnik' column found in selected row. Generated filename might be generic.");
+        }
+
+        // Show loading notification
+        const loadingToast = showToast("Dokumendi loomine", "Koostan dokumenti...", "info", -1);
+
+        // Call API to generate document
+        $.ajax({
+            url: "/api/v1/table/generate-document",
+            method: "POST",
+            data: {
+                template_path: selectedTemplate,
+                row_data_json: JSON.stringify(rowData)
+            },
+            success: function (response) {
+                // Hide loading notification
+                loadingToast.hide();
+
+                console.log("Document generation response:", response);
+
+                if (response.success) {
+                    showToast("Dokument loodud", `Dokument "${response.file_name}" on edukalt loodud mustandite kausta`, "success");
+
+                    // If viewing drafts, refresh to show the new document
+                    if (viewingDrafts) {
+                        loadDocumentDrafts();
+                    }
+
+                    // Ask if user wants to open the document right away
+                    setTimeout(() => {
+                        if (confirm("Kas soovite loodud dokumenti kohe avada?")) {
+                            openCreatedDocument(response.file_path);
+                        }
+                    }, 500);
+                } else {
+                    showToast("Viga", response.message || "Dokumendi loomine ebaõnnestus", "error");
+                }
+            },
+            error: function (xhr, status, error) {
+                // Hide loading notification
+                loadingToast.hide();
+
+                console.error("Error creating document:", error);
+                showToast("Viga", xhr.responseJSON?.message || "Dokumendi loomine ebaõnnestus", "error");
+            }
+        });
+    });
+
+    // Initialize the button state
+    $("#create-doc-btn").addClass("opacity-50 cursor-not-allowed").prop("disabled", true);
+
+    // Function to open the newly created document
+    function openCreatedDocument(filePath) {
+        $.ajax({
+            url: "/api/v1/table/open-for-editing",
+            method: "POST",
+            data: {
+                file_path: filePath
+            },
+            success: function (response) {
+                console.log("Open document response:", response);
+                if (!response.success) {
+                    showToast("Viga", response.message || "Dokumendi avamine ebaõnnestus", "error");
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Error opening document:", error);
+                showToast("Viga", xhr.responseJSON?.message || "Dokumendi avamine ebaõnnestus", "error");
+            }
+        });
+    }
+
+    // Run on page load
+    updateTemplateStatusDisplay();
 });
