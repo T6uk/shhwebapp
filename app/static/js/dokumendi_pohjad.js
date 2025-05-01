@@ -1,7 +1,11 @@
 // Document templates and drafts functionality
 $(document).ready(function () {
+    // Clean up any template status displays from other modals
+    $("#virtuaaltoimik-modal #template-status-display, #column-modal #template-status-display, #save-filter-modal #template-status-display").remove();
+
     // Track current view mode - default to templates
     let viewingDrafts = false;
+    // Track current view mode - default to templates
     let selectedTemplate = null;
     let selectedTemplateInfo = null;
 
@@ -377,32 +381,32 @@ $(document).ready(function () {
 
     // Function to update the template status display
     function updateTemplateStatusDisplay() {
-        // Add or update the status display
-        if (!$("#template-status-display").length) {
-            $(".modal-content").append(`
-                <div id="template-status-display" class="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-2 text-xs">
-                    <div class="selected-template-info"></div>
-                </div>
-            `);
+        // Add or update the status display - target only the document templates modal
+        if (!$("#document-templates-modal #template-status-display").length) {
+            $("#document-templates-modal .modal-content").append(`
+            <div id="template-status-display" class="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-2 text-xs">
+                <div class="selected-template-info"></div>
+            </div>
+        `);
         }
 
         // Update the content
         if (selectedTemplateInfo) {
-            $("#template-status-display .selected-template-info").html(`
-                <div class="flex items-center">
-                    <span class="font-semibold">Valitud mall:</span>
-                    <span class="ml-2">${escapeHtml(selectedTemplateInfo.name)}</span>
-                </div>
-            `);
-            $("#template-status-display").removeClass("hidden");
+            $("#document-templates-modal #template-status-display .selected-template-info").html(`
+            <div class="flex items-center">
+                <span class="font-semibold">Valitud mall:</span>
+                <span class="ml-2">${escapeHtml(selectedTemplateInfo.name)}</span>
+            </div>
+        `);
+            $("#document-templates-modal #template-status-display").removeClass("hidden");
         } else {
-            $("#template-status-display .selected-template-info").html(`
-                <div class="flex items-center text-gray-500">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    <span>Palun valige dokumendimall</span>
-                </div>
-            `);
-            $("#template-status-display").removeClass("hidden");
+            $("#document-templates-modal #template-status-display .selected-template-info").html(`
+            <div class="flex items-center text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                <span>Palun valige dokumendimall</span>
+            </div>
+        `);
+            $("#document-templates-modal #template-status-display").removeClass("hidden");
         }
     }
 
