@@ -1,410 +1,506 @@
 // app/static/js/modules/grid.js
-// AG Grid functionality
+// AG Grid specific functionality
 
-// Get columns from the API
-function getColumns() {
-    $("#loading-overlay").show();
-    $("#status").text("Laadimine...");
+(function() {
+    // Local references to global state
+    const state = window.appState;
+    const funcs = window.appFunctions;
 
-    $.ajax({
-        url: "/api/v1/table/columns",
-        method: "GET",
-        dataType: "json",
-        success: function(response) {
-            if (response && response.columns && response.columns.length > 0) {
-                // Process column data for AG Grid
-                AppState.columnDefs = response.columns.map(function(col) {
-                    // Initialize as visible in our tracking
-                    AppState.columnVisibility[col.field] = true;
+    // Get filter parameters based on column type
+    function getFilterParams(type) {
+        if (type === 'integer' || type === 'numeric' || type === 'double precision' ||
+            type === 'real' || type === 'decimal') {
+            return {
+                filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+                maxNumConditions: 1
+            };
+        } else if (type === 'date' || type === 'timestamp' || type === 'timestamp with time zone') {
+            return {
+                filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+                comparator: dateComparator,
+                maxNumConditions: 1
+            };
+        } else {
+            return {
+                filterOptions: ['contains', 'equals', 'startsWith', 'endsWith'],
+                maxNumConditions: 1,
+                suppressAndOrCondition: true
+            };
+        }
+    }
 
-                    return {
-                        headerName: col.title || col.field,
-                        field: col.field,
-                        sortable: true,
-                        filter: true,
-                        resizable: true,
-                        // Set minimum width to improve rendering performance
-                        minWidth: 100,
-                        // Choose appropriate filters based on data type
-                        filterParams: getFilterParams(col.type),
-                        // Add tooltips for cell values
-                        tooltipField: col.field
-                    };
+    // Date comparator for filtering
+    function dateComparator(filterDate, cellValue) {
+        if (!cellValue) return -1;
+        const cellDate = new Date(cellValue);
+        if (cellDate < filterDate) return -1;
+        if (cellDate > filterDate) return 1;
+        return 0;
+    }
+
+    // Generate quick links for columns
+    function generateQuickLinks() {
+        if (!state.columnDefs || state.columnDefs.length === 0) return;
+
+        const quickLinksContainer = $("#column-quick-links");
+        quickLinksContainer.empty();
+
+        // Add all columns as quick links (or limit to a reasonable number)
+        const maxLinks = Math.min(24, state.columnDefs.length); // Grid layout will organize these
+        for (let i = 0; i < maxLinks; i++) {
+            const column = state.columnDefs[i];
+            const linkElement = $("<div>")
+                .addClass("quick-link")
+                .text(column.headerName)
+                .attr("data-field", column.field)
+                .click(function() {
+                    scrollToColumn(column.field);
+                    $("#links-dropdown-menu").removeClass("show");
                 });
 
-                // Generate quick links
-                generateQuickLinks();
-
-                // Initialize AG Grid
-                initGrid();
-            } else {
-                $("#status").text("Viga: Veergude andmeid ei saadud");
-                $("#loading-overlay").hide();
-            }
-        },
-        error: function(xhr, status, error) {
-            $("#status").text("Viga: " + error);
-            $("#loading-overlay").hide();
+            quickLinksContainer.append(linkElement);
         }
-    });
-}
-
-// Get filter parameters based on column type
-function getFilterParams(type) {
-    if (type === 'integer' || type === 'numeric' || type === 'double precision' ||
-        type === 'real' || type === 'decimal') {
-        return {
-            filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-            maxNumConditions: 1
-        };
-    } else if (type === 'date' || type === 'timestamp' || type === 'timestamp with time zone') {
-        return {
-            filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-            comparator: dateComparator,
-            maxNumConditions: 1
-        };
-    } else {
-        return {
-            filterOptions: ['contains', 'equals', 'startsWith', 'endsWith'],
-            maxNumConditions: 1,
-            suppressAndOrCondition: true
-        };
     }
-}
 
-// Date comparator for filtering
-function dateComparator(filterDate, cellValue) {
-    if (!cellValue) return -1;
-    const cellDate = new Date(cellValue);
-    if (cellDate < filterDate) return -1;
-    if (cellDate > filterDate) return 1;
-    return 0;
-}
-
-// Initialize AG Grid
-function initGrid() {
-    // Create grid options
-    const gridOptions = {
-        defaultColDef: {
-            flex: 1,
-            minWidth: 100,
-            resizable: true,
-            sortable: true,
-            filter: true,
-            // Add these properties for editing
-            editable: function(params) {
-                // Only editable if in edit mode and the column is in editableColumns
-                return isEditMode && editableColumns.includes(params.colDef.field);
-            },
-            cellStyle: getCellStyle,
-            cellClass: function(params) {
-                // Add a custom class to editable cells based on current mode
-                if (isEditMode && editableColumns && editableColumns.includes(params.colDef.field)) {
-                    return 'editable-cell';
-                }
-                return '';
-            }
-        },
-        columnDefs: AppState.columnDefs,
-        rowModelType: 'infinite',  // Use infinite row model for virtualization
-        infiniteInitialRowCount: 1000, // Initial placeholder row count
-        cacheBlockSize: 100, // Number of rows to load at a time
-        maxBlocksInCache: 10, // Maximum number of blocks to keep loaded
-        enableCellTextSelection: true,
-        getRowId: function(params) {
-            // Use row index as ID - adjust if you have a better unique identifier
-            return params.data.id || params.node.rowIndex;
-        },
-        // Add tooltip component for better UX
-        tooltipShowDelay: 300,
-        tooltipInteraction: true,
-        // Improve performance with these settings
-        suppressAnimationFrame: true,
-        enableRangeSelection: false,
-        suppressMovableColumns: false,
-        suppressFieldDotNotation: true,
-        // Event handlers
-        onFirstDataRendered: onFirstDataRendered,
-        onGridReady: onGridReady,
-        onFilterChanged: onFilterChanged,
-        onSortChanged: onSortChanged,
-        onCellValueChanged: onCellValueChanged,
-        rowSelection: 'multiple',
-        suppressRowHoverHighlight: false,
-        rowHighlightClass: 'ag-row-highlight',
-    };
-
-    // Create the grid
-    new agGrid.Grid(document.getElementById('data-table'), gridOptions);
-}
-
-// Handle grid ready event
-function onGridReady(params) {
-    AppState.gridApi = params.api;
-
-    // Set a datasource for infinite scrolling
-    const dataSource = {
-        getRows: function(params) {
-            console.log('AG Grid requesting rows:', params.startRow, 'to', params.endRow);
-
-            // Show loading indicator for initial load
-            if (params.startRow === 0) {
-                $("#loading-overlay").show();
-            } else {
-                // Show mini loading indicator for subsequent loads
-                $("#mini-loading-indicator").removeClass("hidden");
-            }
-
-            // Build query parameters
-            const queryParams = {
-                start_row: params.startRow,
-                end_row: params.endRow
-            };
-
-            // Add sorting if present
-            if (params.sortModel && params.sortModel.length > 0) {
-                queryParams.sort_field = params.sortModel[0].colId;
-                queryParams.sort_dir = params.sortModel[0].sort;
-                console.log('Adding sort:', queryParams.sort_field, queryParams.sort_dir);
-            }
-
-            // Add search term if present
-            if (AppState.searchTerm) {
-                queryParams.search = AppState.searchTerm;
-                console.log('Adding search term:', AppState.searchTerm);
-            }
-
-            // Add filters if present
-            if (params.filterModel && Object.keys(params.filterModel).length > 0) {
-                // Convert the filter model to a JSON string
-                queryParams.filter_model = JSON.stringify(params.filterModel);
-                console.log('Adding filter model:', queryParams.filter_model);
-            }
-
-            // Add timestamp to bust cache when refreshing
-            if (params.parentNode && params.parentNode.data && params.parentNode.data.timestamp) {
-                queryParams.timestamp = params.parentNode.data.timestamp;
-            }
-
-            $.ajax({
-                url: "/api/v1/table/data",
-                method: "GET",
-                data: queryParams,
-                dataType: "json",
-                success: function(response) {
-                    // Update status
-                    $("#status").text(response.rowCount + " kirjet" +
-                        (queryParams.filter_model ? " (filtreeritud)" : ""));
-
-                    // Check if we have more rows
-                    const lastRow = response.rowCount <= response.endRow ? response.rowCount : -1;
-
-                    // Provide the data to the grid
-                    params.successCallback(response.rowData, lastRow);
-
-                    // Hide loading indicators
-                    $("#loading-overlay").hide();
-                    $("#mini-loading-indicator").addClass("hidden");
+    // Initialize AG Grid
+    function initGrid() {
+        // Create grid options
+        const gridOptions = {
+            defaultColDef: {
+                flex: 1,
+                minWidth: 100,
+                resizable: true,
+                sortable: true,
+                filter: true,
+                // Add these properties for editing
+                editable: function(params) {
+                    // Only editable if in edit mode and the column is in editableColumns
+                    return state.isEditMode && state.editableColumns.includes(params.colDef.field);
                 },
-                error: function(xhr, status, error) {
-                    console.error("Error loading data:", error);
-                    console.error("Response:", xhr.responseText);
-                    $("#status").text("Viga: " + error);
-                    params.failCallback();
-                    $("#loading-overlay").hide();
-                    $("#mini-loading-indicator").addClass("hidden");
-
-                    // Show error toast
-                    showToast("Andmete laadimine ebaõnnestus", error, "error");
+                cellStyle: getCellStyle,
+                cellClass: function(params) {
+                    // Add a custom class to editable cells based on current mode
+                    if (state.isEditMode && state.editableColumns &&
+                        state.editableColumns.includes(params.colDef.field)) {
+                        return 'editable-cell';
+                    }
+                    return '';
                 }
-            });
-        }
-    };
+            },
+            columnDefs: state.columnDefs,
+            rowModelType: 'infinite',  // Use infinite row model for virtualization
+            infiniteInitialRowCount: 1000, // Initial placeholder row count
+            cacheBlockSize: 100, // Number of rows to load at a time
+            maxBlocksInCache: 10, // Maximum number of blocks to keep loaded
+            enableCellTextSelection: true,
+            getRowId: function(params) {
+                // Use row index as ID - adjust if you have a better unique identifier
+                return params.data.id || params.node.rowIndex;
+            },
+            // Add tooltip component for better UX
+            tooltipShowDelay: 300,
+            tooltipInteraction: true,
+            // Improve performance with these settings
+            suppressAnimationFrame: true,
+            enableRangeSelection: false,
+            suppressMovableColumns: false,
+            suppressFieldDotNotation: true,
+            // Event handlers
+            onFirstDataRendered: onFirstDataRendered,
+            onGridReady: onGridReady,
+            onFilterChanged: onFilterChanged,
+            onSortChanged: onSortChanged,
+            onCellValueChanged: onCellValueChanged,
+            rowSelection: 'multiple',
+            suppressRowHoverHighlight: false,
+            rowHighlightClass: 'ag-row-highlight',
+        };
 
-    // Set the datasource
-    AppState.gridApi.setDatasource(dataSource);
-
-    AppState.gridApi.addEventListener('filterChanged', function() {
-        setTimeout(updateActiveFiltersDisplay, 100);
-    });
-
-    // Fit columns to available width
-    setTimeout(function() {
-        AppState.gridApi.sizeColumnsToFit();
-    }, 100);
-
-    // Update theme if dark mode is active
-    if (AppState.isDarkMode) {
-        updateTheme();
+        // Create the grid
+        new agGrid.Grid(document.getElementById('data-table'), gridOptions);
     }
-}
 
-// Handle first data rendered
-function onFirstDataRendered(params) {
-    // Auto-size columns for better initial view
-    AppState.gridApi.autoSizeColumns();
-
-    // Size columns to fit the viewport after auto-sizing
-    setTimeout(function() {
-        AppState.gridApi.sizeColumnsToFit();
-    }, 200);
-}
-
-// Handle filter changes
-function onFilterChanged() {
-    // Update row count in status bar
-    const displayedRowCount = AppState.gridApi.getDisplayedRowCount();
-    $("#status").text(displayedRowCount + " kirjet (filtreeritud)");
-}
-
-// Handle sort changes
-function onSortChanged() {
-    // Refresh data with new sort order
-    AppState.gridApi.refreshInfiniteCache();
-}
-
-// Update font size for grid
-function updateFontSize() {
-    document.documentElement.style.setProperty('--ag-font-size', currentFontSize + 'px');
-    if (AppState.gridApi) {
-        AppState.gridApi.refreshCells({force: true});
+    // Cell value changed handler
+    function onCellValueChanged(params) {
+        // To be implemented with edit functionality
+        console.log("Cell value changed:", params);
     }
-}
 
-// Generate quick links for columns
-function generateQuickLinks() {
-    if (!AppState.columnDefs || AppState.columnDefs.length === 0) return;
-
-    const quickLinksContainer = $("#column-quick-links");
-    quickLinksContainer.empty();
-
-    // Add all columns as quick links (or limit to a reasonable number)
-    const maxLinks = Math.min(24, AppState.columnDefs.length); // Grid layout will organize these
-    for (let i = 0; i < maxLinks; i++) {
-        const column = AppState.columnDefs[i];
-        const linkElement = $("<div>")
-            .addClass("quick-link")
-            .text(column.headerName)
-            .attr("data-field", column.field)
-            .click(function() {
-                scrollToColumn(column.field);
-                $("#links-dropdown-menu").removeClass("show");
-            });
-
-        quickLinksContainer.append(linkElement);
+    // Get cell styling
+    function getCellStyle(params) {
+        // Add custom styling if needed
+        return null;
     }
-}
 
-// Scroll to a specific column
-function scrollToColumn(fieldName) {
-    if (!AppState.gridApi) return;
+    // Handle grid ready event
+    function onGridReady(params) {
+        state.gridApi = params.api;
 
-    // Get column instance
-    const column = AppState.gridApi.getColumnDef(fieldName);
-    if (column) {
-        // Ensure column is visible
-        AppState.gridApi.ensureColumnVisible(fieldName);
+        // Set a datasource for infinite scrolling
+        const dataSource = {
+            getRows: function(params) {
+                console.log('AG Grid requesting rows:', params.startRow, 'to', params.endRow);
 
-        // Optional: highlight the column briefly
-        AppState.gridApi.flashCells({
-            columns: [fieldName],
-            rowNodes: AppState.gridApi.getDisplayedRowAtIndex(0) ? [AppState.gridApi.getDisplayedRowAtIndex(0)] : []
+                // Show loading indicator for initial load
+                if (params.startRow === 0) {
+                    $("#loading-overlay").show();
+                } else {
+                    // Show mini loading indicator for subsequent loads
+                    $("#mini-loading-indicator").removeClass("hidden");
+                }
+
+                // Build query parameters
+                const queryParams = {
+                    start_row: params.startRow,
+                    end_row: params.endRow
+                };
+
+                // Add sorting if present
+                if (params.sortModel && params.sortModel.length > 0) {
+                    queryParams.sort_field = params.sortModel[0].colId;
+                    queryParams.sort_dir = params.sortModel[0].sort;
+                    console.log('Adding sort:', queryParams.sort_field, queryParams.sort_dir);
+                }
+
+                // Add search term if present
+                if (state.searchTerm) {
+                    queryParams.search = state.searchTerm;
+                    console.log('Adding search term:', state.searchTerm);
+                }
+
+                // Add filters if present
+                if (params.filterModel && Object.keys(params.filterModel).length > 0) {
+                    // Convert the filter model to a JSON string
+                    queryParams.filter_model = JSON.stringify(params.filterModel);
+                    console.log('Adding filter model:', queryParams.filter_model);
+                }
+
+                // Add timestamp to bust cache when refreshing
+                if (params.parentNode && params.parentNode.data && params.parentNode.data.timestamp) {
+                    queryParams.timestamp = params.parentNode.data.timestamp;
+                }
+
+                $.ajax({
+                    url: "/api/v1/table/data",
+                    method: "GET",
+                    data: queryParams,
+                    dataType: "json",
+                    success: function(response) {
+                        // Update status
+                        $("#status").text(response.rowCount + " kirjet" +
+                            (queryParams.filter_model ? " (filtreeritud)" : ""));
+
+                        // Check if we have more rows
+                        const lastRow = response.rowCount <= response.endRow ? response.rowCount : -1;
+
+                        // Provide the data to the grid
+                        params.successCallback(response.rowData, lastRow);
+
+                        // Hide loading indicators
+                        $("#loading-overlay").hide();
+                        $("#mini-loading-indicator").addClass("hidden");
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading data:", error);
+                        console.error("Response:", xhr.responseText);
+                        $("#status").text("Viga: " + error);
+                        params.failCallback();
+                        $("#loading-overlay").hide();
+                        $("#mini-loading-indicator").addClass("hidden");
+
+                        // Show error toast
+                        funcs.showToast("Andmete laadimine ebaõnnestus", error, "error");
+                    }
+                });
+            }
+        };
+
+        // Set the datasource
+        state.gridApi.setDatasource(dataSource);
+
+        state.gridApi.addEventListener('filterChanged', function() {
+            setTimeout(updateActiveFiltersDisplay, 100);
         });
+
+        // Fit columns to available width
+        setTimeout(function() {
+            state.gridApi.sizeColumnsToFit();
+        }, 100);
+
+        // Update theme if dark mode is active
+        if (state.isDarkMode) {
+            funcs.updateTheme();
+        }
     }
-}
 
-// Show column visibility modal
-function showColumnVisibilityModal() {
-    if (!AppState.columnDefs || AppState.columnDefs.length === 0) return;
+    // Update active filters display
+    function updateActiveFiltersDisplay() {
+        if (!state.gridApi) return;
 
-    // Build checkboxes for all columns
-    const container = $("#column-checkboxes");
-    container.empty();
+        const filterModel = state.gridApi.getFilterModel();
+        const filterCount = Object.keys(filterModel || {}).length;
 
-    AppState.columnDefs.forEach(function(col) {
-        const isVisible = AppState.columnVisibility[col.field];
+        // Show/hide active filters container
+        if (filterCount > 0) {
+            // Get active filters and display them
+            $("#active-filters").empty();
 
-        const checkbox = $(`
-            <div class="flex items-center">
-                <input type="checkbox" id="col-${col.field}"
-                    data-field="${col.field}"
-                    class="column-toggle mr-2"
-                    ${isVisible ? 'checked' : ''}>
-                <label for="col-${col.field}" class="text-sm">${col.headerName}</label>
-            </div>
+            for (const field in filterModel) {
+                const filter = filterModel[field];
+                const column = state.columnDefs.find(col => col.field === field);
+                const columnName = column ? column.headerName : field;
+
+                let filterText = "";
+                if (filter.type === 'contains') {
+                    filterText = `sisaldab "${filter.filter}"`;
+                } else if (filter.type === 'equals') {
+                    filterText = `= "${filter.filter}"`;
+                } else if (filter.type === 'notEqual') {
+                    filterText = `≠ "${filter.filter}"`;
+                } else if (filter.type === 'startsWith') {
+                    filterText = `algab "${filter.filter}"`;
+                } else if (filter.type === 'endsWith') {
+                    filterText = `lõpeb "${filter.filter}"`;
+                } else if (filter.type === 'blank') {
+                    filterText = 'on tühi';
+                } else if (filter.type === 'notBlank') {
+                    filterText = 'ei ole tühi';
+                } else if (filter.type === 'greaterThan') {
+                    filterText = `> ${filter.filter}`;
+                } else if (filter.type === 'greaterThanOrEqual') {
+                    filterText = `≥ ${filter.filter}`;
+                } else if (filter.type === 'lessThan') {
+                    filterText = `< ${filter.filter}`;
+                } else if (filter.type === 'lessThanOrEqual') {
+                    filterText = `≤ ${filter.filter}`;
+                } else if (filter.type === 'inRange') {
+                    const from = filter.filter.from !== null && filter.filter.from !== undefined ? filter.filter.from : "";
+                    const to = filter.filter.to !== null && filter.filter.to !== undefined ? filter.filter.to : "";
+                    filterText = `vahemikus ${from} - ${to}`;
+                }
+
+                const filterBadge = $(`
+                    <div class="filter-badge py-0.5 px-2 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 flex items-center">
+                        <span>${columnName}: ${filterText}</span>
+                        <button class="remove-filter-btn ml-1.5" data-field="${field}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `);
+
+                $("#active-filters").append(filterBadge);
+            }
+
+            $(".remove-filter-btn").click(function() {
+                const field = $(this).data('field');
+                state.gridApi.setFilterModel({...filterModel, [field]: null});
+            });
+
+            $("#active-filters-container").removeClass("hidden");
+        } else {
+            $("#active-filters-container").addClass("hidden");
+        }
+    }
+
+    // Handle first data rendered
+    function onFirstDataRendered(params) {
+        // Auto-size columns for better initial view
+        state.gridApi.autoSizeColumns();
+
+        // Size columns to fit the viewport after auto-sizing
+        setTimeout(function() {
+            state.gridApi.sizeColumnsToFit();
+        }, 200);
+    }
+
+    // Handle filter changes
+    function onFilterChanged() {
+        // Update row count in status bar
+        const displayedRowCount = state.gridApi.getDisplayedRowCount();
+        $("#status").text(displayedRowCount + " kirjet (filtreeritud)");
+
+        // Update active filters display
+        updateActiveFiltersDisplay();
+    }
+
+    // Handle sort changes
+    function onSortChanged() {
+        // Refresh data with new sort order
+        state.gridApi.refreshInfiniteCache();
+    }
+
+    // Export to Excel functionality
+    function exportToExcel() {
+        if (!state.gridApi) return;
+
+        const params = {
+            fileName: 'Suur_Andmetabel_Export.xlsx',
+            processCellCallback: function(params) {
+                // Clean up cell values if needed
+                return params.value;
+            }
+        };
+
+        state.gridApi.exportDataAsExcel(params);
+    }
+
+    // Export to PDF functionality (uses browser print with styling)
+    function exportToPDF() {
+        if (!state.gridApi) return;
+
+        // Create a hidden iframe to handle printing without affecting the current page
+        const printFrame = document.createElement('iframe');
+        printFrame.style.display = 'none';
+        document.body.appendChild(printFrame);
+
+        // Build a new document with just the table data
+        const doc = printFrame.contentWindow.document;
+        doc.open();
+
+        // Add necessary styles
+        doc.write(`
+            <!DOCTYPE html>
+            <html lang="ee">
+            <head>
+                <title>Suur Andmetabel - Eksport</title>
+                <style>
+                    body {
+                        font-family: 'Inter', sans-serif;
+                        color: #1e293b;
+                        margin: 20px;
+                    }
+                    h1 {
+                        font-size: 18px;
+                        margin-bottom: 10px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                    }
+                    th {
+                        background-color: #f1f5f9;
+                        padding: 8px;
+                        text-align: left;
+                        font-weight: 600;
+                        border-bottom: 2px solid #e2e8f0;
+                    }
+                    td {
+                        padding: 8px;
+                        border-bottom: 1px solid #e2e8f0;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f8fafc;
+                    }
+                    @media print {
+                        body {
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Suur Andmetabel - Eksporditud ${new Date().toLocaleString('et-EE')}</h1>
         `);
 
-        container.append(checkbox);
-    });
+        // Create table with visible columns and rows
+        doc.write('<table>');
 
-    // Show the modal
-    $("#column-modal").removeClass("hidden");
-}
+        // Table header
+        doc.write('<thead><tr>');
+        const visibleColumns = state.gridApi.getAllDisplayedColumns();
+        visibleColumns.forEach(column => {
+            const headerName = column.getColDef().headerName || column.getColDef().field;
+            doc.write(`<th>${headerName}</th>`);
+        });
+        doc.write('</tr></thead>');
 
-// Apply column visibility changes
-function applyColumnVisibility() {
-    if (!AppState.gridApi) return;
+        // Table body
+        doc.write('<tbody>');
+        state.gridApi.forEachNodeAfterFilterAndSort(rowNode => {
+            doc.write('<tr>');
+            visibleColumns.forEach(column => {
+                const field = column.getColDef().field;
+                const value = rowNode.data[field] || '';
+                doc.write(`<td>${value}</td>`);
+            });
+            doc.write('</tr>');
+        });
+        doc.write('</tbody></table>');
 
-    // Get checked/unchecked state from checkboxes
-    $(".column-toggle").each(function() {
-        const field = $(this).data('field');
-        const isVisible = $(this).prop('checked');
+        doc.write('</body></html>');
+        doc.close();
 
-        // Update local tracking
-        AppState.columnVisibility[field] = isVisible;
+        // Print the document
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
 
-        // Update AG Grid
-        AppState.gridApi.setColumnVisible(field, isVisible);
-    });
-}
-
-// Function to manually refresh data
-function refreshData() {
-    if (AppState.gridApi) {
-        // Show loading indicator
-        $("#mini-loading-indicator").removeClass("hidden");
-
-        // Add a timestamp to force cache bypass
-        const timestamp = new Date().getTime();
-        AppState.gridApi.refreshInfiniteCache({timestamp: timestamp});
-        console.log("Manual data refresh performed");
-
-        // Reset the refresh button
-        resetRefreshButton();
-
-        // Hide loading indicator after a short delay
-        setTimeout(function() {
-            $("#mini-loading-indicator").addClass("hidden");
-        }, 500);
+        // Remove the iframe after printing
+        setTimeout(() => {
+            document.body.removeChild(printFrame);
+        }, 1000);
     }
-}
 
-// Update status text
-function updateStatus() {
-    if (!AppState.gridApi) return;
+    // Apply column visibility changes
+    function applyColumnVisibility() {
+        if (!state.gridApi) return;
 
-    const displayedRowCount = AppState.gridApi.getDisplayedRowCount();
-    const totalRowCount = AppState.gridApi.getInfiniteRowCount();
+        // Get checked/unchecked state from checkboxes
+        $(".column-toggle").each(function() {
+            const field = $(this).data('field');
+            const isVisible = $(this).prop('checked');
 
-    const filterModel = AppState.gridApi.getFilterModel();
-    const isFiltered = filterModel && Object.keys(filterModel).length > 0;
+            // Update local tracking
+            state.columnVisibility[field] = isVisible;
 
-    $("#status").text(isFiltered ?
-        `Filtreeritud: ${displayedRowCount} kirjet ${totalRowCount ? 'kokku ' + totalRowCount : ''}` :
-        `${displayedRowCount} kirjet`);
-}
+            // Update AG Grid
+            state.gridApi.setColumnVisible(field, isVisible);
+        });
+    }
 
-// Export functions for other modules
-window.getColumns = getColumns;
-window.initGrid = initGrid;
-window.onGridReady = onGridReady;
-window.onFirstDataRendered = onFirstDataRendered;
-window.onFilterChanged = onFilterChanged;
-window.onSortChanged = onSortChanged;
-window.updateFontSize = updateFontSize;
-window.generateQuickLinks = generateQuickLinks;
-window.scrollToColumn = scrollToColumn;
-window.showColumnVisibilityModal = showColumnVisibilityModal;
-window.applyColumnVisibility = applyColumnVisibility;
-window.refreshData = refreshData;
-window.updateStatus = updateStatus;
+    // Update status text
+    function updateStatus() {
+        if (!state.gridApi) return;
+
+        const displayedRowCount = state.gridApi.getDisplayedRowCount();
+        const totalRowCount = state.gridApi.getInfiniteRowCount();
+
+        const filterModel = state.gridApi.getFilterModel();
+        const isFiltered = filterModel && Object.keys(filterModel).length > 0;
+
+        $("#status").text(isFiltered ?
+            `Filtreeritud: ${displayedRowCount} kirjet ${totalRowCount ? 'kokku ' + totalRowCount : ''}` :
+            `${displayedRowCount} kirjet`);
+    }
+
+    // Scroll to a specific column
+    function scrollToColumn(fieldName) {
+        if (!state.gridApi) return;
+
+        // Get column instance
+        const column = state.gridApi.getColumnDef(fieldName);
+        if (column) {
+            // Ensure column is visible
+            state.gridApi.ensureColumnVisible(fieldName);
+
+            // Optional: highlight the column briefly
+            state.gridApi.flashCells({
+                columns: [fieldName],
+                rowNodes: state.gridApi.getDisplayedRowAtIndex(0) ?
+                        [state.gridApi.getDisplayedRowAtIndex(0)] : []
+            });
+        }
+    }
+
+    // Expose functions to the global bridge
+    funcs.getFilterParams = getFilterParams;
+    funcs.initGrid = initGrid;
+    funcs.generateQuickLinks = generateQuickLinks;
+    funcs.exportToExcel = exportToExcel;
+    funcs.exportToPDF = exportToPDF;
+    funcs.applyColumnVisibility = applyColumnVisibility;
+    funcs.updateStatus = updateStatus;
+    funcs.scrollToColumn = scrollToColumn;
+    funcs.updateActiveFiltersDisplay = updateActiveFiltersDisplay;
+})();
