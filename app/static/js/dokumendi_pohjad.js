@@ -618,7 +618,7 @@ $(document).ready(function () {
         // Get selected row from the main grid
         let selectedRows = [];
         try {
-            // Check if gridApi is accessible (it should be a global variable from app.js)
+            // Check if gridApi is accessible
             if (typeof gridApi !== 'undefined' && gridApi) {
                 selectedRows = gridApi.getSelectedRows();
             } else {
@@ -718,3 +718,356 @@ $(document).ready(function () {
     // Run on page load
     updateTemplateStatusDisplay();
 });
+
+// Add this error handling enhancement to the end of your dokumendi_pohjad.js file
+
+// Enhanced error handling and debugging for document generation
+$(document).ready(function() {
+    console.log("Adding enhanced error handling for document generation");
+
+    // Create a more robust click handler for the create-doc-btn
+    $("#create-doc-btn").off('click').on('click', function() {
+        console.log("Create document button clicked with enhanced error handling");
+
+        try {
+            // Step 1: Validate template selection
+            if (!selectedTemplate) {
+                console.error("No template selected");
+                showToast("Viga", "Palun valige dokumendipõhi enne dokumendi koostamist", "error");
+                return;
+            }
+
+            console.log("Selected template:", selectedTemplate);
+
+            // Step 2: Get selected row data with better error handling
+            let selectedRows = [];
+            let gridApi = null;
+
+            // Try multiple approaches to get the grid API
+            if (typeof window.gridApi !== 'undefined') {
+                console.log("Using window.gridApi");
+                gridApi = window.gridApi;
+            } else if (typeof window.appState !== 'undefined' && window.appState.gridApi) {
+                console.log("Using window.appState.gridApi");
+                gridApi = window.appState.gridApi;
+            } else {
+                console.error("gridApi not found in expected locations");
+            }
+
+            // Get selected rows if grid API is available
+            if (gridApi && typeof gridApi.getSelectedRows === 'function') {
+                selectedRows = gridApi.getSelectedRows();
+                console.log("Found selected rows:", selectedRows.length);
+            } else {
+                console.error("gridApi or getSelectedRows is not available");
+            }
+
+            if (!selectedRows || selectedRows.length === 0) {
+                console.error("No rows selected");
+                showToast("Viga", "Palun valige andmete tabelist rida enne dokumendi koostamist", "error");
+                return;
+            }
+
+            // Get the first selected row data
+            const rowData = selectedRows[0];
+            console.log("Selected row data:", rowData);
+
+            // Step 3: Validate row data
+            if (!rowData || typeof rowData !== 'object') {
+                console.error("Invalid row data:", rowData);
+                showToast("Viga", "Valitud rea andmed on vigased või puudulikud", "error");
+                return;
+            }
+
+            // Step 4: Show loading notification with error handling
+            let loadingToast = null;
+            try {
+                loadingToast = showToast("Dokumendi loomine", "Koostan dokumenti...", "info", -1);
+            } catch (toastError) {
+                console.error("Error showing toast:", toastError);
+                // Continue without toast if it fails
+            }
+
+            // Step 5: Prepare request data with better serialization error handling
+            let rowDataJson = null;
+            try {
+                rowDataJson = JSON.stringify(rowData);
+                console.log("Row data serialized successfully, length:", rowDataJson.length);
+            } catch (jsonError) {
+                console.error("JSON serialization error:", jsonError);
+
+                // Try to clean up row data by removing circular references and functions
+                const cleanRowData = {};
+                for (const key in rowData) {
+                    if (typeof rowData[key] !== 'function' && key !== '__proto__') {
+                        try {
+                            // Test if value can be serialized
+                            JSON.stringify(rowData[key]);
+                            cleanRowData[key] = rowData[key];
+                        } catch (e) {
+                            console.log("Removed non-serializable property:", key);
+                            cleanRowData[key] = String(rowData[key]);
+                        }
+                    }
+                }
+
+                try {
+                    rowDataJson = JSON.stringify(cleanRowData);
+                    console.log("Cleaned row data serialized successfully");
+                } catch (secondJsonError) {
+                    console.error("Failed to serialize even cleaned data:", secondJsonError);
+                    if (loadingToast && loadingToast.hide) loadingToast.hide();
+                    showToast("Viga", "Rea andmete töötlemisel tekkis viga", "error");
+                    return;
+                }
+            }
+
+            // Step 6: Send AJAX request with robust error handling
+            $.ajax({
+                url: "/api/v1/table/generate-document",
+                method: "POST",
+                data: {
+                    template_path: selectedTemplate,
+                    row_data_json: rowDataJson
+                },
+                timeout: 60000, // 1-minute timeout
+                success: function(response) {
+                    console.log("Document generation response:", response);
+
+                    // Hide loading toast if it exists
+                    if (loadingToast && typeof loadingToast.hide === 'function') {
+                        try {
+                            loadingToast.hide();
+                        } catch (e) {
+                            console.error("Error hiding toast:", e);
+                        }
+                    }
+
+                    // Check for a valid response
+                    if (response && response.success) {
+                        showToast("Dokument loodud", `Dokument "${response.file_name || 'dokument'}" on edukalt loodud mustandite kausta`, "success");
+
+                        // If viewing drafts, refresh to show the new document
+                        if (typeof viewingDrafts !== 'undefined' && viewingDrafts && typeof loadDocumentDrafts === 'function') {
+                            loadDocumentDrafts();
+                        }
+
+                        // Ask if user wants to open the document right away
+                        setTimeout(function() {
+                            if (confirm("Kas soovite loodud dokumenti kohe avada?")) {
+                                openCreatedDocument(response.file_path);
+                            }
+                        }, 500);
+                    } else {
+                        // Handle success response with error status
+                        const errorMsg = response && response.message ? response.message : "Dokumendi loomine ebaõnnestus tundmatul põhjusel";
+                        console.error("Server returned error:", errorMsg);
+                        showToast("Viga", errorMsg, "error");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Hide loading toast if it exists
+                    if (loadingToast && typeof loadingToast.hide === 'function') {
+                        try {
+                            loadingToast.hide();
+                        } catch (e) {
+                            console.error("Error hiding toast:", e);
+                        }
+                    }
+
+                    // Log detailed error information
+                    console.error("AJAX error:", {
+                        status: status,
+                        error: error,
+                        responseText: xhr.responseText,
+                        statusCode: xhr.status
+                    });
+
+                    // Try to parse error response
+                    let errorMessage = "Dokumendi loomine ebaõnnestus";
+                    try {
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            const errorData = JSON.parse(xhr.responseText);
+                            if (errorData.message) {
+                                errorMessage = errorData.message;
+                            } else if (errorData.detail) {
+                                errorMessage = errorData.detail;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error parsing error response:", e);
+                        // Use status text as fallback
+                        if (xhr.statusText) {
+                            errorMessage += ": " + xhr.statusText;
+                        }
+                    }
+
+                    // Show error message
+                    showToast("Viga", errorMessage, "error");
+                },
+                complete: function() {
+                    console.log("Document generation request completed");
+                }
+            });
+        } catch (error) {
+            // Global error handler for the entire function
+            console.error("Unexpected error in document creation process:", error);
+            showToast("Viga", "Dokumendi loomisel tekkis ootamatu viga: " + error.message, "error");
+        }
+    });
+
+    // Enhanced function to open created document with better error handling
+    window.openCreatedDocument = function(filePath) {
+        if (!filePath) {
+            console.error("No file path provided to openCreatedDocument");
+            return;
+        }
+
+        console.log("Opening document:", filePath);
+
+        $.ajax({
+            url: "/api/v1/table/open-for-editing",
+            method: "POST",
+            data: {
+                file_path: filePath
+            },
+            timeout: 30000, // 30-second timeout
+            success: function(response) {
+                console.log("Open document response:", response);
+                if (!response.success) {
+                    showToast("Viga", response.message || "Dokumendi avamine ebaõnnestus", "error");
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error opening document:", {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText
+                });
+                showToast("Viga", xhr.responseJSON?.message || "Dokumendi avamine ebaõnnestus", "error");
+            }
+        });
+    };
+
+    // More robust implementation of template selection
+    $("#templates-table-body").off("click", ".template-row").on("click", ".template-row", function() {
+        try {
+            // Remove highlighting from all rows
+            $("#templates-table-body tr").removeClass("bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800")
+                .addClass("hover:bg-gray-50 dark:hover:bg-gray-800");
+            $("#templates-table-body tr td:nth-child(2)").removeClass("text-blue-600 dark:text-blue-400")
+                .addClass("text-gray-900 dark:text-gray-100");
+            $("#templates-table-body tr td:nth-child(2) i.fa-check").remove();
+
+            // Add highlighting to the selected row
+            $(this).removeClass("hover:bg-gray-50 dark:hover:bg-gray-800")
+                .addClass("bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800");
+            $(this).find("td:nth-child(2)")
+                .removeClass("text-gray-900 dark:text-gray-100")
+                .addClass("text-blue-600 dark:text-blue-400")
+                .append('<i class="fas fa-check text-green-500 ml-2"></i>');
+
+            // Store selected template path and name
+            const templatePath = $(this).data('path');
+            const templateName = $(this).find("td:nth-child(2)").text().trim();
+
+            console.log("Setting selectedTemplate to:", templatePath);
+            console.log("Setting selectedTemplateInfo to:", { path: templatePath, name: templateName });
+
+            // Ensure these variables are set at global scope or properly accessible
+            window.selectedTemplate = templatePath;
+            window.selectedTemplateInfo = {
+                path: templatePath,
+                name: templateName
+            };
+
+            // Also set them at current scope level if they exist
+            if (typeof selectedTemplate !== 'undefined') {
+                selectedTemplate = templatePath;
+            }
+            if (typeof selectedTemplateInfo !== 'undefined') {
+                selectedTemplateInfo = {
+                    path: templatePath,
+                    name: templateName
+                };
+            }
+
+            // Ensure the create button is enabled
+            $("#create-doc-btn").removeClass("opacity-50 cursor-not-allowed")
+                .addClass("bg-green-500 hover:bg-green-600")
+                .prop("disabled", false);
+
+            // Update status display
+            updateTemplateStatusDisplay();
+
+            console.log("Template selection complete");
+        } catch (error) {
+            console.error("Error in template selection:", error);
+        }
+    });
+
+    console.log("Enhanced error handling for document generation initialized");
+});
+
+// Fallback showToast implementation if it doesn't exist
+if (typeof window.showToast !== 'function') {
+    window.showToast = function(title, message, type = "info", duration = 3000) {
+        console.log(`TOAST (${type}): ${title} - ${message}`);
+
+        // Create a simple toast element
+        const toast = $(`
+            <div class="notification ${type} mb-2">
+                <div class="flex items-center">
+                    <div class="notification-icon">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium">${title}</h3>
+                        <div class="mt-1 text-xs">${message}</div>
+                    </div>
+                    <div class="ml-auto pl-3">
+                        <button class="notification-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).appendTo("#notification-container");
+
+        // Add animation class
+        setTimeout(() => toast.addClass('show'), 10);
+
+        // Set up close button
+        toast.find('.notification-close').on('click', function() {
+            closeToast(toast);
+        });
+
+        // Auto-close after duration (if not -1)
+        let timeoutId = null;
+        if (duration !== -1) {
+            timeoutId = setTimeout(() => closeToast(toast), duration);
+        }
+
+        // Store the timeout ID for possible cancellation
+        toast.data('timeout-id', timeoutId);
+
+        // Add hide method to the toast
+        toast.hide = function() {
+            closeToast(toast);
+        };
+
+        return toast;
+
+        function closeToast(toast) {
+            // Clear any existing timeout
+            const timeoutId = toast.data('timeout-id');
+            if (timeoutId) clearTimeout(timeoutId);
+
+            // Hide with animation
+            toast.removeClass('show');
+            setTimeout(() => toast.remove(), 300);
+        }
+    };
+}

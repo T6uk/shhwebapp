@@ -1,7 +1,7 @@
 // app/static/js/modules/grid.js
 // AG Grid specific functionality
 
-(function() {
+(function () {
     // Local references to global state
     const state = window.appState;
     const funcs = window.appFunctions;
@@ -53,7 +53,7 @@
                 .addClass("quick-link")
                 .text(column.headerName)
                 .attr("data-field", column.field)
-                .click(function() {
+                .click(function () {
                     scrollToColumn(column.field);
                     $("#links-dropdown-menu").removeClass("show");
                 });
@@ -73,12 +73,12 @@
                 sortable: true,
                 filter: true,
                 // Add these properties for editing
-                editable: function(params) {
+                editable: function (params) {
                     // Only editable if in edit mode and the column is in editableColumns
                     return state.isEditMode && state.editableColumns.includes(params.colDef.field);
                 },
                 cellStyle: getCellStyle,
-                cellClass: function(params) {
+                cellClass: function (params) {
                     // Add a custom class to editable cells based on current mode
                     if (state.isEditMode && state.editableColumns &&
                         state.editableColumns.includes(params.colDef.field)) {
@@ -93,7 +93,7 @@
             cacheBlockSize: 100, // Number of rows to load at a time
             maxBlocksInCache: 10, // Maximum number of blocks to keep loaded
             enableCellTextSelection: true,
-            getRowId: function(params) {
+            getRowId: function (params) {
                 // Use row index as ID - adjust if you have a better unique identifier
                 return params.data.id || params.node.rowIndex;
             },
@@ -138,7 +138,7 @@
 
         // Set a datasource for infinite scrolling
         const dataSource = {
-            getRows: function(params) {
+            getRows: function (params) {
                 console.log('AG Grid requesting rows:', params.startRow, 'to', params.endRow);
 
                 // Show loading indicator for initial load
@@ -185,7 +185,7 @@
                     method: "GET",
                     data: queryParams,
                     dataType: "json",
-                    success: function(response) {
+                    success: function (response) {
                         // Update status
                         $("#status").text(response.rowCount + " kirjet" +
                             (queryParams.filter_model ? " (filtreeritud)" : ""));
@@ -200,7 +200,7 @@
                         $("#loading-overlay").hide();
                         $("#mini-loading-indicator").addClass("hidden");
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         console.error("Error loading data:", error);
                         console.error("Response:", xhr.responseText);
                         $("#status").text("Viga: " + error);
@@ -218,12 +218,12 @@
         // Set the datasource
         state.gridApi.setDatasource(dataSource);
 
-        state.gridApi.addEventListener('filterChanged', function() {
+        state.gridApi.addEventListener('filterChanged', function () {
             setTimeout(updateActiveFiltersDisplay, 100);
         });
 
         // Fit columns to available width
-        setTimeout(function() {
+        setTimeout(function () {
             state.gridApi.sizeColumnsToFit();
         }, 100);
 
@@ -291,7 +291,7 @@
                 $("#active-filters").append(filterBadge);
             }
 
-            $(".remove-filter-btn").click(function() {
+            $(".remove-filter-btn").click(function () {
                 const field = $(this).data('field');
                 state.gridApi.setFilterModel({...filterModel, [field]: null});
             });
@@ -308,7 +308,7 @@
         state.gridApi.autoSizeColumns();
 
         // Size columns to fit the viewport after auto-sizing
-        setTimeout(function() {
+        setTimeout(function () {
             state.gridApi.sizeColumnsToFit();
         }, 200);
     }
@@ -335,7 +335,7 @@
 
         const params = {
             fileName: 'Suur_Andmetabel_Export.xlsx',
-            processCellCallback: function(params) {
+            processCellCallback: function (params) {
                 // Clean up cell values if needed
                 return params.value;
             }
@@ -447,7 +447,7 @@
         if (!state.gridApi) return;
 
         // Get checked/unchecked state from checkboxes
-        $(".column-toggle").each(function() {
+        $(".column-toggle").each(function () {
             const field = $(this).data('field');
             const isVisible = $(this).prop('checked');
 
@@ -488,10 +488,44 @@
             state.gridApi.flashCells({
                 columns: [fieldName],
                 rowNodes: state.gridApi.getDisplayedRowAtIndex(0) ?
-                        [state.gridApi.getDisplayedRowAtIndex(0)] : []
+                    [state.gridApi.getDisplayedRowAtIndex(0)] : []
             });
         }
     }
+
+    window.getSelectedRowsManually = function () {
+        // This is a fallback method to get selected rows by directly checking DOM elements
+
+        // Find all rows with the selected class
+        const selectedDomRows = document.querySelectorAll('.ag-row-selected');
+        console.log("DOM selected rows:", selectedDomRows);
+
+        if (!selectedDomRows || selectedDomRows.length === 0) {
+            console.log("No selected rows found in DOM");
+            return [];
+        }
+
+        // Try to get the data from selected rows
+        const selectedData = [];
+        selectedDomRows.forEach(row => {
+            // Get the row ID or index
+            const rowIndex = row.getAttribute('row-index');
+            const rowId = row.getAttribute('row-id');
+            console.log(`Found selected row in DOM: index=${rowIndex}, id=${rowId}`);
+
+            // Try to get data from grid API using index
+            if (window.gridApi && typeof window.gridApi.getDisplayedRowAtIndex === 'function' && rowIndex) {
+                const node = window.gridApi.getDisplayedRowAtIndex(parseInt(rowIndex));
+                if (node && node.data) {
+                    selectedData.push(node.data);
+                    console.log("Retrieved row data from grid API:", node.data);
+                }
+            }
+        });
+
+        console.log("Manually extracted selected rows:", selectedData);
+        return selectedData;
+    };
 
     // Expose functions to the global bridge
     funcs.getFilterParams = getFilterParams;

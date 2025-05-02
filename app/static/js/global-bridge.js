@@ -19,6 +19,8 @@ window.appState = {
 // Global function references
 window.appFunctions = {
     // These will be populated by modules
+    initViewFile: null,
+    initVirtualToimik: null,
     refreshData: null,
     toggleUIElements: null,
     performSearch: null,
@@ -45,3 +47,11 @@ window.appFunctions = {
     loadSavedFiltersList: null,
     scrollToColumn: null,
 };
+
+// Initialize file operation handlers if they're available
+if (typeof window.initViewFile === 'function') {
+    window.initViewFile();
+}
+if (typeof window.initVirtualToimik === 'function') {
+    window.initVirtualToimik();
+}

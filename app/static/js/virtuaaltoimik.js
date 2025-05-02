@@ -1,34 +1,115 @@
-// Virtuaaltoimik functionality
+// app/static/js/virtuaaltoimik.js
+// Robust implementation with improved debugging for row selection issues
+
 $(document).ready(function () {
-    // Current toimiku number
+    console.log("Setting up virtual-file button handler with improved row detection");
+
+    // Current toimiku number for the modal
     let currentToimikuNr = null;
+    let showNewestFirst = true;
 
-    // Set up click handler for the Virtuaaltoimik button
+    // Add a fallback toast function if not available
+    if (typeof window.showToast !== 'function') {
+        window.showToast = function (title, message, type, duration = 3000) {
+            alert(`${title}: ${message}`);
+            console.log(`TOAST: ${type} - ${title}: ${message}`);
+            // Return an object with a hide method to prevent errors
+            return {
+                hide: function () {
+                }
+            };
+        };
+    }
+
+    // Fix the virtual-file button handler
     $("#virtual-file").off('click').on('click', function () {
-        console.log("Virtuaaltoimik button clicked");
+        console.log("virtual-file button clicked");
 
-        // Get selected row(s)
-        const selectedRows = gridApi ? gridApi.getSelectedRows() : null;
+        // Try multiple ways to get gridApi
+        let gridApi = null;
 
+        // Option 1: Try window.gridApi directly
+        if (window.gridApi) {
+            console.log("Found gridApi on window object");
+            gridApi = window.gridApi;
+        }
+        // Option 2: Try window.appState
+        else if (window.appState && window.appState.gridApi) {
+            console.log("Found gridApi in appState");
+            gridApi = window.appState.gridApi;
+        }
+        // Option 3: Try to get it from the grid element directly
+        else {
+            console.log("Attempting to get gridApi from DOM element");
+            const gridDiv = document.querySelector('#data-table');
+            if (gridDiv && gridDiv.__agGridApi) {
+                gridApi = gridDiv.__agGridApi;
+                console.log("Found gridApi in DOM element");
+            }
+        }
+
+        // Check if we found a gridApi
+        if (!gridApi) {
+            console.error("Could not find gridApi");
+            showToast("Viga", "Tabeli API-d ei leitud. Värskendage lehte ja proovige uuesti.", "error");
+            $("#tools-dropdown-menu").removeClass("show");
+            return;
+        }
+
+        // Debug the selection state
+        console.log("Grid API found, checking selected rows");
+        console.log("Selection mode:", gridApi.getSelectionModel ? gridApi.getSelectionModel() : "Unknown");
+
+        // Try multiple ways to get selected rows
+        let selectedRows = [];
+
+        // Method 1: getSelectedRows (most common)
+        if (typeof gridApi.getSelectedRows === 'function') {
+            selectedRows = gridApi.getSelectedRows();
+            console.log("Using getSelectedRows() method:", selectedRows);
+        }
+        // Method 2: getSelectedNodes and map to rows
+        else if (typeof gridApi.getSelectedNodes === 'function') {
+            const selectedNodes = gridApi.getSelectedNodes();
+            console.log("Selected nodes:", selectedNodes);
+            selectedRows = selectedNodes.map(node => node.data);
+            console.log("Mapped selected nodes to rows:", selectedRows);
+        }
+
+        // Workaround: If no row is selected, get the first visible row as fallback
         if (!selectedRows || selectedRows.length === 0) {
+            console.warn("No rows selected, checking for visible rows");
+
+            // Try to get the first displayed row as a fallback
+            if (typeof gridApi.getDisplayedRowAtIndex === 'function') {
+                const firstNode = gridApi.getDisplayedRowAtIndex(0);
+                if (firstNode && firstNode.data) {
+                    console.log("Using first visible row as fallback:", firstNode.data);
+                    showToast("Info", "Automaatselt valiti esimene rida, kuna ühtegi rida polnud valitud.", "info");
+                    selectedRows = [firstNode.data];
+                }
+            }
+        }
+
+        // Final check for selected rows
+        if (!selectedRows || selectedRows.length === 0) {
+            console.error("No selected rows found after all attempts");
             showToast("Viga", "Palun valige rida enne virtuaaltoimiku avamist", "error");
             $("#tools-dropdown-menu").removeClass("show");
             return;
         }
 
-        // Get the first selected row
+        // Log all data in the selected row for debugging
         const selectedRow = selectedRows[0];
         console.log("Selected row data:", selectedRow);
-
-        // Log all column names for debugging
-        console.log("All available columns:", Object.keys(selectedRow));
+        console.log("Properties in row:", Object.keys(selectedRow).join(", "));
 
         // Try to find Võlgnik and toimiku_nr separately
         let toimikuNr = null;
         let volgnikName = null;
 
-        // Find Võlgnik name
-        const volgnikColumns = ['Võlgnik', 'võlgnik'];
+        // Find Võlgnik name - try common variations
+        const volgnikColumns = ['Võlgnik', 'võlgnik', 'volgnik', 'VÕLGNIK', 'isik', 'nimi'];
         for (const col of volgnikColumns) {
             if (selectedRow[col] !== undefined && selectedRow[col] !== null) {
                 volgnikName = selectedRow[col];
@@ -37,8 +118,8 @@ $(document).ready(function () {
             }
         }
 
-        // Find toimiku_nr
-        const toimikuColumns = ['toimiku_nr', 'toimikunr', 'toimiku nr'];
+        // Find toimiku_nr - try common variations
+        const toimikuColumns = ['toimiku_nr', 'toimikunr', 'toimiku nr', 'id'];
         for (const col of toimikuColumns) {
             if (selectedRow[col] !== undefined && selectedRow[col] !== null) {
                 toimikuNr = selectedRow[col];
@@ -47,13 +128,47 @@ $(document).ready(function () {
             }
         }
 
+        // If toimiku_nr still not found, try to find any field that might contain it
+        if (!toimikuNr) {
+            console.log("Trying to find toimiku_nr in any field with pattern matching");
+            for (const key in selectedRow) {
+                const value = selectedRow[key];
+                if (value && typeof value === 'string' &&
+                    (key.toLowerCase().includes('toimik') ||
+                        key.toLowerCase().includes('number') ||
+                        /^\d+\/\d+\/\d+$/.test(value))) {
+                    toimikuNr = value;
+                    console.log(`Found potential toimiku_nr in column '${key}':`, toimikuNr);
+                    break;
+                }
+            }
+        }
+
+        // If võlgnik name still not found, use a placeholder or any string field value
         if (!volgnikName) {
-            showToast("Viga", "Võlgnikku ei leitud valitud real", "error");
-            $("#tools-dropdown-menu").removeClass("show");
-            return;
+            console.log("No võlgnik field found, using fallback");
+            // Try to find any string field that could be a name
+            for (const key in selectedRow) {
+                const value = selectedRow[key];
+                if (value && typeof value === 'string' &&
+                    (key.toLowerCase().includes('nimi') ||
+                        key.toLowerCase().includes('name') ||
+                        value.includes(' '))) {
+                    volgnikName = value;
+                    console.log(`Found potential võlgnik name in column '${key}':`, volgnikName);
+                    break;
+                }
+            }
+
+            // If still not found, use a placeholder
+            if (!volgnikName) {
+                volgnikName = "Tundmatu";
+                console.log("Using placeholder for võlgnik name");
+            }
         }
 
         if (!toimikuNr) {
+            console.error("Could not find toimiku_nr in any column");
             showToast("Viga", "Toimiku numbrit ei leitud valitud real", "error");
             $("#tools-dropdown-menu").removeClass("show");
             return;
@@ -79,34 +194,19 @@ $(document).ready(function () {
         loadFolderContents(sanitizedToimikuNr);
     });
 
-    // Close modal handlers
-    $("#close-virtuaaltoimik-modal, #exit-virtuaaltoimik-btn").on('click', function () {
-        $("#virtuaaltoimik-modal").addClass("hidden");
-    });
-
-    // Close modal when clicking backdrop
-    $("#virtuaaltoimik-backdrop").on('click', function () {
-        $("#virtuaaltoimik-modal").addClass("hidden");
-    });
-
-    // Prevent closing when clicking modal content
-    $(".modal-content").on('click', function (e) {
-        e.stopPropagation();
-    });
-
     // Function to load folder contents
     function loadFolderContents(toimikuNr) {
         // Show loading state
         $("#files-table-body").html(`
-        <tr>
-          <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-            <div class="flex justify-center items-center space-x-2">
-              <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <span>Laadin faile...</span>
-            </div>
-          </td>
-        </tr>
-      `);
+            <tr>
+                <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <div class="flex justify-center items-center space-x-2">
+                        <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Laadin faile...</span>
+                    </div>
+                </td>
+            </tr>
+        `);
 
         // Hide empty and error states
         $("#files-empty-state").addClass("hidden");
@@ -147,6 +247,7 @@ $(document).ready(function () {
         });
     }
 
+    // Function to render files table
     function renderFilesTable(items) {
         let tableHtml = '';
 
@@ -162,34 +263,34 @@ $(document).ready(function () {
                 : getFileTypeDisplay(item.extension, item.mime_type);
 
             tableHtml += `
-          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer file-row" data-path="${escapeHtml(item.path)}" data-is-dir="${item.is_directory}">
-            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
-              ${icon}
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-              ${escapeHtml(item.name)}
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-              ${escapeHtml(typeDisplay)}
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-              ${escapeHtml(item.formatted_size)}
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-              ${escapeHtml(item.modified)}
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-              <div class="flex space-x-2">
-                <button class="text-blue-500 hover:text-blue-700 dark:text-blue-400 open-file-btn" title="Ava" data-path="${escapeHtml(item.path)}" data-is-dir="${item.is_directory}">
-                  <i class="fas fa-${item.is_directory ? 'folder-open' : 'file-alt'}"></i>
-                </button>
-                <button class="text-red-500 hover:text-red-700 dark:text-red-400 delete-file-btn" title="Kustuta" data-path="${escapeHtml(item.path)}">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer file-row" data-path="${escapeHtml(item.path)}" data-is-dir="${item.is_directory}">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                        ${icon}
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        ${escapeHtml(item.name)}
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        ${escapeHtml(typeDisplay)}
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        ${escapeHtml(item.formatted_size)}
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        ${escapeHtml(item.modified)}
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <div class="flex space-x-2">
+                            <button class="text-blue-500 hover:text-blue-700 dark:text-blue-400 open-file-btn" title="Ava" data-path="${escapeHtml(item.path)}" data-is-dir="${item.is_directory}">
+                                <i class="fas fa-${item.is_directory ? 'folder-open' : 'file-alt'}"></i>
+                            </button>
+                            <button class="text-red-500 hover:text-red-700 dark:text-red-400 delete-file-btn" title="Kustuta" data-path="${escapeHtml(item.path)}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
         });
 
         // Update table body
@@ -226,55 +327,7 @@ $(document).ready(function () {
         });
     }
 
-    function deleteFileOrFolder(path, row) {
-        // Show loading indicator
-        const loadingToast = showToast("Kustutamine", "Kustutan faili...", "info", -1); // -1 for no auto-hide
-
-        // Call the API to delete the file
-        $.ajax({
-            url: "/api/v1/table/file-operation",
-            method: "POST",
-            data: {
-                operation: "delete",
-                path: path
-            },
-            success: function (response) {
-                console.log("Delete response:", response);
-
-                // Close the loading toast
-                if (loadingToast) loadingToast.hide();
-
-                if (response.success) {
-                    // Remove the row from the table
-                    row.fadeOut(300, function () {
-                        $(this).remove();
-
-                        // If no more files, show empty state
-                        if ($("#files-table-body tr.file-row").length === 0) {
-                            $("#files-empty-state").removeClass("hidden");
-                        }
-                    });
-
-                    // Show success message
-                    showToast("Kustutatud", "Fail edukalt kustutatud", "success");
-                } else {
-                    // Show error message
-                    showToast("Viga", response.message || "Kustutamine ebaõnnestus", "error");
-                }
-            },
-            error: function (xhr, status, error) {
-                console.error("Error deleting file:", error);
-
-                // Close the loading toast
-                if (loadingToast) loadingToast.hide();
-
-                // Show error message
-                showToast("Viga", "Kustutamine ebaõnnestus: " + (xhr.responseJSON?.detail || error), "error");
-            }
-        });
-    }
-
-    // Helper function to get file icon based on extension
+    // Helper functions
     function getFileIcon(extension) {
         const iconMap = {
             '.pdf': '<i class="fas fa-file-pdf text-red-500"></i>',
@@ -300,7 +353,6 @@ $(document).ready(function () {
         return iconMap[extension.toLowerCase()] || '<i class="fas fa-file text-gray-500"></i>';
     }
 
-    // Helper function to get file type display name
     function getFileTypeDisplay(extension, mimeType) {
         const typeMap = {
             '.pdf': 'PDF dokument',
@@ -326,10 +378,19 @@ $(document).ready(function () {
         return typeMap[extension.toLowerCase()] || (extension ? extension.substring(1).toUpperCase() + ' fail' : 'Tundmatu fail');
     }
 
-    // Helper function to open a file or folder
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     function openFileOrFolder(path, isDirectory) {
         if (isDirectory) {
-            // For folders, we could either navigate inside the modal or open the folder directly
+            // For folders, open directly
             openFolderDirectly(path);
         } else {
             // For files, attempt to open them
@@ -337,13 +398,11 @@ $(document).ready(function () {
         }
     }
 
-    // Function to open a folder directly
     function openFolderDirectly(path) {
         $.ajax({
             url: `/api/v1/table/open-folder/${encodeURIComponent(path)}`,
             method: "GET",
             success: function (response) {
-                console.log("Open folder response:", response);
                 if (response.success) {
                     showToast("Kaust avatud", "Kaust avati edukalt", "success");
                 } else {
@@ -357,7 +416,6 @@ $(document).ready(function () {
         });
     }
 
-    // Function to open a file directly
     function openFileDirectly(path) {
         // Show loading notification
         const loadingToast = showToast("Faili avamine", "Avan faili...", "info", 1000);
@@ -370,7 +428,6 @@ $(document).ready(function () {
                 file_path: path
             },
             success: function (response) {
-                console.log("Open file response:", response);
                 if (response.success) {
                     showToast("Fail avatud", "Fail avati edukalt", "success");
                 } else {
@@ -384,40 +441,67 @@ $(document).ready(function () {
         });
     }
 
-    // Helper function to escape HTML
-    function escapeHtml(unsafe) {
-        if (unsafe === null || unsafe === undefined) return '';
-        return String(unsafe)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
+    function deleteFileOrFolder(path, row) {
+        // Show loading indicator
+        const loadingToast = showToast("Kustutamine", "Kustutan faili...", "info", -1);
 
-    // Search functionality
-    $("#files-search-input").on('input', function () {
-        const searchTerm = $(this).val().toLowerCase();
+        // Call the API to delete the file
+        $.ajax({
+            url: "/api/v1/table/file-operation",
+            method: "POST",
+            data: {
+                operation: "delete",
+                path: path
+            },
+            success: function (response) {
+                // Close the loading toast
+                if (loadingToast && loadingToast.hide) loadingToast.hide();
 
-        $(".file-row").each(function () {
-            const fileName = $(this).find("td:nth-child(2)").text().toLowerCase();
-            if (fileName.includes(searchTerm)) {
-                $(this).removeClass("hidden");
-            } else {
-                $(this).addClass("hidden");
+                if (response.success) {
+                    // Remove the row from the table
+                    row.fadeOut(300, function () {
+                        $(this).remove();
+
+                        // If no more files, show empty state
+                        if ($("#files-table-body tr.file-row").length === 0) {
+                            $("#files-empty-state").removeClass("hidden");
+                        }
+                    });
+
+                    // Show success message
+                    showToast("Kustutatud", "Fail edukalt kustutatud", "success");
+                } else {
+                    // Show error message
+                    showToast("Viga", response.message || "Kustutamine ebaõnnestus", "error");
+                }
+            },
+            error: function (xhr, status, error) {
+                // Close the loading toast
+                if (loadingToast && loadingToast.hide) loadingToast.hide();
+
+                // Show error message
+                showToast("Viga", "Kustutamine ebaõnnestus: " + (xhr.responseJSON?.detail || error), "error");
             }
         });
+    }
+
+    // Set up modal close handlers
+    $("#close-virtuaaltoimik-modal, #exit-virtuaaltoimik-btn").off('click').on('click', function () {
+        $("#virtuaaltoimik-modal").addClass("hidden");
     });
 
-    // Refresh button functionality
-    $("#refresh-files-btn").on('click', function () {
-        if (currentToimikuNr) {
-            loadFolderContents(currentToimikuNr);
-        }
+    // Close modal when clicking backdrop
+    $("#virtuaaltoimik-backdrop").off('click').on('click', function () {
+        $("#virtuaaltoimik-modal").addClass("hidden");
+    });
+
+    // Prevent closing when clicking modal content
+    $(".modal-content").off('click').on('click', function (e) {
+        e.stopPropagation();
     });
 
     // Folder open button functionality
-    $("#folder-open-btn").on('click', function () {
+    $("#folder-open-btn").off('click').on('click', function () {
         if (currentToimikuNr) {
             const folderPath = `c:\\virtuaaltoimik\\${currentToimikuNr}`;
             openFolderDirectly(folderPath);
@@ -426,7 +510,15 @@ $(document).ready(function () {
         }
     });
 
-    // Update the create document button click handler
+    // Refresh button functionality
+    $("#refresh-files-btn").off('click').on('click', function () {
+        if (currentToimikuNr) {
+            loadFolderContents(currentToimikuNr);
+        }
+    });
+
+    console.log("virtual-file click handler setup complete with improved row detection");
+
     $("#create-document-btn").off('click').on('click', function () {
         console.log("Create document button clicked from virtuaaltoimik");
 
@@ -450,62 +542,109 @@ $(document).ready(function () {
         // Store the toimiku info as data attribute for persistence
         $("#document-templates-modal").data("toimiku-info", toimikuInfo);
 
-        // Set the title with toimiku info - using the correct ID
+        // Set the title with toimiku info
         $("#doc-pohjad-title").text(`Dokumendipõhjad: ${toimikuInfo}`);
 
-        // Reset to templates view if needed
-        if (typeof viewingDrafts !== 'undefined' && viewingDrafts) {
-            viewingDrafts = false;
-            $("#drafts-btn").html('<i class="fas fa-file-signature text-xs mr-1"></i><span>Mustandid</span>');
-        }
-
         // Load templates if the function exists
-        if (typeof loadDocumentTemplates === 'function') {
+        if (typeof window.loadDocumentTemplates === 'function') {
+            window.loadDocumentTemplates();
+        } else if (typeof loadDocumentTemplates === 'function') {
             loadDocumentTemplates();
         } else {
-            console.error("loadDocumentTemplates function not found");
+            // Try to find and execute the function from dokumendi_pohjad.js
+            console.log("Looking for loadDocumentTemplates function...");
+
+            // Load templates directly if function can't be found
+            $.ajax({
+                url: "/api/v1/table/document-templates",
+                method: "GET",
+                success: function (response) {
+                    console.log("Document templates loaded directly:", response);
+
+                    if (response.success && response.templates) {
+                        renderTemplatesTable(response.templates);
+                    } else {
+                        showToast("Viga", "Dokumendipohjad ei leitud", "error");
+                    }
+                },
+                error: function (error) {
+                    console.error("Error loading document templates:", error);
+                    showToast("Viga", "Viga dokumendipohjad laadimisel", "error");
+                }
+            });
         }
     });
 
-    $("#archive-btn").on('click', function () {
-        showToast("Funktsioon arendamisel", "Arhiivi funktsioon on arendamisel", "info");
-    });
-});
+// Add this helper function to render the templates if needed
+    function renderTemplatesTable(templates) {
+        if (!templates || templates.length === 0) {
+            $("#templates-table-body").html('<tr><td colspan="6" class="text-center py-4">Dokumendipohjad puuduvad</td></tr>');
+            return;
+        }
 
-// Improved date toggle filter for Virtuaaltoimik
-$(document).ready(function () {
-    // Track the current sort state - start with newest first (true)
-    let showNewestFirst = true;
+        let tableHtml = '';
+        templates.forEach(template => {
+            tableHtml += `
+        <tr class="template-row hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" data-path="${template.path}">
+            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                <i class="fas fa-file-word text-blue-500"></i>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                ${template.name}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                Word dokument
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                ${template.formatted_size}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                ${template.modified}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <div class="flex space-x-2">
+                    <button class="text-blue-500 hover:text-blue-700 dark:text-blue-400 use-template-btn" title="Kasuta">
+                        <i class="fas fa-file-alt"></i>
+                    </button>
+                    <button class="text-green-500 hover:text-green-700 dark:text-green-400 preview-template-btn" title="Eelvaade">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        `;
+        });
 
-    // Set up click handler for the filter button
+        $("#templates-table-body").html(tableHtml);
+    }
+
+    // Improved filter button handler for file sorting
     $("#filter-files-btn").off('click').on('click', function () {
         console.log("Filter button clicked, current state:", showNewestFirst);
 
         // Toggle the sort direction
         showNewestFirst = !showNewestFirst;
 
-        // Update the button text and icon to indicate the current sort direction
+        // Update the button text and icon
         if (showNewestFirst) {
             $(this).html('<i class="fas fa-sort-amount-down text-xs mr-1"></i><span>Uuemad ees</span>');
-            $(this).addClass("bg-blue-500 text-white").removeClass("btn-secondary");
         } else {
             $(this).html('<i class="fas fa-sort-amount-up text-xs mr-1"></i><span>Vanemad ees</span>');
-            $(this).addClass("bg-blue-500 text-white").removeClass("btn-secondary");
         }
 
-        // Re-sort the file list
+        // Apply sorting
         sortFilesByDate(showNewestFirst);
 
-        // Show a toast notification of the current sort order
-        const message = showNewestFirst ? "Failid sorteeritud: uuemad ees" : "Failid sorteeritud: vanemad ees";
-        showToast("Filter rakendatud", message, "info");
+        // Show notification
+        showToast("Filter rakendatud",
+            showNewestFirst ? "Failid sorteeritud: uuemad ees" : "Failid sorteeritud: vanemad ees",
+            "info");
     });
 
-    // Function to sort files by their modification date
+// Function to sort files by date
     function sortFilesByDate(newestFirst) {
         console.log("Sorting files, newest first:", newestFirst);
 
-        // Get all file rows from the table
         const tableBody = $("#files-table-body");
         const fileRows = tableBody.find("tr.file-row").toArray();
 
@@ -516,12 +655,10 @@ $(document).ready(function () {
             return; // Nothing to sort
         }
 
-        // Debug the first row's date to check date parsing
+        // Debug the first row's date
         if (fileRows.length > 0) {
             const firstRowDate = $(fileRows[0]).find("td:nth-child(5)").text();
             console.log("First row date string:", firstRowDate);
-            const parsedDate = parseDateFromElement(firstRowDate);
-            console.log("Parsed date:", parsedDate);
         }
 
         // Sort the rows based on the date in the 5th column (modification date)
@@ -531,11 +668,6 @@ $(document).ready(function () {
 
             console.log("Comparing dates:", dateA, dateB);
 
-            if (isNaN(dateA) || isNaN(dateB)) {
-                console.error("Invalid date comparison:", $(a).find("td:nth-child(5)").text(), $(b).find("td:nth-child(5)").text());
-                return 0;
-            }
-
             // Sort based on direction
             return newestFirst ? dateB - dateA : dateA - dateB;
         });
@@ -543,7 +675,7 @@ $(document).ready(function () {
         // Remove current rows
         tableBody.find("tr.file-row").remove();
 
-        // Re-append the sorted rows to the table
+        // Re-append the sorted rows
         $.each(fileRows, function (index, row) {
             tableBody.append(row);
         });
@@ -551,19 +683,17 @@ $(document).ready(function () {
         console.log("Sorting complete");
     }
 
-    // Helper function to parse the date from the displayed format "DD.MM.YYYY HH:MM"
+// Helper function to parse Estonian date format "DD.MM.YYYY HH:MM"
     function parseDateFromElement(dateString) {
         try {
             console.log("Parsing date string:", dateString);
 
             if (!dateString || typeof dateString !== 'string') {
-                console.error("Invalid date string:", dateString);
-                return new Date(0);
+                return new Date(0); // Return epoch date as fallback
             }
 
             const parts = dateString.trim().split(" ");
             if (parts.length !== 2) {
-                console.error("Unexpected date format, expected 'DD.MM.YYYY HH:MM', got:", dateString);
                 return new Date(0);
             }
 
@@ -571,7 +701,6 @@ $(document).ready(function () {
             const timeParts = parts[1].split(":");
 
             if (dateParts.length !== 3 || timeParts.length !== 2) {
-                console.error("Invalid date or time parts:", dateParts, timeParts);
                 return new Date(0);
             }
 
@@ -581,34 +710,15 @@ $(document).ready(function () {
             const hour = parseInt(timeParts[0], 10);
             const minute = parseInt(timeParts[1], 10);
 
-            console.log("Parsed components:", {day, month, year, hour, minute});
-
             // Validate values
             if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) {
-                console.error("Invalid numeric date parts");
                 return new Date(0);
             }
 
-            const dateObj = new Date(year, month, day, hour, minute);
-            console.log("Created date object:", dateObj);
-            return dateObj;
+            return new Date(year, month, day, hour, minute);
         } catch (e) {
             console.error("Error parsing date:", dateString, e);
             return new Date(0); // Return epoch date as fallback
         }
     }
-
-    // Initialize the button state
-    initializeFilterButton();
-
-    // Initial setup - set the button to reflect the default state
-    function initializeFilterButton() {
-        const filterBtn = $("#filter-files-btn");
-        if (showNewestFirst) {
-            filterBtn.html('<i class="fas fa-filter text-xs mr-1"></i><span>Filter</span>');
-        }
-    }
-
-    // Add a console log to verify the script is running
-    console.log("Virtuaaltoimik filter script loaded");
 });
