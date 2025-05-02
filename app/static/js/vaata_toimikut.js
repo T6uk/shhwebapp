@@ -1,4 +1,6 @@
+// app/static/js/vaata_toimikut.js
 // Direct implementation of the "vaata toimikut" functionality with path sanitization
+
 $(document).ready(function () {
     console.log("Setting up view-file click handler with path sanitization");
 
@@ -7,12 +9,12 @@ $(document).ready(function () {
         console.log("view-file button clicked");
 
         // Get selected row(s)
-        const selectedRows = gridApi ? gridApi.getSelectedRows() : null;
+        const selectedRows = window.gridApi ? window.gridApi.getSelectedRows() : null;
         console.log("Selected rows:", selectedRows);
 
         if (!selectedRows || selectedRows.length === 0) {
             console.error("No rows selected");
-            showToast("Viga", "Palun valige rida enne toimiku avamist", "error");
+            window.showToast("Viga", "Palun valige rida enne toimiku avamist", "error");
             $("#tools-dropdown-menu").removeClass("show");
             return;
         }
@@ -44,7 +46,7 @@ $(document).ready(function () {
 
         if (!toimikuNr) {
             console.error("Could not find toimiku_nr in any expected column");
-            showToast("Viga", "Toimiku numbrit ei leitud valitud real", "error");
+            window.showToast("Viga", "Toimiku numbrit ei leitud valitud real", "error");
             $("#tools-dropdown-menu").removeClass("show");
             return;
         }
@@ -65,10 +67,10 @@ $(document).ready(function () {
             success: function (response) {
                 console.log("API response:", response);
                 if (response.success) {
-                    showToast("Toimik avatud", `Toimik ${sanitizedToimikuNr} on avatud asukohas: ${response.path}`, "success");
+                    window.showToast("Toimik avatud", `Toimik ${sanitizedToimikuNr} on avatud asukohas: ${response.path}`, "success");
                 } else {
                     console.error("API reported error:", response.message);
-                    showToast("Viga", `${response.message}. Asukoht: ${response.path || 'N/A'}`, "error");
+                    window.showToast("Viga", `${response.message}. Asukoht: ${response.path || 'N/A'}`, "error");
                 }
             },
             error: function (xhr, status, error) {
@@ -76,10 +78,10 @@ $(document).ready(function () {
                 try {
                     const errorResponse = xhr.responseJSON || JSON.parse(xhr.responseText);
                     console.error("Parsed error response:", errorResponse);
-                    showToast("Viga", errorResponse?.detail || errorResponse?.message || "Viga toimiku avamisel", "error");
+                    window.showToast("Viga", errorResponse?.detail || errorResponse?.message || "Viga toimiku avamisel", "error");
                 } catch (e) {
                     console.error("Error parsing response:", e);
-                    showToast("Viga", `Viga toimiku avamisel: ${error || status}`, "error");
+                    window.showToast("Viga", `Viga toimiku avamisel: ${error || status}`, "error");
                 }
             }
         });

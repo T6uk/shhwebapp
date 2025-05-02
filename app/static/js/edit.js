@@ -1,12 +1,12 @@
 // app/static/js/edit.js - Tabeli redigeerimise funktsioonid
 // Globaalsed muutujad redigeerimiseks
-let isEditMode = false;
-let editSessionId = null;
-let editableColumns = [];
-let unsavedChanges = {};
-let lastChangeCheck = null;
-let changeCheckInterval = null;
-let socket = null;
+window.isEditMode = false;
+window.editSessionId = null;
+window.editableColumns = [];
+window.unsavedChanges = {};
+window.lastChangeCheck = null;
+window.changeCheckInterval = null;
+window.socket = null;
 
 // Algväärtusta kui dokument on laaditud
 $(document).ready(function () {
@@ -21,32 +21,24 @@ $(document).ready(function () {
 
     setupWebSocket();
 
-    const originalInit = window.getEditableColumns;
+    // Button state initialization
+    const editBtn = document.getElementById('edit-mode-btn');
+    if (editBtn) {
+        editBtn.style.backgroundColor = "#22c55e"; // Green-500
+        editBtn.style.borderColor = "#22c55e";
+        editBtn.style.color = "white";
 
-    // Override the original function to add our initialization
-    window.getEditableColumns = function () {
-        // Call the original function
-        if (originalInit) originalInit();
-
-        // Initialize button hover state
-        const editBtn = document.getElementById('edit-mode-btn');
-        if (editBtn) {
-            editBtn.style.backgroundColor = "#22c55e"; // Green-500
-            editBtn.style.borderColor = "#22c55e";
-            editBtn.style.color = "white";
-
-            $(editBtn).hover(
-                function () {
-                    this.style.backgroundColor = "#16a34a"; // Green-600 for hover
-                    this.style.borderColor = "#16a34a";
-                },
-                function () {
-                    this.style.backgroundColor = "#22c55e"; // Back to Green-500
-                    this.style.borderColor = "#22c55e";
-                }
-            );
-        }
-    };
+        $(editBtn).hover(
+            function () {
+                this.style.backgroundColor = "#16a34a"; // Green-600 for hover
+                this.style.borderColor = "#16a34a";
+            },
+            function () {
+                this.style.backgroundColor = "#22c55e"; // Back to Green-500
+                this.style.borderColor = "#22c55e";
+            }
+        );
+    }
     $("#edit-mode-btn").addClass('edit-mode-inactive');
 });
 
@@ -629,7 +621,7 @@ function showToast(title, message, type, duration = 3000) {
     setTimeout(() => toast.addClass('show'), 10);
 
     // Set up close button
-    toast.find('.notification-close').on('click', function() {
+    toast.find('.notification-close').on('click', function () {
         closeToast(toast);
     });
 
@@ -643,7 +635,7 @@ function showToast(title, message, type, duration = 3000) {
     toast.data('timeout-id', timeoutId);
 
     // Add hide method to the toast
-    toast.hide = function() {
+    toast.hide = function () {
         closeToast(toast);
     };
 
@@ -687,5 +679,19 @@ function getCellStyle(params) {
 }
 
 // Need funktsioonid peavad olema ligipääsetavad globaalses ulatuses AG Grid'iga integreerimiseks
+window.getEditableColumns = getEditableColumns;
+window.setupEditHandlers = setupEditHandlers;
+window.setupChangeNotifications = setupChangeNotifications;
+window.setupWebSocket = setupWebSocket;
+window.toggleEditMode = toggleEditMode;
+window.enableEditMode = enableEditMode;
+window.disableEditMode = disableEditMode;
 window.onCellValueChanged = onCellValueChanged;
+window.loadSessionChanges = loadSessionChanges;
+window.updateChangesListUI = updateChangesListUI;
+window.undoChange = undoChange;
+window.undoAllChanges = undoAllChanges;
+window.checkForChanges = checkForChanges;
+window.showDataChangeNotification = showDataChangeNotification;
+window.showToast = showToast;
 window.getCellStyle = getCellStyle;

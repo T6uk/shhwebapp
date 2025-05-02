@@ -1,11 +1,12 @@
 // Document generation functionality
-const DocumentGenerator = (function() {
+window.DocumentGenerator = (function() {
     // Keep track of the currently selected template and row
     let selectedTemplatePath = null;
     let selectedRowData = null;
 
     // Initialize the document generator
     function init() {
+        console.log("Initializing DocumentGenerator");
         // Set up event listeners
         setupEventListeners();
     }
@@ -18,6 +19,7 @@ const DocumentGenerator = (function() {
             $(this).addClass('bg-blue-100 dark:bg-blue-900');
 
             selectedTemplatePath = $(this).data('path');
+            console.log("Selected template path:", selectedTemplatePath);
         });
 
         // Handle create document button click
@@ -57,7 +59,7 @@ const DocumentGenerator = (function() {
             // Prepare form data
             const formData = new FormData();
             formData.append('template_path', selectedTemplatePath);
-            formData.append('row_data', JSON.stringify(selectedRowData));
+            formData.append('row_data_json', JSON.stringify(selectedRowData));
             formData.append('output_name', outputName);
 
             // Send request to generate document
@@ -74,7 +76,7 @@ const DocumentGenerator = (function() {
 
                     // Ask if user wants to open the document
                     if (confirm('Dokument edukalt genereeritud. Kas soovite avada dokumendi?')) {
-                        openDocument(data.output_path);
+                        openDocument(data.file_path);
                     }
 
                     // Close the templates modal
@@ -82,7 +84,9 @@ const DocumentGenerator = (function() {
 
                     // Refresh the drafts list if the drafts modal is open
                     if ($('#document-drafts-modal').is(':visible')) {
-                        loadDrafts();
+                        if (typeof loadDrafts === 'function') {
+                            loadDrafts();
+                        }
                     }
                 } else {
                     showNotification('error', 'Viga', data.message);
@@ -147,6 +151,13 @@ const DocumentGenerator = (function() {
 
     // Show a notification
     function showNotification(type, title, message) {
+        // Use global showToast if available
+        if (typeof window.showToast === 'function') {
+            window.showToast(title, message, type);
+            return;
+        }
+
+        // Fallback implementation
         const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
         const bgClass = type === 'success' ? 'bg-green-100 border-green-500 text-green-700' : 'bg-red-100 border-red-500 text-red-700';
 
@@ -197,11 +208,12 @@ const DocumentGenerator = (function() {
     // Public API
     return {
         init: init,
-        setRowData: setRowData
+        setRowData: setRowData,
+        openDocument: openDocument
     };
 })();
 
 // Initialize when the document is ready
 $(document).ready(function() {
-    DocumentGenerator.init();
+    window.DocumentGenerator.init();
 });

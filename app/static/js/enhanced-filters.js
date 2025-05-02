@@ -2,9 +2,9 @@
 // Enhanced filtering functionality for the data table application
 
 // Global variables for filter management
-let activeFilters = [];
-let nextFilterId = 1;
-let lastChangeCheck = null;
+window.activeFilters = [];
+window.nextFilterId = 1;
+window.lastChangeCheck = null;
 
 document.addEventListener("DOMContentLoaded", function () {
     // Initialize first filter row
@@ -44,9 +44,9 @@ function setupFilterEventHandlers() {
             $row.remove();
 
             // If there was a field selected, immediately update the grid filter model
-            if (fieldName && gridApi) {
+            if (fieldName && window.gridApi) {
                 // Get the current filter model
-                const currentFilterModel = gridApi.getFilterModel() || {};
+                const currentFilterModel = window.gridApi.getFilterModel() || {};
 
                 // Remove this field from the filter model if it exists
                 if (currentFilterModel[fieldName]) {
@@ -55,14 +55,14 @@ function setupFilterEventHandlers() {
                     console.log("Updated filter model after removal:", currentFilterModel);
 
                     // Apply the updated filter model
-                    gridApi.setFilterModel(Object.keys(currentFilterModel).length > 0 ? currentFilterModel : null);
+                    window.gridApi.setFilterModel(Object.keys(currentFilterModel).length > 0 ? currentFilterModel : null);
 
                     // Refresh the grid data
-                    gridApi.refreshInfiniteCache();
+                    window.gridApi.refreshInfiniteCache();
 
                     // Update status text after data loads
                     setTimeout(function () {
-                        const displayedRowCount = gridApi.getDisplayedRowCount();
+                        const displayedRowCount = window.gridApi.getDisplayedRowCount();
                         const isFiltered = Object.keys(currentFilterModel).length > 0;
                         $("#status").text(isFiltered ?
                             `Filtreeritud: ${displayedRowCount} kirjet` :
@@ -77,12 +77,12 @@ function setupFilterEventHandlers() {
             resetFilterRow($row);
 
             // Also clear the grid filter if it had a field
-            if (fieldName && gridApi) {
-                gridApi.setFilterModel(null);
-                gridApi.refreshInfiniteCache();
+            if (fieldName && window.gridApi) {
+                window.gridApi.setFilterModel(null);
+                window.gridApi.refreshInfiniteCache();
 
                 setTimeout(function () {
-                    const displayedRowCount = gridApi.getDisplayedRowCount();
+                    const displayedRowCount = window.gridApi.getDisplayedRowCount();
                     $("#status").text(`${displayedRowCount} kirjet`);
                 }, 500);
 
@@ -136,7 +136,7 @@ function setupFilterEventHandlers() {
 function resetFilterPanel() {
     // Clear filter container
     $("#filter-container").empty();
-    nextFilterId = 1;
+    window.nextFilterId = 1;
 
     // Add initial filter row
     addFilterRow();
@@ -163,14 +163,14 @@ function resetFilterRow($row) {
     `);
 
     // Apply dark mode styling if needed
-    if (isDarkMode) {
+    if (window.isDarkMode) {
         $row.find("input, select").addClass("bg-gray-700 text-gray-200 border-gray-600")
             .removeClass("bg-white text-gray-700 border-gray-200");
     }
 }
 
 function addFilterRow() {
-    const newRowId = nextFilterId++;
+    const newRowId = window.nextFilterId++;
     const newRow = $(`
         <div class="filter-row" data-id="${newRowId}">
             <select class="filter-select filter-field">
@@ -203,13 +203,17 @@ function addFilterRow() {
     updateFilterFields();
 
     // Update dark mode styling if active
-    if (isDarkMode) {
+    if (window.isDarkMode) {
         updateDynamicElements();
     }
 }
 
 function updateFilterFields() {
-    if (!columnDefs || columnDefs.length === 0) return;
+    // Use columnDefs from window if available
+    if (!window.columnDefs || window.columnDefs.length === 0) {
+        console.log("No column definitions available");
+        return;
+    }
 
     // Clear existing options except the first placeholder
     $(".filter-field").each(function () {
@@ -218,7 +222,7 @@ function updateFilterFields() {
     });
 
     // Add column options to each filter field dropdown
-    columnDefs.forEach(function (col) {
+    window.columnDefs.forEach(function (col) {
         const option = $("<option>")
             .val(col.field)
             .text(col.headerName);
@@ -237,7 +241,7 @@ function updateFilterOperators(fieldSelect) {
     if (!selectedField) return;
 
     // Find column definition
-    const column = columnDefs.find(col => col.field === selectedField);
+    const column = window.columnDefs.find(col => col.field === selectedField);
     if (!column) return;
 
     // Clear existing options
@@ -316,7 +320,7 @@ function updateFilterValueInput($row) {
     if (!selectedField) return;
 
     // Find column definition
-    const column = columnDefs.find(col => col.field === selectedField);
+    const column = window.columnDefs.find(col => col.field === selectedField);
     if (!column) return;
 
     // Get column type
@@ -366,7 +370,7 @@ function updateFilterValueInput($row) {
     }
 
     // Apply dark mode styling if needed
-    if (isDarkMode) {
+    if (window.isDarkMode) {
         $valueContainer.find('input').addClass('bg-gray-700 text-gray-200 border-gray-600')
             .removeClass('bg-white text-gray-700 border-gray-200');
     }
@@ -432,7 +436,7 @@ function applyFilters() {
 
         // Add to applied filters for display
         if (hasValidFilters) {
-            const columnDef = columnDefs.find(c => c.field === field);
+            const columnDef = window.columnDefs.find(c => c.field === field);
             const fieldDisplay = columnDef ? columnDef.headerName : field;
             appliedFilters.push(`${fieldDisplay} ${displayValue}`);
         }
@@ -443,16 +447,16 @@ function applyFilters() {
     console.log("Applied filters:", appliedFilters);
 
     // Apply to grid
-    if (gridApi) {
+    if (window.gridApi) {
         // Set the filter model
-        gridApi.setFilterModel(hasValidFilters ? filterModel : null);
+        window.gridApi.setFilterModel(hasValidFilters ? filterModel : null);
 
         // Request fresh data
-        gridApi.refreshInfiniteCache();
+        window.gridApi.refreshInfiniteCache();
 
         // Update status after data loads
         setTimeout(function() {
-            const displayedRowCount = gridApi.getDisplayedRowCount();
+            const displayedRowCount = window.gridApi.getDisplayedRowCount();
             $("#status").text(hasValidFilters ?
                 `Filtreeritud: ${displayedRowCount} kirjet` :
                 `${displayedRowCount} kirjet`);
@@ -477,25 +481,25 @@ function applyFilters() {
 }
 
 function removeFilterAndApply(fieldName) {
-    if (!gridApi || !fieldName) return;
+    if (!window.gridApi || !fieldName) return;
 
     // Get current filter model
-    const filterModel = gridApi.getFilterModel() || {};
+    const filterModel = window.gridApi.getFilterModel() || {};
 
     // Remove this field
     if (filterModel[fieldName]) {
         delete filterModel[fieldName];
 
         // Apply the updated model
-        gridApi.setFilterModel(Object.keys(filterModel).length > 0 ? filterModel : null);
-        gridApi.refreshInfiniteCache();
+        window.gridApi.setFilterModel(Object.keys(filterModel).length > 0 ? filterModel : null);
+        window.gridApi.refreshInfiniteCache();
 
         // Show confirmation
         showToast("Filter eemaldatud", `Filter "${fieldName}" on eemaldatud`, "info");
 
         // Update status text
         setTimeout(function() {
-            const displayedRowCount = gridApi.getDisplayedRowCount();
+            const displayedRowCount = window.gridApi.getDisplayedRowCount();
             const isFiltered = Object.keys(filterModel).length > 0;
             $("#status").text(isFiltered ?
                 `Filtreeritud: ${displayedRowCount} kirjet` :
@@ -505,9 +509,9 @@ function removeFilterAndApply(fieldName) {
 }
 
 function updateActiveFiltersDisplay() {
-    if (!gridApi) return;
+    if (!window.gridApi) return;
 
-    const filterModel = gridApi.getFilterModel() || {};
+    const filterModel = window.gridApi.getFilterModel() || {};
     const $container = $("#active-filters-container");
     const $filtersDisplay = $("#active-filters");
 
@@ -518,7 +522,7 @@ function updateActiveFiltersDisplay() {
     if (Object.keys(filterModel).length > 0) {
         Object.entries(filterModel).forEach(([field, config]) => {
             // Find column display name
-            const columnDef = columnDefs.find(c => c.field === field);
+            const columnDef = window.columnDefs.find(c => c.field === field);
             const fieldDisplay = columnDef ? columnDef.headerName : field;
 
             // Create display text
@@ -586,13 +590,13 @@ function clearFilters() {
     resetFilterPanel();
 
     // Clear grid filters if grid is available
-    if (gridApi) {
-        gridApi.setFilterModel(null);
-        gridApi.refreshInfiniteCache();
+    if (window.gridApi) {
+        window.gridApi.setFilterModel(null);
+        window.gridApi.refreshInfiniteCache();
 
         // Update status after data loads
         setTimeout(function () {
-            const displayedRowCount = gridApi.getDisplayedRowCount();
+            const displayedRowCount = window.gridApi.getDisplayedRowCount();
             $("#status").text(`${displayedRowCount} kirjet`);
         }, 500);
     }
@@ -603,7 +607,7 @@ function clearFilters() {
 
 function debugFilter() {
     // Get the current filter model from the grid
-    const filterModel = gridApi ? gridApi.getFilterModel() : {};
+    const filterModel = window.gridApi ? window.gridApi.getFilterModel() : {};
     const debugOutput = $('#debug-output');
 
     // Show UI form state
@@ -663,3 +667,116 @@ function debugFilter() {
         }
     });
 }
+
+function showSaveFilterModal() {
+    // Get current filter settings
+    if (!window.gridApi) return;
+
+    const filterModel = window.gridApi.getFilterModel() || {};
+
+    if (Object.keys(filterModel).length === 0) {
+        showToast("Pole midagi salvestada", "Palun rakendage enne salvestamist vähemalt üks filter", "warning");
+        return;
+    }
+
+    // Clear form
+    $("#filter-name").val("");
+    $("#filter-description").val("");
+    $("#filter-public").prop("checked", false);
+
+    // Show modal
+    $("#save-filter-modal").removeClass("hidden");
+}
+
+function processSaveFilter() {
+    if (!window.gridApi) return;
+
+    const name = $("#filter-name").val().trim();
+    const description = $("#filter-description").val().trim();
+    const isPublic = $("#filter-public").prop("checked");
+
+    // Validate inputs
+    if (!name) {
+        showToast("Nõutud väli puudub", "Palun sisestage filtri nimi", "error");
+        return;
+    }
+
+    // Get current filter model
+    const filterModel = window.gridApi.getFilterModel() || {};
+
+    if (Object.keys(filterModel).length === 0) {
+        showToast("Pole midagi salvestada", "Palun rakendage enne salvestamist vähemalt üks filter", "warning");
+        return;
+    }
+
+    // Show loading indicator
+    $("#save-filter-button").html('<i class="fas fa-spinner fa-spin mr-2"></i> Salvestamine...');
+    $("#save-filter-button").prop("disabled", true);
+
+    // Call API to save filter
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+    formData.append('filter_model', JSON.stringify(filterModel));
+    formData.append('is_public', isPublic);
+
+    $.ajax({
+        url: "/api/v1/table/save-filter",
+        method: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            // Hide modal
+            $("#save-filter-modal").addClass("hidden");
+
+            // Show success message
+            showToast("Filter salvestatud", `Filter "${name}" edukalt salvestatud`, "success");
+
+            // Refresh filters list
+            if (typeof loadSavedFiltersList === 'function') {
+                loadSavedFiltersList();
+            }
+        },
+        error: function(xhr) {
+            console.error("Error saving filter:", xhr.responseJSON);
+            showToast("Viga filtri salvestamisel", xhr.responseJSON?.detail || "Palun proovige uuesti", "error");
+        },
+        complete: function() {
+            // Reset button
+            $("#save-filter-button").html('<i class="fas fa-save mr-2"></i> Salvesta filter');
+            $("#save-filter-button").prop("disabled", false);
+        }
+    });
+}
+
+function updateDynamicElements() {
+    if (window.isDarkMode) {
+        $(".filter-row input, .filter-row select").addClass("bg-gray-700 text-gray-200 border-gray-600")
+            .removeClass("bg-white text-gray-700 border-gray-200");
+    } else {
+        $(".filter-row input, .filter-row select").removeClass("bg-gray-700 text-gray-200 border-gray-600")
+            .addClass("bg-white text-gray-700 border-gray-200");
+    }
+}
+
+// For compatibility with other modules - these names are used in events.js and other places
+window.addEnhancedFilterRow = addFilterRow;
+window.applyEnhancedFilters = applyFilters;
+
+// Expose all functions globally
+window.resetFilterPanel = resetFilterPanel;
+window.resetFilterRow = resetFilterRow;
+window.addFilterRow = addFilterRow;
+window.updateFilterFields = updateFilterFields;
+window.updateFilterOperators = updateFilterOperators;
+window.updateFilterValueInput = updateFilterValueInput;
+window.applyFilters = applyFilters;
+window.removeFilterAndApply = removeFilterAndApply;
+window.updateActiveFiltersDisplay = updateActiveFiltersDisplay;
+window.clearFilters = clearFilters;
+window.debugFilter = debugFilter;
+window.setupFilterEventHandlers = setupFilterEventHandlers;
+window.showSaveFilterModal = showSaveFilterModal;
+window.processSaveFilter = processSaveFilter;
+window.updateDynamicElements = updateDynamicElements;

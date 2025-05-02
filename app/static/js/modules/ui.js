@@ -2,40 +2,58 @@
 // UI utilities
 
 // Set up dropdown toggles
+// Set up dropdown toggles
 function setupDropdowns() {
     const dropdowns = [
         {toggle: "#tools-dropdown-toggle", menu: "#tools-dropdown-menu"},
         {toggle: "#widgets-dropdown-toggle", menu: "#widgets-dropdown-menu"},
         {toggle: "#settings-dropdown-toggle", menu: "#settings-dropdown-menu"},
         {toggle: "#links-dropdown-toggle", menu: "#links-dropdown-menu"},
-        {toggle: "#filters-dropdown-toggle", menu: "#filters-dropdown-menu"}
+        {toggle: "#filters-dropdown-toggle", menu: "#filters-dropdown-menu"},
+        {toggle: "#user-dropdown-toggle", menu: "#user-dropdown-menu"} // Add user dropdown
     ];
 
     // Set up each dropdown with toggle behavior
     dropdowns.forEach(dropdown => {
-        $(dropdown.toggle).click(function(e) {
+        $(dropdown.toggle).off('click').on('click', function(e) {
             e.stopPropagation();
-            $(dropdown.menu).toggleClass("show");
+            const $menu = $(dropdown.menu);
+            const isVisible = $menu.hasClass("show");
 
-            // Hide other dropdowns
-            dropdowns.forEach(other => {
-                if (other.menu !== dropdown.menu) {
-                    $(other.menu).removeClass("show");
-                }
-            });
+            // Hide all dropdowns first
+            $(".dropdown-menu").removeClass("show");
+
+            // Toggle this dropdown
+            if (!isVisible) {
+                $menu.addClass("show");
+            }
         });
     });
 
     // Close dropdowns when clicking outside
-    $(document).click(function() {
+    $(document).off('click.dropdown').on('click.dropdown', function() {
         $(".dropdown-menu").removeClass("show");
     });
 
     // Prevent dropdown closing when clicking inside dropdown
-    $(".dropdown-menu").click(function(e) {
+    $(".dropdown-menu").off('click.dropdown').on('click.dropdown', function(e) {
         e.stopPropagation();
     });
 }
+
+// Export functions for other modules
+window.setupDropdowns = setupDropdowns;
+window.showToast = showToast;
+window.checkForDatabaseChanges = checkForDatabaseChanges;
+window.setupDataRefreshTimer = setupDataRefreshTimer;
+window.highlightRefreshButton = highlightRefreshButton;
+window.resetRefreshButton = resetRefreshButton;
+
+// Add direct initialization code
+$(document).ready(function() {
+    // Initialize dropdowns
+    setupDropdowns();
+});
 
 // Show a toast notification
 function showToast(title, message, type = "info") {
