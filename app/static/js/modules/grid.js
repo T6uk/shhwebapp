@@ -72,6 +72,15 @@
                 resizable: true,
                 sortable: true,
                 filter: true,
+                // Add cell renderer to highlight blank values
+                cellRenderer: function (params) {
+                    if (params.value === null || params.value === '' ||
+                        (typeof params.value === 'string' && params.value.trim() === '')) {
+                        // Return a styled empty cell indicator
+                        return '<span style="color:#999;font-style:italic;font-size:0.9em;">(tühi)</span>';
+                    }
+                    return params.value;
+                },
                 // Add these properties for editing
                 editable: function (params) {
                     // Only editable if in edit mode and the column is in editableColumns
@@ -162,22 +171,32 @@
                     console.log('Adding sort:', queryParams.sort_field, queryParams.sort_dir);
                 }
 
-                // Add search term if present
-                if (state.searchTerm) {
-                    queryParams.search = state.searchTerm;
-                    console.log('Adding search term:', state.searchTerm);
+                // Add search term if present - check both possible state locations
+                const searchTerm = state.searchTerm || (window.appState ? window.appState.searchTerm : null);
+                if (searchTerm) {
+                    queryParams.search = searchTerm;
+                    console.log('Adding search term:', searchTerm);
                 }
 
                 // Add filters if present
                 if (params.filterModel && Object.keys(params.filterModel).length > 0) {
                     // Convert the filter model to a JSON string
-                    queryParams.filter_model = JSON.stringify(params.filterModel);
-                    console.log('Adding filter model:', queryParams.filter_model);
+                    try {
+                        const filterModelStr = JSON.stringify(params.filterModel);
+                        queryParams.filter_model = filterModelStr;
+                        console.log('Adding filter model:', filterModelStr);
+                    } catch (error) {
+                        console.error('Error stringifying filter model:', error, params.filterModel);
+                        // Continue without filters if there's an error
+                    }
                 }
 
                 // Add timestamp to bust cache when refreshing
                 if (params.parentNode && params.parentNode.data && params.parentNode.data.timestamp) {
                     queryParams.timestamp = params.parentNode.data.timestamp;
+                } else {
+                    // Always add a timestamp to prevent caching
+                    queryParams.timestamp = new Date().getTime();
                 }
 
                 $.ajax({
@@ -186,9 +205,19 @@
                     data: queryParams,
                     dataType: "json",
                     success: function (response) {
+                        // Validate response data
+                        if (!response || !response.rowData) {
+                            console.error("Invalid response format:", response);
+                            params.failCallback();
+                            $("#loading-overlay").hide();
+                            $("#mini-loading-indicator").addClass("hidden");
+                            return;
+                        }
+
                         // Update status
+                        const isFiltered = queryParams.filter_model || queryParams.search;
                         $("#status").text(response.rowCount + " kirjet" +
-                            (queryParams.filter_model ? " (filtreeritud)" : ""));
+                            (isFiltered ? " (filtreeritud)" : ""));
 
                         // Check if we have more rows
                         const lastRow = response.rowCount <= response.endRow ? response.rowCount : -1;
@@ -199,17 +228,29 @@
                         // Hide loading indicators
                         $("#loading-overlay").hide();
                         $("#mini-loading-indicator").addClass("hidden");
+
+                        console.log(`Loaded ${response.rowData.length} rows out of ${response.rowCount} total`);
                     },
                     error: function (xhr, status, error) {
                         console.error("Error loading data:", error);
-                        console.error("Response:", xhr.responseText);
+                        console.error("Status:", status);
+                        try {
+                            console.error("Response:", xhr.responseText);
+                        } catch (e) {
+                            console.error("Could not log response text:", e);
+                        }
+
                         $("#status").text("Viga: " + error);
                         params.failCallback();
                         $("#loading-overlay").hide();
                         $("#mini-loading-indicator").addClass("hidden");
 
-                        // Show error toast
-                        funcs.showToast("Andmete laadimine ebaõnnestus", error, "error");
+                        // Show error toast if function exists
+                        if (typeof funcs.showToast === 'function') {
+                            funcs.showToast("Andmete laadimine ebaõnnestus", error, "error");
+                        } else if (typeof showToast === 'function') {
+                            showToast("Andmete laadimine ebaõnnestus", error, "error");
+                        }
                     }
                 });
             }

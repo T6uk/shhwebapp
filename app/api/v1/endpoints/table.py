@@ -107,51 +107,15 @@ async def get_table_data(
         logger.info(f"Received filter_model: {filter_model}")
 
         # Add search filters if provided
-        if search:
-            search_value = f"%{search}%"
-            query_params["search_value"] = search_value
-
-            if using_sqlite:
-                # For SQLite, we search on all columns
-                # Get column names from PRAGMA
-                columns_query = "PRAGMA table_info('taitur_data')"
-                cols_result = await db.execute(text(columns_query))
-                all_columns = [row[1] for row in cols_result.fetchall()]  # column name is at index 1
-
-                # Build search conditions for all columns
-                search_conditions = []
-                for col in all_columns:
-                    # SQLite uses || for concatenation
-                    search_conditions.append(f'"{col}" LIKE :search_value')
-
-                if search_conditions:
-                    where_clauses.append(f"({' OR '.join(search_conditions)})")
-            else:
-                # For PostgreSQL, search on text columns
-                text_cols_query = """
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = :table_name
-                    AND data_type IN ('character varying', 'text', 'character', 'varchar')
-                """
-                text_cols_result = await db.execute(text(text_cols_query), {"table_name": BigTable.name})
-                text_cols = [row[0] for row in text_cols_result.fetchall()]
-
-                if text_cols:
-                    search_conditions = [f'"{col}"::text ILIKE :search_value' for col in text_cols]
-                    where_clauses.append(f"({' OR '.join(search_conditions)})")
-
-        # Process filter model if provided
         if filter_model:
             try:
                 # Parse the filter model
                 try:
                     filters = json.loads(filter_model)
+                    logger.info(f"Successfully parsed filter_model: {filters}")
                 except json.JSONDecodeError:
                     logger.error(f"Invalid JSON in filter_model: {filter_model}")
                     raise ValueError("Invalid filter model format")
-
-                logger.info(f"Parsed filters: {filters}")
 
                 # Process each filter
                 filter_idx = 0
@@ -163,137 +127,302 @@ async def get_table_data(
 
                     # Skip if field doesn't exist in the table
                     if field not in column_types and field != "id":  # Always allow "id"
-                        logger.warning(f"Field {field} not found in table schema")
+                        logger.warning(f"Field {field} not found in table schema, skipping filter")
                         continue
 
-                    # Convert value based on column type
-                    converted_value = filter_value
+                    # Determine the appropriate cast expression based on DB type
+                    cast_expr = "" if using_sqlite else "::text"
+
                     try:
-                        # Get column type info
-                        col_type_info = column_types.get(field, {})
-                        col_type = col_type_info.get("data_type", "").lower()
+                        # Handle each filter type with better type handling
+                        if filter_type == 'contains':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
+                            query_params[param_name] = f"%{filter_value}%"
+                            filter_idx += 1
 
-                        # Convert value based on column type
-                        if field == "id" or col_type in ("integer", "int", "bigint", "smallint"):
-                            # Handle integer types
-                            if filter_value is not None and filter_value != "":
-                                if isinstance(filter_value, dict):  # For inRange
-                                    if 'from' in filter_value and filter_value['from']:
-                                        filter_value['from'] = int(filter_value['from'])
-                                    if 'to' in filter_value and filter_value['to']:
-                                        filter_value['to'] = int(filter_value['to'])
-                                    converted_value = filter_value
+                        elif filter_type == 'notContains':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'("{field}" IS NULL OR "{field}"{cast_expr} NOT LIKE :{param_name})')
+                            query_params[param_name] = f"%{filter_value}%"
+                            filter_idx += 1
+
+                        elif filter_type == 'equals':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}" = :{param_name}')
+
+                            # Try to convert values based on column type
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
+
+                            # Handle numeric types
+                            if field == "id" or col_type in ("integer", "int", "bigint", "smallint"):
+                                try:
+                                    query_params[param_name] = int(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                try:
+                                    query_params[param_name] = float(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            # Handle date types
+                            elif col_type in ("date", "timestamp"):
+                                query_params[param_name] = filter_value
+                            else:
+                                query_params[param_name] = filter_value
+
+                            filter_idx += 1
+
+                        elif filter_type == 'notEqual':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'("{field}" IS NULL OR "{field}" != :{param_name})')
+
+                            # Type conversion similar to equals
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
+
+                            if field == "id" or col_type in ("integer", "int", "bigint", "smallint"):
+                                try:
+                                    query_params[param_name] = int(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                try:
+                                    query_params[param_name] = float(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            else:
+                                query_params[param_name] = filter_value
+
+                            filter_idx += 1
+
+                        elif filter_type == 'startsWith':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
+                            query_params[param_name] = f"{filter_value}%"
+                            filter_idx += 1
+
+                        elif filter_type == 'endsWith':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
+                            query_params[param_name] = f"%{filter_value}"
+                            filter_idx += 1
+
+                        elif filter_type == 'notBlank':
+                            # Improved notBlank filter to correctly filter out ALL types of blank values
+                            if using_sqlite:
+                                # SQLite implementation - more robust check including whitespace-only strings
+                                where_clauses.append(
+                                    f'("{field}" IS NOT NULL AND "{field}" != "" AND TRIM("{field}") != "")')
+                                logger.info(f"Added improved notBlank filter for {field} using SQLite syntax")
+                            else:
+                                # PostgreSQL implementation - handle all types of blank values and type-specific checks
+                                col_type_info = column_types.get(field, {})
+                                col_type = col_type_info.get("data_type", "").lower()
+                                if col_type in (
+                                        "integer", "int", "bigint", "smallint", "numeric", "decimal", "real", "double",
+                                        "float"):
+                                    # For numeric types, IS NOT NULL is sufficient
+                                    where_clauses.append(f'"{field}" IS NOT NULL')
+                                elif col_type in ("date", "timestamp", "timestamp with time zone"):
+                                    # For date/timestamp types, IS NOT NULL is sufficient
+                                    where_clauses.append(f'"{field}" IS NOT NULL')
                                 else:
-                                    converted_value = int(filter_value)
+                                    # For string and other types, check NULL, empty string, and whitespace-only
+                                    where_clauses.append(
+                                        f'("{field}" IS NOT NULL AND "{field}"::text != \'\' AND TRIM(COALESCE("{field}"::text, \'\')) != \'\')')
+                                logger.info(
+                                    f"Added improved notBlank filter for {field} using PostgreSQL syntax for type {col_type}")
 
-                        elif col_type in ("numeric", "decimal", "real", "double", "float"):
-                            # Handle float types
-                            if filter_value is not None and filter_value != "":
-                                if isinstance(filter_value, dict):  # For inRange
-                                    if 'from' in filter_value and filter_value['from']:
-                                        filter_value['from'] = float(filter_value['from'])
-                                    if 'to' in filter_value and filter_value['to']:
-                                        filter_value['to'] = float(filter_value['to'])
-                                    converted_value = filter_value
+                        elif filter_type == 'blank':
+                            # Improved blank filter to correctly match ALL types of blank values
+                            if using_sqlite:
+                                # SQLite implementation - including whitespace-only strings
+                                where_clauses.append(f'("{field}" IS NULL OR "{field}" = "" OR TRIM("{field}") = "")')
+                                logger.info(f"Added improved blank filter for {field} using SQLite syntax")
+                            else:
+                                # PostgreSQL implementation - type-specific handling
+                                col_type_info = column_types.get(field, {})
+                                col_type = col_type_info.get("data_type", "").lower()
+
+                                if col_type in (
+                                        "integer", "int", "bigint", "smallint", "numeric", "decimal", "real", "double",
+                                        "float"):
+                                    # For numeric types, IS NULL is sufficient
+                                    where_clauses.append(f'"{field}" IS NULL')
+                                elif col_type in ("date", "timestamp", "timestamp with time zone"):
+                                    # For date/timestamp types, IS NULL is sufficient
+                                    where_clauses.append(f'"{field}" IS NULL')
                                 else:
-                                    converted_value = float(filter_value)
+                                    # For string and other types, check NULL, empty string, and whitespace-only
+                                    where_clauses.append(
+                                        f'("{field}" IS NULL OR "{field}"::text = \'\' OR TRIM(COALESCE("{field}"::text, \'\')) = \'\')')
 
-                    except (ValueError, TypeError) as e:
-                        logger.warning(f"Error converting value for {field}: {e}")
-                        # Continue with the original value
+                                logger.info(
+                                    f"Added improved blank filter for {field} using PostgreSQL syntax for type {col_type}")
 
-                    logger.info(f"Converted value for {field}: {filter_value} -> {converted_value}")
+                        elif filter_type == 'greaterThan':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}" > :{param_name}')
 
-                    # Special case for ID column when type info is missing - assume integer
-                    if field == "id" and filter_value is not None and not isinstance(filter_value, dict):
-                        try:
-                            converted_value = int(filter_value)
-                        except (ValueError, TypeError):
-                            logger.warning(f"Cannot convert ID value {filter_value} to integer")
+                            # Type conversion
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
 
-                    # Handle operator based on DB type (SQLite vs PostgreSQL)
-                    cast_expr = "" if using_sqlite else "::text"  # PostgreSQL needs ::text cast for LIKE operations
+                            if col_type in ("integer", "int", "bigint", "smallint"):
+                                try:
+                                    query_params[param_name] = int(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                try:
+                                    query_params[param_name] = float(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            else:
+                                query_params[param_name] = filter_value
 
-                    # Handle each filter type, adapting for SQLite or PostgreSQL
-                    if filter_type == 'contains':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
-                        query_params[param_name] = f"%{filter_value}%"
-                        filter_idx += 1
+                            filter_idx += 1
 
-                    elif filter_type == 'equals':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}" = :{param_name}')
-                        query_params[param_name] = converted_value
-                        filter_idx += 1
-
-                    elif filter_type == 'notEqual':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}" != :{param_name}')
-                        query_params[param_name] = converted_value
-                        filter_idx += 1
-
-                    elif filter_type == 'startsWith':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
-                        query_params[param_name] = f"{filter_value}%"
-                        filter_idx += 1
-
-                    elif filter_type == 'endsWith':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}"{cast_expr} LIKE :{param_name}')
-                        query_params[param_name] = f"%{filter_value}"
-                        filter_idx += 1
-
-                    elif filter_type == 'blank':
-                        where_clauses.append(f'("{field}" IS NULL OR "{field}" = \'\')')
-
-                    elif filter_type == 'notBlank':
-                        where_clauses.append(f'("{field}" IS NOT NULL AND "{field}" != \'\')')
-
-                    elif filter_type == 'greaterThan':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}" > :{param_name}')
-                        query_params[param_name] = converted_value
-                        filter_idx += 1
-
-                    elif filter_type == 'lessThan':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}" < :{param_name}')
-                        query_params[param_name] = converted_value
-                        filter_idx += 1
-
-                    elif filter_type == 'greaterThanOrEqual':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}" >= :{param_name}')
-                        query_params[param_name] = converted_value
-                        filter_idx += 1
-
-                    elif filter_type == 'lessThanOrEqual':
-                        param_name = f"filter_{filter_idx}"
-                        where_clauses.append(f'"{field}" <= :{param_name}')
-                        query_params[param_name] = converted_value
-                        filter_idx += 1
-
-                    elif filter_type == 'inRange' and isinstance(converted_value, dict):
-                        from_value = converted_value.get('from')
-                        to_value = converted_value.get('to')
-
-                        if from_value is not None:
+                        elif filter_type == 'greaterThanOrEqual':
                             param_name = f"filter_{filter_idx}"
                             where_clauses.append(f'"{field}" >= :{param_name}')
-                            query_params[param_name] = from_value
+
+                            # Type conversion
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
+
+                            if col_type in ("integer", "int", "bigint", "smallint"):
+                                try:
+                                    query_params[param_name] = int(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                try:
+                                    query_params[param_name] = float(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            else:
+                                query_params[param_name] = filter_value
+
                             filter_idx += 1
 
-                        if to_value is not None:
+                        elif filter_type == 'lessThan':
+                            param_name = f"filter_{filter_idx}"
+                            where_clauses.append(f'"{field}" < :{param_name}')
+
+                            # Type conversion
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
+
+                            if col_type in ("integer", "int", "bigint", "smallint"):
+                                try:
+                                    query_params[param_name] = int(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                try:
+                                    query_params[param_name] = float(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            else:
+                                query_params[param_name] = filter_value
+
+                            filter_idx += 1
+
+                        elif filter_type == 'lessThanOrEqual':
                             param_name = f"filter_{filter_idx}"
                             where_clauses.append(f'"{field}" <= :{param_name}')
-                            query_params[param_name] = to_value
+
+                            # Type conversion
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
+
+                            if col_type in ("integer", "int", "bigint", "smallint"):
+                                try:
+                                    query_params[param_name] = int(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                try:
+                                    query_params[param_name] = float(filter_value)
+                                except (ValueError, TypeError):
+                                    query_params[param_name] = filter_value
+                            else:
+                                query_params[param_name] = filter_value
+
                             filter_idx += 1
+
+                        elif filter_type == 'inRange' and isinstance(filter_value, dict):
+                            from_value = filter_value.get('from')
+                            to_value = filter_value.get('to')
+
+                            # Type conversion
+                            col_type_info = column_types.get(field, {})
+                            col_type = col_type_info.get("data_type", "").lower()
+
+                            # Only add range conditions if values are provided
+                            if from_value is not None and from_value != "":
+                                param_name = f"filter_{filter_idx}"
+                                where_clauses.append(f'"{field}" >= :{param_name}')
+
+                                if col_type in ("integer", "int", "bigint", "smallint"):
+                                    try:
+                                        query_params[param_name] = int(from_value)
+                                    except (ValueError, TypeError):
+                                        query_params[param_name] = from_value
+                                elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                    try:
+                                        query_params[param_name] = float(from_value)
+                                    except (ValueError, TypeError):
+                                        query_params[param_name] = from_value
+                                elif col_type in ("date", "timestamp"):
+                                    query_params[param_name] = from_value
+                                else:
+                                    query_params[param_name] = from_value
+
+                                filter_idx += 1
+
+                            if to_value is not None and to_value != "":
+                                param_name = f"filter_{filter_idx}"
+                                where_clauses.append(f'"{field}" <= :{param_name}')
+
+                                if col_type in ("integer", "int", "bigint", "smallint"):
+                                    try:
+                                        query_params[param_name] = int(to_value)
+                                    except (ValueError, TypeError):
+                                        query_params[param_name] = to_value
+                                elif col_type in ("numeric", "decimal", "real", "double", "float"):
+                                    try:
+                                        query_params[param_name] = float(to_value)
+                                    except (ValueError, TypeError):
+                                        query_params[param_name] = to_value
+                                elif col_type in ("date", "timestamp"):
+                                    query_params[param_name] = to_value
+                                else:
+                                    query_params[param_name] = to_value
+
+                                filter_idx += 1
+
+                        else:
+                            logger.warning(f"Unsupported filter type: {filter_type}")
+
+                        logger.info(f"Successfully processed filter: {field} {filter_type}")
+
+                    except Exception as e:
+                        logger.error(f"Error processing specific filter '{field}' with type '{filter_type}': {str(e)}")
+                        logger.error(traceback.format_exc())
+                        # Continue with other filters but log the error
 
             except Exception as e:
                 logger.error(f"Error processing filter model: {str(e)}", exc_info=True)
                 # Continue without failing - best effort filtering
+
+            # After processing filters, log complete SQL info
+            if where_clauses:
+                logger.info(f"Final WHERE clauses: {where_clauses}")
+                logger.info(f"Final query params: {query_params}")
 
         # Combine WHERE clauses
         where_sql = ""

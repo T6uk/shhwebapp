@@ -1,13 +1,13 @@
 // app/static/js/modules/core.js
 // Core functionality and initialization
 
-(function() {
+(function () {
     // Local references to global state
     const state = window.appState;
     const funcs = window.appFunctions;
 
     // Initialize when document is ready
-    $(document).ready(function() {
+    $(document).ready(function () {
         checkSystemDarkModePreference();
 
         const savedDarkMode = localStorage.getItem('darkMode');
@@ -30,7 +30,7 @@
         setupAdminNavigation();
 
         // Handle window resize
-        $(window).resize(function() {
+        $(window).resize(function () {
             funcs.resizeTableContainer();
             if (state.gridApi) {
                 state.gridApi.sizeColumnsToFit();
@@ -49,7 +49,7 @@
         // Check for changes on initial load
         state.lastChangeCheck = new Date();
         state.lastChangeCheck.setMinutes(state.lastChangeCheck.getMinutes() - 30); // Check last 30 minutes
-        setTimeout(function() {
+        setTimeout(function () {
             checkForDatabaseChanges();
         }, 3000); // Check shortly after page loads
 
@@ -58,7 +58,7 @@
 
         if ($("#user-profile").length) {
             const username = $("#user-profile").data("username");
-            setTimeout(function() {
+            setTimeout(function () {
                 funcs.showToast("Tere tulemast!", `Tere, ${username}! Andmed on valmis.`, "success");
             }, 1500); // Show after data loads
         }
@@ -89,9 +89,9 @@
 
     function setupDarkModeObserver() {
         // Create an observer instance
-        const observer = new MutationObserver(function(mutations) {
+        const observer = new MutationObserver(function (mutations) {
             if (state.isDarkMode) {
-                mutations.forEach(function(mutation) {
+                mutations.forEach(function (mutation) {
                     if (mutation.addedNodes.length) {
                         // Apply dark mode to newly added elements
                         $(mutation.addedNodes).find('.btn-secondary:not(.bg-yellow-500):not(.bg-red-500):not(.bg-green-500)').addClass('bg-gray-700 text-gray-200 border-gray-600').removeClass('bg-white text-gray-700 border-gray-200');
@@ -125,7 +125,7 @@
         console.log("Data refresh will only happen on user action");
 
         // Check for changes every 30 seconds, but only notify, don't refresh
-        setInterval(function() {
+        setInterval(function () {
             checkForDatabaseChanges();
         }, 30000); // 30 seconds
     }
@@ -138,7 +138,7 @@
                 last_checked: state.lastChangeCheck || new Date().toISOString()
             },
             dataType: "json",
-            success: function(response) {
+            success: function (response) {
                 // Update the last check timestamp
                 state.lastChangeCheck = response.timestamp;
 
@@ -147,7 +147,7 @@
                     highlightRefreshButton(response.changes);
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error("Error checking for changes:", error);
             }
         });
@@ -191,7 +191,7 @@
             resetRefreshButton();
 
             // Hide loading indicator after a short delay
-            setTimeout(function() {
+            setTimeout(function () {
                 $("#mini-loading-indicator").addClass("hidden");
             }, 500);
         }
@@ -203,7 +203,7 @@
             url: "/auth/check-admin",  // Updated path
             method: "GET",
             dataType: "json",
-            success: function(response) {
+            success: function (response) {
                 if (response.is_admin) {
                     // Add admin link to navigation
                     $("#admin-nav").html(`
@@ -217,7 +217,7 @@
                     $("#admin-dashboard-btn").show();
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 console.log("Not admin or not authenticated");
             }
         });
@@ -232,10 +232,10 @@
             url: "/api/v1/table/columns",
             method: "GET",
             dataType: "json",
-            success: function(response) {
+            success: function (response) {
                 if (response && response.columns && response.columns.length > 0) {
                     // Process column data for AG Grid
-                    state.columnDefs = response.columns.map(function(col) {
+                    state.columnDefs = response.columns.map(function (col) {
                         // Initialize as visible in our tracking
                         state.columnVisibility[col.field] = true;
 
@@ -265,7 +265,7 @@
                     $("#loading-overlay").hide();
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 $("#status").text("Viga: " + error);
                 $("#loading-overlay").hide();
             }
@@ -275,7 +275,7 @@
     // Add a debounce function to improve search performance
     function debounce(func, wait) {
         let timeout;
-        return function(...args) {
+        return function (...args) {
             const context = this;
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(context, args), wait);
@@ -313,12 +313,12 @@
 
         if (state.uiHidden) {
             // Hide toolbar but keep header
-            $("#toolbar-container").slideUp(300, function() {
+            $("#toolbar-container").slideUp(300, function () {
                 funcs.resizeTableContainer();
             });
         } else {
             // Show toolbar
-            $("#toolbar-container").slideDown(300, function() {
+            $("#toolbar-container").slideDown(300, function () {
                 funcs.resizeTableContainer();
             });
         }
@@ -326,22 +326,35 @@
 
     // Search functionality
     function performSearch() {
-        state.searchTerm = $("#search-input").val();
+        const searchTerm = $("#search-input").val();
+        console.log('Performing search with term:', searchTerm);
 
-        if (state.gridApi) {
+        // Set the search term directly on the global state
+        window.appState.searchTerm = searchTerm;
+
+        if (window.appState.gridApi) {
             // Refresh data with search term
-            state.gridApi.refreshInfiniteCache();
+            console.log('Refreshing grid cache with search term:', window.appState.searchTerm);
+            window.appState.gridApi.refreshInfiniteCache();
+        } else {
+            console.error('Grid API not available for search');
         }
     }
 
     // Reset search
     function resetSearch() {
         $("#search-input").val('');
-        state.searchTerm = '';
 
-        if (state.gridApi) {
+        // Clear the search term directly on the global state
+        window.appState.searchTerm = '';
+        console.log('Reset search, searchTerm is now:', window.appState.searchTerm);
+
+        if (window.appState.gridApi) {
             // Refresh data without search term
-            state.gridApi.refreshInfiniteCache();
+            console.log('Refreshing grid cache after reset');
+            window.appState.gridApi.refreshInfiniteCache();
+        } else {
+            console.error('Grid API not available for reset');
         }
     }
 

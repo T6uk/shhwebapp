@@ -7,22 +7,34 @@ window.nextFilterId = 1;
 window.lastChangeCheck = null;
 
 document.addEventListener("DOMContentLoaded", function () {
+    console.log("Initializing enhanced filters");
+
     // Initialize first filter row
     resetFilterPanel();
 
     // Set up event handlers for the filter panel
     setupFilterEventHandlers();
+
+    console.log("Enhanced filters initialized");
 });
 
 function setupFilterEventHandlers() {
     // Add filter row button
     $("#add-filter-row").off("click").on("click", function () {
+        console.log("Add filter row button clicked");
         addFilterRow();
     });
 
-    // Apply filters button
+    // Apply filters button - fix the event handler with explicit debugging
     $("#apply-filters").off("click").on("click", function () {
-        applyFilters();
+        console.log("Rakenda (Apply filters) button clicked");
+        try {
+            // Call the apply filters function directly
+            applyFilters();
+        } catch (error) {
+            console.error("Error applying filters:", error);
+            showToast("Viga", "Filtrite rakendamisel tekkis viga: " + error.message, "error");
+        }
     });
 
     // Clear filters button
@@ -240,22 +252,31 @@ function updateFilterOperators(fieldSelect) {
 
     if (!selectedField) return;
 
-    // Find column definition
-    const column = window.columnDefs.find(col => col.field === selectedField);
-    if (!column) return;
+    // Find column definition - check both possible locations
+    const columnDefs = window.columnDefs || (window.appState ? window.appState.columnDefs : []);
+    const column = columnDefs.find(col => col.field === selectedField);
+
+    if (!column) {
+        console.warn(`Column definition not found for field: ${selectedField}`);
+        return;
+    }
 
     // Clear existing options
     $operatorSelect.empty();
 
-    // Get column type or default to string
+    // Get column type from the column definition
     const colDef = column.colDef || {};
     const colType = column.type || colDef.type || 'string';
 
-    // Define operators based on type
+    console.log(`Determining operators for field '${selectedField}' with type '${colType}'`);
+
+    // Define operator options based on column type
     let operators = [];
 
     // Text-based columns
-    if (colType.includes('char') || colType.includes('text') || colType === 'string') {
+    if (colType.includes('char') || colType.includes('text') || colType === 'string' ||
+        colType === 'varchar' || colType === 'character varying') {
+        console.log("Using text operators");
         operators = [
             {value: 'contains', label: 'Sisaldab'},
             {value: 'equals', label: 'Võrdub'},
@@ -268,7 +289,8 @@ function updateFilterOperators(fieldSelect) {
     }
     // Numeric columns
     else if (colType.includes('int') || colType.includes('numeric') || colType.includes('real') ||
-        colType.includes('double') || colType === 'number') {
+        colType.includes('double') || colType.includes('decimal') || colType === 'number') {
+        console.log("Using numeric operators");
         operators = [
             {value: 'equals', label: 'Võrdub'},
             {value: 'notEqual', label: 'Ei võrdu'},
@@ -282,7 +304,9 @@ function updateFilterOperators(fieldSelect) {
         ];
     }
     // Date columns
-    else if (colType.includes('date') || colType.includes('timestamp')) {
+    else if (colType.includes('date') || colType.includes('timestamp') || colType === 'date' ||
+        colType === 'timestamp with time zone' || colType === 'timestamp without time zone') {
+        console.log("Using date operators");
         operators = [
             {value: 'equals', label: 'Võrdub'},
             {value: 'notEqual', label: 'Ei võrdu'},
@@ -295,6 +319,7 @@ function updateFilterOperators(fieldSelect) {
     }
     // Default/fallback
     else {
+        console.log("Using default operators for unknown type");
         operators = [
             {value: 'equals', label: 'Võrdub'},
             {value: 'notEqual', label: 'Ei võrdu'},
@@ -309,8 +334,10 @@ function updateFilterOperators(fieldSelect) {
         $operatorSelect.append(`<option value="${op.value}">${op.label}</option>`);
     });
 
-    // Update value input based on selected options
+    // Update value input based on selected column and operator
     updateFilterValueInput($row);
+
+    console.log(`Updated filter operators for field '${selectedField}' (${colType}) with ${operators.length} operators`);
 }
 
 function updateFilterValueInput($row) {
@@ -320,38 +347,45 @@ function updateFilterValueInput($row) {
     if (!selectedField) return;
 
     // Find column definition
-    const column = window.columnDefs.find(col => col.field === selectedField);
+    const columnDefs = window.columnDefs || (window.appState ? window.appState.columnDefs : []);
+    const column = columnDefs.find(col => col.field === selectedField);
     if (!column) return;
 
-    // Get column type
-    const colDef = column.colDef || {};
-    const colType = column.type || colDef.type || 'string';
-
+    const colType = column.type || 'string';
     const $valueContainer = $row.find('.filter-value-container');
 
     // Clear existing inputs
     $valueContainer.empty();
 
-    // For blank/notBlank operators, no input is needed
+    // For blank/notBlank operators, no input is needed - fix for these special operators
     if (selectedOperator === 'blank' || selectedOperator === 'notBlank') {
-        $valueContainer.html('<div class="text-gray-400 italic">Väärtust pole vaja</div>');
+        $valueContainer.html(`
+            <div class="text-gray-400 italic text-xs">
+                ${selectedOperator === 'blank' ?
+            'Näitab tühjad ja NULL väärtused' :
+            'Näitab mitteväärtused (ei tühi ega NULL)'}
+            </div>
+        `);
+        console.log(`No input field needed for ${selectedOperator} operator`);
         return;
     }
 
     // For inRange operator, we need two inputs
     if (selectedOperator === 'inRange') {
         if (colType.includes('date') || colType.includes('timestamp')) {
+            console.log("Creating date range inputs");
             $valueContainer.html(`
                 <div class="flex gap-2 flex-1">
-                    <input type="date" class="filter-input filter-from flex-1" placeholder="Alates">
-                    <input type="date" class="filter-input filter-to flex-1" placeholder="Kuni">
+                    <input type="date" class="compact-input filter-from flex-1" placeholder="Alates">
+                    <input type="date" class="compact-input filter-to flex-1" placeholder="Kuni">
                 </div>
             `);
         } else {
+            console.log("Creating numeric range inputs");
             $valueContainer.html(`
                 <div class="flex gap-2 flex-1">
-                    <input type="number" class="filter-input filter-from flex-1" placeholder="Alates">
-                    <input type="number" class="filter-input filter-to flex-1" placeholder="Kuni">
+                    <input type="number" class="compact-input filter-from flex-1" placeholder="Alates">
+                    <input type="number" class="compact-input filter-to flex-1" placeholder="Kuni">
                 </div>
             `);
         }
@@ -360,13 +394,42 @@ function updateFilterValueInput($row) {
 
     // For different column types, create appropriate inputs
     if (colType.includes('date') || colType.includes('timestamp')) {
-        $valueContainer.html(`<input type="date" class="filter-input" placeholder="Vali kuupäev">`);
+        console.log("Creating date input");
+        $valueContainer.html(`<input type="date" class="compact-input w-full filter-input" placeholder="Vali kuupäev">`);
     } else if (colType.includes('int') || colType.includes('numeric') || colType.includes('real') ||
-        colType.includes('double') || colType === 'number') {
-        $valueContainer.html(`<input type="number" class="filter-input" placeholder="Sisesta number">`);
+        colType.includes('double') || colType.includes('float') || colType === 'number') {
+        console.log("Creating numeric input");
+        $valueContainer.html(`<input type="number" class="compact-input w-full filter-input" placeholder="Sisesta number">`);
     } else {
-        // Default to text input
-        $valueContainer.html(`<input type="text" class="filter-input" placeholder="Filtri väärtus">`);
+        // For text fields, use a regular text input
+        console.log("Creating text input");
+        $valueContainer.html(`<input type="text" class="compact-input w-full filter-input" placeholder="Filtri väärtus">`);
+
+        // Fetch values for suggestions if available
+        fetchFilterValues(selectedField)
+            .then(response => {
+                if (response && response.values && response.values.length > 0 && response.values.length <= 100) {
+                    // If column has relatively few values, show a datalist for suggestions
+                    const datalistId = `datalist-${selectedField.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+                    console.log(`Creating datalist with ${response.values.length} values`);
+
+                    let html = `<input type="text" class="compact-input w-full filter-input" placeholder="Filtri väärtus" list="${datalistId}">`;
+                    html += `<datalist id="${datalistId}">`;
+
+                    response.values.forEach(value => {
+                        if (value !== null && value !== '') {
+                            html += `<option value="${value.replace(/"/g, '&quot;')}">`;
+                        }
+                    });
+
+                    html += '</datalist>';
+                    $valueContainer.html(html);
+                }
+            })
+            .catch(error => {
+                console.error("Error loading filter values:", error);
+            });
     }
 
     // Apply dark mode styling if needed
@@ -377,39 +440,51 @@ function updateFilterValueInput($row) {
 }
 
 function applyFilters() {
-    // Collect the current state of filters
+    console.log("applyFilters function called");
+
+    // Create a simple object to hold our filters
     let filterModel = {};
     let hasValidFilters = false;
     let appliedFilters = [];
 
     // Process each filter row
-    $(".filter-row").each(function() {
+    $(".filter-row").each(function () {
         const field = $(this).find(".filter-field").val();
-        if (!field) return; // Skip if no field selected
+        if (!field) {
+            console.log("Skipping row - no field selected");
+            return; // Skip if no field selected
+        }
 
         const operator = $(this).find(".filter-operator").val();
+        console.log(`Processing filter: field=${field}, operator=${operator}`);
+
         let displayValue = ""; // For the toast message
 
         // Handle different operators
         if (operator === 'blank') {
             filterModel[field] = {
                 type: 'blank'
+                // No filter value needed for blank
             };
-            displayValue = "is blank";
+            displayValue = "on tühi";
             hasValidFilters = true;
-        }
-        else if (operator === 'notBlank') {
+            console.log(`Added blank filter for ${field}`);
+        } else if (operator === 'notBlank') {
             filterModel[field] = {
                 type: 'notBlank'
+                // No filter value needed for notBlank
             };
-            displayValue = "is not blank";
+            displayValue = "ei ole tühi";
             hasValidFilters = true;
-        }
-        else if (operator === 'inRange') {
+            console.log(`Added notBlank filter for ${field}`);
+        } else if (operator === 'inRange') {
             const fromValue = $(this).find(".filter-from").val();
             const toValue = $(this).find(".filter-to").val();
 
-            if (!fromValue && !toValue) return; // Skip empty ranges
+            if (!fromValue && !toValue) {
+                console.log("Skipping inRange filter - no values provided");
+                return; // Skip empty ranges
+            }
 
             filterModel[field] = {
                 type: 'inRange',
@@ -420,11 +495,14 @@ function applyFilters() {
             };
             displayValue = `between ${fromValue || '?'} and ${toValue || '?'}`;
             hasValidFilters = true;
-        }
-        else {
+            console.log(`Added inRange filter for ${field}: from=${fromValue}, to=${toValue}`);
+        } else {
             // For all other operators
             const value = $(this).find(".filter-input").val();
-            if (!value) return; // Skip empty values
+            if (!value && operator !== 'blank' && operator !== 'notBlank') {
+                console.log(`Skipping ${operator} filter - no value provided`);
+                return; // Skip empty values
+            }
 
             filterModel[field] = {
                 type: operator,
@@ -432,43 +510,80 @@ function applyFilters() {
             };
             displayValue = `${operator} "${value}"`;
             hasValidFilters = true;
+            console.log(`Added ${operator} filter for ${field}: ${value}`);
         }
 
         // Add to applied filters for display
         if (hasValidFilters) {
-            const columnDef = window.columnDefs.find(c => c.field === field);
+            // Find column display name
+            const columnDefs = window.columnDefs || (window.appState ? window.appState.columnDefs : null);
+            const columnDef = columnDefs ? columnDefs.find(c => c.field === field) : null;
             const fieldDisplay = columnDef ? columnDef.headerName : field;
             appliedFilters.push(`${fieldDisplay} ${displayValue}`);
         }
     });
 
     // Log the filter model
-    console.log("Applying filter model:", filterModel);
+    console.log("Final filter model:", JSON.stringify(filterModel, null, 2));
     console.log("Applied filters:", appliedFilters);
 
-    // Apply to grid
-    if (window.gridApi) {
+    // Check if we have any valid filters
+    if (Object.keys(filterModel).length === 0) {
+        console.log("No valid filters created");
+        hasValidFilters = false;
+    }
+
+    // Apply to grid - ensure we use the correct API access
+    const gridApi = window.gridApi || (window.appState ? window.appState.gridApi : null);
+
+    if (gridApi) {
         // Set the filter model
-        window.gridApi.setFilterModel(hasValidFilters ? filterModel : null);
+        if (typeof gridApi.setFilterModel === 'function') {
+            console.log("Setting filter model on grid API");
+            gridApi.setFilterModel(hasValidFilters ? filterModel : null);
+        } else {
+            console.error("gridApi.setFilterModel is not a function");
+            showToast("Viga", "Filtrite rakendamine ebaõnnestus: tabeli API funktsioon puudub", "error");
+            return;
+        }
 
         // Request fresh data
-        window.gridApi.refreshInfiniteCache();
+        if (typeof gridApi.refreshInfiniteCache === 'function') {
+            console.log("Refreshing grid data with infinite cache");
+            gridApi.refreshInfiniteCache();
+        } else if (typeof gridApi.refreshServerSideStore === 'function') {
+            console.log("Refreshing grid data with server-side store");
+            gridApi.refreshServerSideStore({purge: true});
+        } else {
+            console.error("No grid refresh method found");
+            showToast("Viga", "Andmete värskendamine ebaõnnestus: tabeli API funktsioon puudub", "error");
+            return;
+        }
 
         // Update status after data loads
-        setTimeout(function() {
-            const displayedRowCount = window.gridApi.getDisplayedRowCount();
-            $("#status").text(hasValidFilters ?
-                `Filtreeritud: ${displayedRowCount} kirjet` :
-                `${displayedRowCount} kirjet`);
+        setTimeout(function () {
+            try {
+                const displayedRowCount = gridApi.getDisplayedRowCount();
+                $("#status").text(hasValidFilters ?
+                    `Filtreeritud: ${displayedRowCount} kirjet` :
+                    `${displayedRowCount} kirjet`);
+                console.log(`Updated status with ${displayedRowCount} rows`);
+            } catch (error) {
+                console.error("Error updating status:", error);
+            }
         }, 500);
+    } else {
+        console.error("Grid API not available for filtering");
+        showToast("Viga", "Tabeli API pole saadaval", "error");
+        return;
     }
 
     // Show feedback
     if (hasValidFilters) {
         const filterCount = Object.keys(filterModel).length;
         showToast("Filtrid rakendatud",
-                 filterCount === 1 ? appliedFilters[0] : `${filterCount} filtrit rakendatud`,
-                 "success");
+            filterCount === 1 ? appliedFilters[0] : `${filterCount} filtrit rakendatud`,
+            "success");
     } else {
         showToast("Filtrid eemaldatud", "Kõik filtrid on eemaldatud", "info");
     }
@@ -476,8 +591,30 @@ function applyFilters() {
     // Close filter panel if configured
     if ($("#auto-close-filters").prop("checked")) {
         $("#filter-panel").removeClass("show");
+        // Also resize the table container after closing
+        setTimeout(function () {
+            if (typeof window.appFunctions.resizeTableContainer === 'function') {
+                window.appFunctions.resizeTableContainer();
+            } else if (typeof resizeTableContainer === 'function') {
+                resizeTableContainer();
+            }
+        }, 200);
     }
-    setTimeout(updateActiveFiltersDisplay, 100);
+
+    // Update active filters display
+    try {
+        setTimeout(function () {
+            if (typeof window.appFunctions.updateActiveFiltersDisplay === 'function') {
+                window.appFunctions.updateActiveFiltersDisplay();
+            } else if (typeof updateActiveFiltersDisplay === 'function') {
+                updateActiveFiltersDisplay();
+            }
+        }, 500);
+    } catch (error) {
+        console.error("Error updating active filters display:", error);
+    }
+
+    console.log("Filter application complete");
 }
 
 function removeFilterAndApply(fieldName) {
@@ -498,7 +635,7 @@ function removeFilterAndApply(fieldName) {
         showToast("Filter eemaldatud", `Filter "${fieldName}" on eemaldatud`, "info");
 
         // Update status text
-        setTimeout(function() {
+        setTimeout(function () {
             const displayedRowCount = window.gridApi.getDisplayedRowCount();
             const isFiltered = Object.keys(filterModel).length > 0;
             $("#status").text(isFiltered ?
@@ -509,9 +646,26 @@ function removeFilterAndApply(fieldName) {
 }
 
 function updateActiveFiltersDisplay() {
-    if (!window.gridApi) return;
+    console.log("Updating active filters display");
 
-    const filterModel = window.gridApi.getFilterModel() || {};
+    // Get the grid API from the correct location
+    const gridApi = window.gridApi || (window.appState ? window.appState.gridApi : null);
+
+    if (!gridApi) {
+        console.error("Grid API not available for updating active filters display");
+        return;
+    }
+
+    // Get the current filter model
+    let filterModel;
+    try {
+        filterModel = gridApi.getFilterModel() || {};
+        console.log("Current filter model:", filterModel);
+    } catch (error) {
+        console.error("Error getting filter model:", error);
+        filterModel = {};
+    }
+
     const $container = $("#active-filters-container");
     const $filtersDisplay = $("#active-filters");
 
@@ -522,7 +676,7 @@ function updateActiveFiltersDisplay() {
     if (Object.keys(filterModel).length > 0) {
         Object.entries(filterModel).forEach(([field, config]) => {
             // Find column display name
-            const columnDef = window.columnDefs.find(c => c.field === field);
+            const columnDef = window.columnDefs ? window.columnDefs.find(c => c.field === field) : null;
             const fieldDisplay = columnDef ? columnDef.headerName : field;
 
             // Create display text
@@ -539,16 +693,34 @@ function updateActiveFiltersDisplay() {
             } else if (config.filter) {
                 // Map operator to human readable form
                 let opText = config.type;
-                switch(config.type) {
-                    case 'equals': opText = "="; break;
-                    case 'notEqual': opText = "≠"; break;
-                    case 'contains': opText = "sisaldab"; break;
-                    case 'startsWith': opText = "algab"; break;
-                    case 'endsWith': opText = "lõpeb"; break;
-                    case 'greaterThan': opText = ">"; break;
-                    case 'greaterThanOrEqual': opText = "≥"; break;
-                    case 'lessThan': opText = "<"; break;
-                    case 'lessThanOrEqual': opText = "≤"; break;
+                switch (config.type) {
+                    case 'equals':
+                        opText = "=";
+                        break;
+                    case 'notEqual':
+                        opText = "≠";
+                        break;
+                    case 'contains':
+                        opText = "sisaldab";
+                        break;
+                    case 'startsWith':
+                        opText = "algab";
+                        break;
+                    case 'endsWith':
+                        opText = "lõpeb";
+                        break;
+                    case 'greaterThan':
+                        opText = ">";
+                        break;
+                    case 'greaterThanOrEqual':
+                        opText = "≥";
+                        break;
+                    case 'lessThan':
+                        opText = "<";
+                        break;
+                    case 'lessThanOrEqual':
+                        opText = "≤";
+                        break;
                 }
                 displayText += `${opText} "${config.filter}"`;
             }
@@ -570,14 +742,17 @@ function updateActiveFiltersDisplay() {
 
         // Show the container
         $container.removeClass("hidden");
+        console.log("Displayed active filters");
     } else {
         // Hide the container if no filters
         $container.addClass("hidden");
+        console.log("No active filters to display");
     }
 
     // Set up click handlers for remove buttons
-    $(".remove-filter-btn").click(function() {
+    $(".remove-filter-btn").click(function () {
         const field = $(this).data("field");
+        console.log("Remove filter clicked for field:", field);
         removeFilterAndApply(field);
 
         // Update the display after removal
@@ -726,7 +901,7 @@ function processSaveFilter() {
         data: formData,
         processData: false,
         contentType: false,
-        success: function(response) {
+        success: function (response) {
             // Hide modal
             $("#save-filter-modal").addClass("hidden");
 
@@ -738,11 +913,11 @@ function processSaveFilter() {
                 loadSavedFiltersList();
             }
         },
-        error: function(xhr) {
+        error: function (xhr) {
             console.error("Error saving filter:", xhr.responseJSON);
             showToast("Viga filtri salvestamisel", xhr.responseJSON?.detail || "Palun proovige uuesti", "error");
         },
-        complete: function() {
+        complete: function () {
             // Reset button
             $("#save-filter-button").html('<i class="fas fa-save mr-2"></i> Salvesta filter');
             $("#save-filter-button").prop("disabled", false);

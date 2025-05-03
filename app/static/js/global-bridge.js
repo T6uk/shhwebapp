@@ -16,7 +16,7 @@ window.appState = {
     lastChangeCheck: new Date()
 };
 
-// Global function references
+// Global function references - ensure filter functions are properly set
 window.appFunctions = {
     // These will be populated by modules
     initViewFile: null,
@@ -46,6 +46,16 @@ window.appFunctions = {
     updateStatus: null,
     loadSavedFiltersList: null,
     scrollToColumn: null,
+};
+
+// Direct access to critical functions for debugging
+window.applyFilters = function() {
+    console.log("Global window.applyFilters called");
+    if (window.appFunctions.applyEnhancedFilters) {
+        window.appFunctions.applyEnhancedFilters();
+    } else {
+        console.error("applyEnhancedFilters not found on window.appFunctions");
+    }
 };
 
 // Initialize file operation handlers if they're available
