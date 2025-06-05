@@ -1,7 +1,7 @@
 // app/static/js/modules/ui.js
 // UI interactions and utilities
 
-(function() {
+(function () {
     // Local references to global state
     const state = window.appState;
     const funcs = window.appFunctions;
@@ -17,29 +17,55 @@
             {toggle: "#user-dropdown-toggle", menu: "#user-dropdown-menu"}
         ];
 
+        // Remove any existing event handlers to prevent conflicts
+        dropdowns.forEach(dropdown => {
+            $(dropdown.toggle).off('click.dropdown');
+            $(dropdown.menu).off('click.dropdown');
+        });
+
         // Set up each dropdown with toggle behavior
         dropdowns.forEach(dropdown => {
-            $(dropdown.toggle).click(function(e) {
+            $(dropdown.toggle).on('click.dropdown', function (e) {
                 e.stopPropagation();
-                $(dropdown.menu).toggleClass("show");
+                e.preventDefault();
 
-                // Hide other dropdowns
+                const $menu = $(dropdown.menu);
+                const isCurrentlyOpen = $menu.hasClass("show");
+
+                // Hide all other dropdowns first
                 dropdowns.forEach(other => {
                     if (other.menu !== dropdown.menu) {
                         $(other.menu).removeClass("show");
                     }
                 });
+
+                // Toggle current dropdown
+                if (isCurrentlyOpen) {
+                    $menu.removeClass("show");
+                } else {
+                    $menu.addClass("show");
+                }
+            });
+
+            // Prevent dropdown from closing when clicking inside
+            $(dropdown.menu).on('click.dropdown', function (e) {
+                e.stopPropagation();
             });
         });
 
-        // Close dropdowns when clicking outside
-        $(document).click(function() {
-            $(".dropdown-menu").removeClass("show");
+        // Close all dropdowns when clicking outside
+        $(document).off('click.dropdown').on('click.dropdown', function (e) {
+            // Check if the click is outside all dropdowns
+            if (!$(e.target).closest('.dropdown').length) {
+                $(".dropdown-menu").removeClass("show");
+            }
         });
 
-        // Prevent dropdown closing when clicking inside dropdown
-        $(".dropdown-menu").click(function(e) {
-            e.stopPropagation();
+        // Close dropdowns on escape key
+        $(document).off('keydown.dropdown').on('keydown.dropdown', function (e) {
+            if (e.key === 'Escape') {
+                $(".dropdown-menu").removeClass("show");
+            }
         });
     }
 
@@ -203,7 +229,7 @@
         const isDark = state.isDarkMode;
 
         // Get all toast notifications
-        $(".toast-notification").each(function() {
+        $(".toast-notification").each(function () {
             const $toast = $(this);
 
             // Get the notification type (info, success, error, warning)
@@ -229,13 +255,13 @@
         $("#reset-button").click(funcs.resetSearch);
 
         // Enter key in search input
-        $("#search-input").keypress(function(e) {
+        $("#search-input").keypress(function (e) {
             if (e.which == 13) { // Enter key
                 funcs.performSearch();
             }
         });
 
-        $("#keyboard-shortcuts").click(function() {
+        $("#keyboard-shortcuts").click(function () {
             showToast("Kiirklahvid",
                 "Alt + H: Peida/näita tööriistariba\n" +
                 "Ctrl + F: Otsingukast\n" +
@@ -246,7 +272,7 @@
             $("#settings-dropdown-menu").removeClass("show");
         });
 
-        $(document).on('DOMNodeInserted', function(e) {
+        $(document).on('DOMNodeInserted', function (e) {
             if ($(e.target).hasClass('toast-notification') ||
                 $(e.target).hasClass('dropdown-menu') ||
                 $(e.target).hasClass('filter-row')) {
@@ -255,17 +281,17 @@
         });
 
         // Export functionality
-        $("#export-excel").click(function() {
+        $("#export-excel").click(function () {
             funcs.exportToExcel();
             $("#tools-dropdown-menu").removeClass("show");
         });
 
-        $("#export-pdf").click(function() {
+        $("#export-pdf").click(function () {
             funcs.exportToPDF();
             $("#tools-dropdown-menu").removeClass("show");
         });
 
-        $("#filter-toggle").click(function() {
+        $("#filter-toggle").click(function () {
             $("#filter-panel").toggleClass("show");
 
             // If showing, update filter field dropdowns with column options
@@ -281,67 +307,67 @@
         });
 
         // Handle add filter row button
-        $("#add-filter-row").click(function() {
+        $("#add-filter-row").click(function () {
             funcs.addEnhancedFilterRow();
         });
 
         // Handle apply filters button
-        $("#apply-filters").click(function() {
+        $("#apply-filters").click(function () {
             funcs.applyEnhancedFilters();
         });
 
         // Handle clear filters button
-        $("#clear-filters").click(function() {
+        $("#clear-filters").click(function () {
             funcs.clearFilters();
         });
 
         // Handle save filter button
-        $("#save-filter").click(function() {
+        $("#save-filter").click(function () {
             showSaveFilterModal();
         });
 
         // Add save filter modal buttons
-        $("#save-filter-button").click(function() {
+        $("#save-filter-button").click(function () {
             processSaveFilter();
         });
 
-        $("#cancel-save-filter").click(function() {
+        $("#cancel-save-filter").click(function () {
             $("#save-filter-modal").addClass("hidden");
         });
 
         // Close save filter modal when clicking outside
-        $("#save-filter-modal-backdrop").click(function() {
+        $("#save-filter-modal-backdrop").click(function () {
             $("#save-filter-modal").addClass("hidden");
         });
 
         // Prevent closing when clicking on modal content
-        $("#save-filter-modal .modal-content").click(function(e) {
+        $("#save-filter-modal .modal-content").click(function (e) {
             e.stopPropagation();
         });
 
-        $("#virtual-file").click(function() {
+        $("#virtual-file").click(function () {
             showToast("Arendamisel", "Funktsioon 'Virtuaaltoimik' on arendamisel.", "info");
             $("#tools-dropdown-menu").removeClass("show");
         });
 
-        $("#receipts-report").click(function() {
+        $("#receipts-report").click(function () {
             showToast("Arendamisel", "Funktsioon 'Laekumiste aruanne' on arendamisel.", "info");
             $("#tools-dropdown-menu").removeClass("show");
         });
 
         // Settings buttons
-        $("#toggle-columns").click(function() {
+        $("#toggle-columns").click(function () {
             showColumnVisibilityModal();
             $("#settings-dropdown-menu").removeClass("show");
         });
 
-        $("#save-column-layout").click(function() {
+        $("#save-column-layout").click(function () {
             showToast("Arendamisel", "Veergude paigutuse salvestamine on arendamisel.", "info");
             $("#settings-dropdown-menu").removeClass("show");
         });
 
         // Toggle dark mode
-        $("#toggle-dark-mode").click(function() {
+        $("#toggle-dark-mode").click(function () {
             // Toggle state
             state.isDarkMode = !state.isDarkMode;
 
@@ -363,36 +389,36 @@
         });
 
         // Widget buttons
-        $("#save-view").click(function() {
+        $("#save-view").click(function () {
             showToast("Arendamisel", "Funktsioon 'Salvesta vaade' on arendamisel.", "info");
             $("#widgets-dropdown-menu").removeClass("show");
         });
 
-        $("#load-view").click(function() {
+        $("#load-view").click(function () {
             showToast("Arendamisel", "Funktsioon 'Lae vaade' on arendamisel.", "info");
             $("#widgets-dropdown-menu").removeClass("show");
         });
 
         // Column visibility modal
-        $("#close-column-modal, #column-modal-backdrop, #cancel-column-changes").click(function() {
+        $("#close-column-modal, #column-modal-backdrop, #cancel-column-changes").click(function () {
             $("#column-modal").addClass("hidden");
         });
 
-        $("#apply-column-changes").click(function() {
+        $("#apply-column-changes").click(function () {
             funcs.applyColumnVisibility();
             $("#column-modal").addClass("hidden");
         });
 
-        $("#toggle-ui-btn").click(function() {
+        $("#toggle-ui-btn").click(function () {
             funcs.toggleUIElements();
         });
 
-        $("#refresh-button").click(function() {
+        $("#refresh-button").click(function () {
             funcs.refreshData();
         });
 
         // Keyboard shortcut (Alt+H) to toggle UI
-        $(document).keydown(function(e) {
+        $(document).keydown(function (e) {
             // Alt + H to toggle UI
             if (e.altKey && e.keyCode === 72) {
                 funcs.toggleUIElements();
@@ -428,7 +454,7 @@
         const container = $("#column-checkboxes");
         container.empty();
 
-        state.columnDefs.forEach(function(col) {
+        state.columnDefs.forEach(function (col) {
             const isVisible = state.columnVisibility[col.field];
 
             const checkbox = $(`

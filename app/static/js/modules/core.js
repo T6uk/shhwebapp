@@ -40,30 +40,30 @@
         // Get columns first
         getColumns();
 
-        // Set up dropdown toggles
-        funcs.setupDropdowns();
+        // Set up dropdown toggles - IMPORTANT: Do this after DOM is ready
+        setTimeout(function () {
+            funcs.setupDropdowns();
+        }, 100);
 
         // Set up event handlers
         funcs.setupEventHandlers();
 
-        // Check for changes on initial load
+        // Rest of initialization...
         state.lastChangeCheck = new Date();
-        state.lastChangeCheck.setMinutes(state.lastChangeCheck.getMinutes() - 30); // Check last 30 minutes
+        state.lastChangeCheck.setMinutes(state.lastChangeCheck.getMinutes() - 30);
         setTimeout(function () {
             checkForDatabaseChanges();
-        }, 3000); // Check shortly after page loads
+        }, 3000);
 
-        // Set up periodic change checking (no auto refresh)
         setupDataRefreshTimer();
 
         if ($("#user-profile").length) {
             const username = $("#user-profile").data("username");
             setTimeout(function () {
                 funcs.showToast("Tere tulemast!", `Tere, ${username}! Andmed on valmis.`, "success");
-            }, 1500); // Show after data loads
+            }, 1500);
         }
 
-        // Set up dark mode observer
         setupDarkModeObserver();
     });
 

@@ -598,18 +598,42 @@ function showDataChangeNotification(changes) {
 
 // Näita teavitust
 function showToast(title, message, type, duration = 3000) {
+    // Determine background and text colors based on notification type and dark mode
+    let bgClass, textClass;
+    const isDarkMode = document.body.classList.contains('dark-mode');
+
+    if (type === 'success') {
+        bgClass = isDarkMode ? 'bg-green-900' : 'bg-green-100';
+        textClass = isDarkMode ? 'text-green-100' : 'text-green-800';
+    } else if (type === 'error') {
+        bgClass = isDarkMode ? 'bg-red-900' : 'bg-red-100';
+        textClass = isDarkMode ? 'text-red-100' : 'text-red-800';
+    } else if (type === 'warning') {
+        bgClass = isDarkMode ? 'bg-yellow-900' : 'bg-yellow-100';
+        textClass = isDarkMode ? 'text-yellow-100' : 'text-yellow-800';
+    } else { // info or default
+        bgClass = isDarkMode ? 'bg-blue-900' : 'bg-blue-100';
+        textClass = isDarkMode ? 'text-blue-100' : 'text-blue-800';
+    }
+
+    // Create toast with proper styling
     const toast = $(`
-        <div class="notification ${type} mb-2">
+        <div class="notification ${bgClass} ${textClass} mb-2 rounded-lg shadow-sm border-l-4 
+                  ${type === 'success' ? 'border-green-500' :
+        type === 'error' ? 'border-red-500' :
+            type === 'warning' ? 'border-yellow-500' : 'border-blue-500'} p-3">
             <div class="flex items-center">
                 <div class="notification-icon">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <i class="fas fa-${type === 'success' ? 'check-circle' :
+        type === 'error' ? 'exclamation-circle' :
+            type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
                 </div>
                 <div class="ml-3">
                     <h3 class="text-sm font-medium">${title}</h3>
                     <div class="mt-1 text-xs">${message}</div>
                 </div>
                 <div class="ml-auto pl-3">
-                    <button class="notification-close">
+                    <button class="notification-close text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>

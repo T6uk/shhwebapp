@@ -885,14 +885,6 @@
     }
 
     $(document).ready(function () {
-        // Toggle user dropdown
-        $("#user-dropdown-toggle").click(function (e) {
-            e.stopPropagation();
-            $("#user-dropdown-menu").toggleClass("show");
-            // Hide other dropdowns
-            $(".dropdown-menu").not("#user-dropdown-menu").removeClass("show");
-        });
-
         // Update column visibility modal function to use compact styles
         window.showColumnVisibilityModal = function () {
             if (!columnDefs || columnDefs.length === 0) return;
@@ -921,36 +913,6 @@
 
         // Call resizeTableContainer once layout is ready
         setTimeout(resizeTableContainer, 100);
-    });
-</script>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        console.log("DOM loaded - Setting up direct filter button handler");
-        setTimeout(function() {
-            const applyButton = document.getElementById("apply-filters");
-            if (applyButton) {
-                console.log("Apply filters button found, attaching direct handler");
-                applyButton.addEventListener("click", function(e) {
-                    console.log("Apply filters button clicked (direct handler)");
-                    e.preventDefault();
-
-                    // Try different ways to call the filter application
-                    if (typeof window.applyFilters === 'function') {
-                        window.applyFilters();
-                    } else if (window.appFunctions && typeof window.appFunctions.applyEnhancedFilters === 'function') {
-                        window.appFunctions.applyEnhancedFilters();
-                    } else if (typeof applyFilters === 'function') {
-                        applyFilters();
-                    } else {
-                        console.error("No apply filters function found");
-                        alert("Filtrite rakendamine ebaõnnestus - funktsioon pole saadaval");
-                    }
-                });
-            } else {
-                console.error("Apply filters button not found");
-            }
-        }, 1000); // Wait for other scripts to load
     });
 </script>
 </body>
