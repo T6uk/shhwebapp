@@ -480,3 +480,60 @@
         min-width: 12rem;
     }
 }
+
+/* Edit mode button styles */
+.edit-mode-inactive {
+    background-color: #22c55e !important; /* Green-500 */
+    border-color: #22c55e !important;
+    color: white !important;
+}
+
+.edit-mode-inactive:hover {
+    background-color: #16a34a !important; /* Green-600 */
+    border-color: #16a34a !important;
+}
+
+.edit-mode-active {
+    background-color: #ef4444 !important; /* Red-500 */
+    border-color: #ef4444 !important;
+    color: white !important;
+}
+
+.edit-mode-active:hover {
+    background-color: #dc2626 !important; /* Red-600 */
+    border-color: #dc2626 !important;
+}
+
+/* Editable cell highlighting */
+.editable-cell {
+    background-color: #dbeafe !important;
+    cursor: pointer !important;
+}
+
+.dark-mode .editable-cell {
+    background-color: #93c5fd !important;
+    color: #000000 !important;
+}
+
+/* Edit history panel improvements */
+#edit-history-panel {
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode #edit-history-panel {
+    border-color: #374151;
+}
+
+/* Change item styling */
+.change-item {
+    transition: background-color 0.15s ease;
+}
+
+.change-item:hover {
+    background-color: #f8fafc;
+}
+
+.dark-mode .change-item:hover {
+    background-color: #1f2937;
+}

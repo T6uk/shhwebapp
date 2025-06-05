@@ -57,6 +57,12 @@
 
         setupDataRefreshTimer();
 
+        if (typeof window.getEditableColumns === 'function') {
+            setTimeout(function () {
+                window.getEditableColumns();
+            }, 1000);
+        }
+
         if ($("#user-profile").length) {
             const username = $("#user-profile").data("username");
             setTimeout(function () {

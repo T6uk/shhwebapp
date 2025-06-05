@@ -8,11 +8,11 @@ window.appState = {
     searchTerm: '',
     isDarkMode: false,
     activeFilters: [],
-    nextFilterId: 2, // Start at 2 since we have one filter row by default
-    columnVisibility: {}, // To track which columns are visible
+    nextFilterId: 2,
+    columnVisibility: {},
     uiHidden: false,
-    isEditMode: false,
-    editableColumns: [],
+    isEditMode: false,           // Add this
+    editableColumns: [],         // Add this
     lastChangeCheck: new Date()
 };
 

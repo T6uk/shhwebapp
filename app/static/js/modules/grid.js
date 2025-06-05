@@ -76,21 +76,27 @@
                 cellRenderer: function (params) {
                     if (params.value === null || params.value === '' ||
                         (typeof params.value === 'string' && params.value.trim() === '')) {
-                        // Return a styled empty cell indicator
                         return '<span style="color:#999;font-style:italic;font-size:0.9em;">(tühi)</span>';
                     }
                     return params.value;
                 },
-                // Add these properties for editing
+                // Fix editing configuration
                 editable: function (params) {
                     // Only editable if in edit mode and the column is in editableColumns
-                    return state.isEditMode && state.editableColumns.includes(params.colDef.field);
+                    return window.appState.isEditMode &&
+                        (window.appState.editableColumns || []).includes(params.colDef.field);
                 },
-                cellStyle: getCellStyle,
+                cellStyle: function (params) {
+                    // Use the global getCellStyle function
+                    if (typeof window.getCellStyle === 'function') {
+                        return window.getCellStyle(params);
+                    }
+                    return null;
+                },
                 cellClass: function (params) {
                     // Add a custom class to editable cells based on current mode
-                    if (state.isEditMode && state.editableColumns &&
-                        state.editableColumns.includes(params.colDef.field)) {
+                    if (window.appState.isEditMode &&
+                        (window.appState.editableColumns || []).includes(params.colDef.field)) {
                         return 'editable-cell';
                     }
                     return '';
@@ -119,7 +125,12 @@
             onGridReady: onGridReady,
             onFilterChanged: onFilterChanged,
             onSortChanged: onSortChanged,
-            onCellValueChanged: onCellValueChanged,
+            onCellValueChanged: function (params) {
+                // Call the global cell value changed handler
+                if (typeof window.onCellValueChanged === 'function') {
+                    window.onCellValueChanged(params);
+                }
+            },
             rowSelection: 'multiple',
             suppressRowHoverHighlight: false,
             rowHighlightClass: 'ag-row-highlight',

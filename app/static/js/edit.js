@@ -1,9 +1,5 @@
 // app/static/js/edit.js - Tabeli redigeerimise funktsioonid
 // Globaalsed muutujad redigeerimiseks
-window.isEditMode = false;
-window.editSessionId = null;
-window.editableColumns = [];
-window.unsavedChanges = {};
 window.lastChangeCheck = null;
 window.changeCheckInterval = null;
 window.socket = null;
@@ -144,14 +140,16 @@ function getEditableColumns() {
         method: "GET",
         dataType: "json",
         success: function (response) {
-            editableColumns = response.columns || [];
+            // Store in both places for compatibility
+            window.editableColumns = response.columns || [];
+            window.appState.editableColumns = response.columns || [];
 
-            // Näita redigeerimise nuppu ainult siis, kui kasutajal on õigused
+            // Show edit button if user can edit
             if (response.can_edit) {
                 $("#edit-mode-container").removeClass("hidden");
             }
 
-            console.log("Redigeeritavad veerud:", editableColumns);
+            console.log("Redigeeritavad veerud:", window.editableColumns);
         },
         error: function (xhr, status, error) {
             console.error("Viga redigeeritavate veergude laadimisel:", error);
@@ -207,7 +205,6 @@ function enableEditMode() {
     const password = prompt("Sisestage redigeerimisrežiimi parool:");
     if (!password) return;
 
-    // Add log to verify this function runs
     console.log("Attempting to enable edit mode");
 
     // Verify password with server
@@ -222,9 +219,9 @@ function enableEditMode() {
             console.log("Edit mode password verification response:", response);
 
             if (response.success) {
-                // Enable edit mode
-                isEditMode = true;
-                editSessionId = response.session_id;
+                // Enable edit mode using global state
+                window.appState.isEditMode = true;
+                window.editSessionId = response.session_id;
 
                 // Update button UI using classes
                 const editBtn = document.getElementById('edit-mode-btn');
@@ -237,26 +234,44 @@ function enableEditMode() {
                 console.log("Edit mode enabled, button should be red now");
 
                 // Reset unsaved changes
-                unsavedChanges = {};
+                window.unsavedChanges = {};
+
+                // Make sure editableColumns are in global state
+                window.appState.editableColumns = window.editableColumns || [];
 
                 // Redraw rows to highlight editable cells
-                if (gridApi) {
-                    gridApi.redrawRows();
+                if (window.appState.gridApi) {
+                    window.appState.gridApi.redrawRows();
+                } else if (window.gridApi) {
+                    // Fallback to global gridApi
+                    window.gridApi.redrawRows();
                 }
 
                 // Show edit history panel
                 $("#edit-history-panel").removeClass("hidden");
 
                 // Show notification
-                showToast("Redigeerimisrežiim lubatud", "Saate nüüd redigeerida esiletõstetud lahtreid topeltklõpsates", "info");
+                if (typeof window.appFunctions.showToast === 'function') {
+                    window.appFunctions.showToast("Redigeerimisrežiim lubatud", "Saate nüüd redigeerida esiletõstetud lahtreid topeltklõpsates", "info");
+                } else {
+                    showToast("Redigeerimisrežiim lubatud", "Saate nüüd redigeerida esiletõstetud lahtreid topeltklõpsates", "info");
+                }
             } else {
                 // Show error
-                showToast("Redigeerimisrežiimi viga", response.message || "Vale parool", "error");
+                if (typeof window.appFunctions.showToast === 'function') {
+                    window.appFunctions.showToast("Redigeerimisrežiimi viga", response.message || "Vale parool", "error");
+                } else {
+                    showToast("Redigeerimisrežiimi viga", response.message || "Vale parool", "error");
+                }
             }
         },
         error: function (xhr, status, error) {
             console.error("Viga parooli kontrollimisel:", error);
-            showToast("Viga", "Redigeerimisrežiimi lubamine ebaõnnestus", "error");
+            if (typeof window.appFunctions.showToast === 'function') {
+                window.appFunctions.showToast("Viga", "Redigeerimisrežiimi lubamine ebaõnnestus", "error");
+            } else {
+                showToast("Viga", "Redigeerimisrežiimi lubamine ebaõnnestus", "error");
+            }
         }
     });
 }
@@ -264,15 +279,15 @@ function enableEditMode() {
 // Disable edit mode
 function disableEditMode() {
     // Check for unsaved changes
-    if (Object.keys(unsavedChanges).length > 0) {
+    if (Object.keys(window.unsavedChanges || {}).length > 0) {
         if (!confirm("Teil on salvestamata muudatusi. Kas olete kindel, et soovite redigeerimisrežiimist väljuda? Muudatusi ei saa hiljem tagasi võtta.")) {
             return;
         }
     }
 
-    // Disable edit mode
-    isEditMode = false;
-    editSessionId = null;
+    // Disable edit mode using global state
+    window.appState.isEditMode = false;
+    window.editSessionId = null;
 
     // Update button UI using classes
     const editBtn = document.getElementById('edit-mode-btn');
@@ -288,35 +303,41 @@ function disableEditMode() {
     $("#edit-history-panel").addClass("hidden");
 
     // Clear unsaved changes
-    unsavedChanges = {};
+    window.unsavedChanges = {};
 
     // Refresh table to remove highlighting
-    if (gridApi) {
-        gridApi.redrawRows();
+    if (window.appState.gridApi) {
+        window.appState.gridApi.redrawRows();
+    } else if (window.gridApi) {
+        window.gridApi.redrawRows();
     }
 
     // Show notification
-    showToast("Redigeerimisrežiim keelatud", "Olete nüüd ainult vaatamise režiimis", "info");
+    if (typeof window.appFunctions.showToast === 'function') {
+        window.appFunctions.showToast("Redigeerimisrežiim keelatud", "Olete nüüd ainult vaatamise režiimis", "info");
+    } else {
+        showToast("Redigeerimisrežiim keelatud", "Olete nüüd ainult vaatamise režiimis", "info");
+    }
 }
 
 // Käsitle lahtri väärtuse muutmist - see integreerib AG Grid'iga
 function onCellValueChanged(params) {
-    // Töötle ainult redigeerimisrežiimis
-    if (!isEditMode) return;
+    // Only process in edit mode
+    if (!window.appState.isEditMode) return;
 
     const column = params.column.getColDef().field;
     const rowId = params.data.id;
     const oldValue = params.oldValue;
     const newValue = params.newValue;
 
-    // Jäta vahele, kui tegelikku muudatust pole
+    // Skip if no actual change
     if (oldValue === newValue) return;
 
-    // Võti selle muudatuse jälgimiseks
+    // Key for tracking this change
     const changeKey = `${rowId}_${column}`;
 
-    // Lisa salvestamata muudatustesse
-    unsavedChanges[changeKey] = {
+    // Add to unsaved changes
+    window.unsavedChanges[changeKey] = {
         rowId: rowId,
         column: column,
         oldValue: oldValue,
@@ -324,39 +345,47 @@ function onCellValueChanged(params) {
         timestamp: new Date().toISOString()
     };
 
-    // Salvesta serverisse
+    // Save to server
     $.ajax({
         url: "/api/v1/table/update-cell",
         method: "POST",
         data: {
-            table_name: "taitur_data", // Asenda oma tegeliku tabeli nimega
+            table_name: "taitur_data",
             row_id: rowId,
             column_name: column,
             old_value: oldValue,
             new_value: newValue,
-            session_id: editSessionId
+            session_id: window.editSessionId
         },
         dataType: "json",
         success: function (response) {
             if (response.success) {
-                // Eemalda salvestamata muudatustest, kuna see on salvestatud
-                delete unsavedChanges[changeKey];
+                // Remove from unsaved changes
+                delete window.unsavedChanges[changeKey];
 
-                // Uuenda muudatuste nimekirja
+                // Update changes list
                 loadSessionChanges();
 
-                // Näita õnnestumise teavitust
-                showToast("Lahter uuendatud", `Veeru ${column} väärtus edukalt uuendatud`, "success");
+                // Show success notification
+                if (typeof window.appFunctions.showToast === 'function') {
+                    window.appFunctions.showToast("Lahter uuendatud", `Veeru ${column} väärtus edukalt uuendatud`, "success");
+                } else {
+                    showToast("Lahter uuendatud", `Veeru ${column} väärtus edukalt uuendatud`, "success");
+                }
             }
         },
         error: function (xhr, status, error) {
             console.error("Viga lahtri uuendamisel:", error);
 
-            // Taasta muudatus tabelis
+            // Restore change in table
             params.node.setDataValue(column, oldValue);
 
-            // Näita vea teavitust
-            showToast("Uuendamine ebaõnnestus", xhr.responseJSON?.detail || error, "error");
+            // Show error notification
+            if (typeof window.appFunctions.showToast === 'function') {
+                window.appFunctions.showToast("Uuendamine ebaõnnestus", xhr.responseJSON?.detail || error, "error");
+            } else {
+                showToast("Uuendamine ebaõnnestus", xhr.responseJSON?.detail || error, "error");
+            }
         }
     });
 }
@@ -681,13 +710,12 @@ function getCellStyle(params) {
     // Check if we're in dark mode
     const isDarkMode = document.body.classList.contains('dark-mode');
 
-    // Tõsta esile redigeeritavad lahtrid, kui ollakse redigeerimisrežiimis
-    if (isEditMode && editableColumns.includes(params.colDef.field)) {
+    // Highlight editable cells when in edit mode
+    if (window.appState.isEditMode && window.appState.editableColumns.includes(params.colDef.field)) {
         return {
-            backgroundColor: isDarkMode ? "#93c5fd" : "#dbeafe",  // Lighter blue in dark mode
-            color: "#000000", // Always black text for highlighted cells
+            backgroundColor: isDarkMode ? "#93c5fd" : "#dbeafe",
+            color: "#000000",
             cursor: "pointer",
-            // Add a subtle border to make it stand out more in dark mode
             border: isDarkMode ? "1px solid #60a5fa" : "none"
         };
     }
@@ -695,7 +723,7 @@ function getCellStyle(params) {
     // Special styling for highlighted/selected cells in dark mode
     if (isDarkMode && params.node.isSelected()) {
         return {
-            color: "#000000" // Black text for selected cells in dark mode
+            color: "#000000"
         };
     }
 
