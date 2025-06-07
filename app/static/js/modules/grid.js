@@ -80,11 +80,21 @@
                     }
                     return params.value;
                 },
-                // Fix editing configuration
+                // Fix editing configuration with proper state checking
                 editable: function (params) {
-                    // Only editable if in edit mode and the column is in editableColumns
-                    return window.appState.isEditMode &&
-                        (window.appState.editableColumns || []).includes(params.colDef.field);
+                    // Check both global and appState for edit mode
+                    const isEditMode = window.isEditMode || (window.appState && window.appState.isEditMode);
+
+                    // Get editable columns from either location
+                    const editableColumns = window.editableColumns ||
+                                          (window.appState && window.appState.editableColumns) ||
+                                          [];
+
+                    const isColumnEditable = editableColumns.includes(params.colDef.field);
+
+                    console.log(`Cell editable check: field=${params.colDef.field}, editMode=${isEditMode}, columnEditable=${isColumnEditable}`);
+
+                    return isEditMode && isColumnEditable;
                 },
                 cellStyle: function (params) {
                     // Use the global getCellStyle function
@@ -95,11 +105,20 @@
                 },
                 cellClass: function (params) {
                     // Add a custom class to editable cells based on current mode
-                    if (window.appState.isEditMode &&
-                        (window.appState.editableColumns || []).includes(params.colDef.field)) {
+                    const isEditMode = window.isEditMode || (window.appState && window.appState.isEditMode);
+                    const editableColumns = window.editableColumns ||
+                                          (window.appState && window.appState.editableColumns) ||
+                                          [];
+
+                    if (isEditMode && editableColumns.includes(params.colDef.field)) {
                         return 'editable-cell';
                     }
                     return '';
+                },
+                // Add cell editor for better editing experience
+                cellEditor: 'agTextCellEditor',
+                cellEditorParams: {
+                    maxLength: 1000
                 }
             },
             columnDefs: state.columnDefs,
@@ -126,14 +145,20 @@
             onFilterChanged: onFilterChanged,
             onSortChanged: onSortChanged,
             onCellValueChanged: function (params) {
+                console.log("AG Grid cell value changed event fired:", params);
                 // Call the global cell value changed handler
                 if (typeof window.onCellValueChanged === 'function') {
                     window.onCellValueChanged(params);
+                } else {
+                    console.error("window.onCellValueChanged function not found");
                 }
             },
             rowSelection: 'multiple',
             suppressRowHoverHighlight: false,
             rowHighlightClass: 'ag-row-highlight',
+            // Enable single click editing for better UX
+            singleClickEdit: true,
+            stopEditingWhenCellsLoseFocus: true
         };
 
         // Create the grid

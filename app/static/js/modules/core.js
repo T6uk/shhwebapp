@@ -48,6 +48,14 @@
         // Set up event handlers
         funcs.setupEventHandlers();
 
+        // Initialize edit system after grid is ready
+        setTimeout(function () {
+            // Make sure edit.js functions are available
+            if (typeof window.getEditableColumns === 'function') {
+                window.getEditableColumns();
+            }
+        }, 1500);
+
         // Rest of initialization...
         state.lastChangeCheck = new Date();
         state.lastChangeCheck.setMinutes(state.lastChangeCheck.getMinutes() - 30);
@@ -56,12 +64,6 @@
         }, 3000);
 
         setupDataRefreshTimer();
-
-        if (typeof window.getEditableColumns === 'function') {
-            setTimeout(function () {
-                window.getEditableColumns();
-            }, 1000);
-        }
 
         if ($("#user-profile").length) {
             const username = $("#user-profile").data("username");
@@ -370,4 +372,5 @@
     funcs.debounce = debounce;
     funcs.performSearch = performSearch;
     funcs.resetSearch = resetSearch;
+    funcs.highlightRefreshButton = highlightRefreshButton;
 })();

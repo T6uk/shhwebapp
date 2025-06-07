@@ -11,10 +11,16 @@ window.appState = {
     nextFilterId: 2,
     columnVisibility: {},
     uiHidden: false,
-    isEditMode: false,           // Add this
-    editableColumns: [],         // Add this
+    isEditMode: false,
+    editableColumns: [],
     lastChangeCheck: new Date()
 };
+
+// Also ensure global edit variables exist for backward compatibility
+window.isEditMode = false;
+window.editSessionId = null;
+window.unsavedChanges = {};
+window.editableColumns = [];
 
 // Global function references - ensure filter functions are properly set
 window.appFunctions = {
@@ -46,6 +52,8 @@ window.appFunctions = {
     updateStatus: null,
     loadSavedFiltersList: null,
     scrollToColumn: null,
+    highlightRefreshButton: null,
+    debounce: null
 };
 
 // Direct access to critical functions for debugging
@@ -65,3 +73,17 @@ if (typeof window.initViewFile === 'function') {
 if (typeof window.initVirtualToimik === 'function') {
     window.initVirtualToimik();
 }
+
+// Function to synchronize state between global and appState
+window.syncEditState = function() {
+    // Sync from global to appState
+    window.appState.isEditMode = window.isEditMode;
+    window.appState.editableColumns = window.editableColumns;
+
+    // Sync from appState to global (in case appState was updated)
+    window.isEditMode = window.appState.isEditMode;
+    window.editableColumns = window.appState.editableColumns;
+};
+
+// Call sync function periodically to ensure consistency
+setInterval(window.syncEditState, 1000);

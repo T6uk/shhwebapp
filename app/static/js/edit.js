@@ -1,11 +1,23 @@
 // app/static/js/edit.js - Tabeli redigeerimise funktsioonid
-// Globaalsed muutujad redigeerimiseks
+
+// Initialize global edit state variables
+window.isEditMode = false;
+window.editSessionId = null;
+window.unsavedChanges = {};
+window.editableColumns = [];
 window.lastChangeCheck = null;
 window.changeCheckInterval = null;
 window.socket = null;
 
 // Algväärtusta kui dokument on laaditud
 $(document).ready(function () {
+    // Initialize edit state in appState as well for consistency
+    if (!window.appState) {
+        window.appState = {};
+    }
+    window.appState.isEditMode = false;
+    window.appState.editableColumns = [];
+
     // Kontrolli, kas kasutajal on redigeerimisõigused ja lae redigeeritavad veerud
     getEditableColumns();
 
@@ -101,8 +113,10 @@ function setupWebSocket() {
                 }]);
 
                 // Värskenda ka tabelit, et näidata viimased muudatused
-                if (gridApi) {
-                    gridApi.refreshInfiniteCache();
+                if (window.appState && window.appState.gridApi) {
+                    window.appState.gridApi.refreshInfiniteCache();
+                } else if (window.gridApi) {
+                    window.gridApi.refreshInfiniteCache();
                 }
             } else if (data.type === "pong") {
                 // Ping vastus, midagi pole vaja teha
@@ -140,7 +154,7 @@ function getEditableColumns() {
         method: "GET",
         dataType: "json",
         success: function (response) {
-            // Store in both places for compatibility
+            // Store in all places for compatibility
             window.editableColumns = response.columns || [];
             window.appState.editableColumns = response.columns || [];
 
@@ -150,6 +164,17 @@ function getEditableColumns() {
             }
 
             console.log("Redigeeritavad veerud:", window.editableColumns);
+
+            // Trigger grid redraw if it exists to update editable cells
+            if (window.appState && window.appState.gridApi) {
+                setTimeout(() => {
+                    window.appState.gridApi.redrawRows();
+                }, 100);
+            } else if (window.gridApi) {
+                setTimeout(() => {
+                    window.gridApi.redrawRows();
+                }, 100);
+            }
         },
         error: function (xhr, status, error) {
             console.error("Viga redigeeritavate veergude laadimisel:", error);
@@ -181,7 +206,7 @@ function setupEditHandlers() {
 
     // Lisa beforeunload sündmuse käsitleja hoiatamaks salvestamata muudatuste kohta
     $(window).on("beforeunload", function (e) {
-        if (isEditMode && Object.keys(unsavedChanges).length > 0) {
+        if (window.isEditMode && Object.keys(window.unsavedChanges).length > 0) {
             // Standardne sõnum beforeunload sündmuse jaoks
             const message = "Teil on salvestamata muudatusi. Kas olete kindel, et soovite lahkuda? Muudatusi ei saa hiljem tagasi võtta.";
             e.returnValue = message;
@@ -192,7 +217,7 @@ function setupEditHandlers() {
 
 // Lülita redigeerimisrežiim sisse/välja
 function toggleEditMode() {
-    if (isEditMode) {
+    if (window.isEditMode) {
         disableEditMode();
     } else {
         enableEditMode();
@@ -219,7 +244,8 @@ function enableEditMode() {
             console.log("Edit mode password verification response:", response);
 
             if (response.success) {
-                // Enable edit mode using global state
+                // Enable edit mode in both global and appState
+                window.isEditMode = true;
                 window.appState.isEditMode = true;
                 window.editSessionId = response.session_id;
 
@@ -236,14 +262,15 @@ function enableEditMode() {
                 // Reset unsaved changes
                 window.unsavedChanges = {};
 
-                // Make sure editableColumns are in global state
-                window.appState.editableColumns = window.editableColumns || [];
+                // Ensure editableColumns are available
+                if (!window.appState.editableColumns || window.appState.editableColumns.length === 0) {
+                    window.appState.editableColumns = window.editableColumns || [];
+                }
 
                 // Redraw rows to highlight editable cells
                 if (window.appState.gridApi) {
                     window.appState.gridApi.redrawRows();
                 } else if (window.gridApi) {
-                    // Fallback to global gridApi
                     window.gridApi.redrawRows();
                 }
 
@@ -285,7 +312,8 @@ function disableEditMode() {
         }
     }
 
-    // Disable edit mode using global state
+    // Disable edit mode in both global and appState
+    window.isEditMode = false;
     window.appState.isEditMode = false;
     window.editSessionId = null;
 
@@ -323,15 +351,26 @@ function disableEditMode() {
 // Käsitle lahtri väärtuse muutmist - see integreerib AG Grid'iga
 function onCellValueChanged(params) {
     // Only process in edit mode
-    if (!window.appState.isEditMode) return;
+    if (!window.isEditMode) {
+        console.log("Cell value changed but not in edit mode, ignoring");
+        return;
+    }
 
     const column = params.column.getColDef().field;
     const rowId = params.data.id;
     const oldValue = params.oldValue;
     const newValue = params.newValue;
 
+    console.log("Cell value changed:", {column, rowId, oldValue, newValue});
+
     // Skip if no actual change
     if (oldValue === newValue) return;
+
+    // Check if column is editable
+    if (!window.editableColumns.includes(column)) {
+        console.log("Column is not editable:", column);
+        return;
+    }
 
     // Key for tracking this change
     const changeKey = `${rowId}_${column}`;
@@ -392,10 +431,10 @@ function onCellValueChanged(params) {
 
 // Lae muudatused praeguse redigeerimisseansi jaoks
 function loadSessionChanges() {
-    if (!editSessionId) return;
+    if (!window.editSessionId) return;
 
     $.ajax({
-        url: `/api/v1/table/session-changes/${editSessionId}`,
+        url: `/api/v1/table/session-changes/${window.editSessionId}`,
         method: "GET",
         dataType: "json",
         success: function (response) {
@@ -461,8 +500,10 @@ function undoChange(changeId) {
         success: function (response) {
             if (response.success) {
                 // Värskenda tabeli andmeid
-                if (gridApi) {
-                    gridApi.refreshInfiniteCache();
+                if (window.appState.gridApi) {
+                    window.appState.gridApi.refreshInfiniteCache();
+                } else if (window.gridApi) {
+                    window.gridApi.refreshInfiniteCache();
                 }
 
                 // Lae muudatuste nimekiri uuesti
@@ -487,7 +528,7 @@ function undoAllChanges() {
 
     // Hangi kõik muudatused ja tühista need ükshaaval
     $.ajax({
-        url: `/api/v1/table/session-changes/${editSessionId}`,
+        url: `/api/v1/table/session-changes/${window.editSessionId}`,
         method: "GET",
         dataType: "json",
         success: function (response) {
@@ -504,8 +545,10 @@ function undoAllChanges() {
                 Promise.all(undoPromises)
                     .then(() => {
                         // Värskenda tabeli andmeid
-                        if (gridApi) {
-                            gridApi.refreshInfiniteCache();
+                        if (window.appState.gridApi) {
+                            window.appState.gridApi.refreshInfiniteCache();
+                        } else if (window.gridApi) {
+                            window.gridApi.refreshInfiniteCache();
                         }
 
                         // Lae muudatuste nimekiri uuesti
@@ -530,10 +573,10 @@ function undoAllChanges() {
 // Seadista teavitused teiste kasutajate muudatustest
 function setupChangeNotifications() {
     // Määra algne ajatempel
-    lastChangeCheck = new Date().toISOString();
+    window.lastChangeCheck = new Date().toISOString();
 
     // Kontrolli muudatusi iga 15 sekundi järel
-    changeCheckInterval = setInterval(checkForChanges, 15000);
+    window.changeCheckInterval = setInterval(checkForChanges, 15000);
 }
 
 // Kontrolli muudatusi teistelt kasutajatelt
@@ -542,12 +585,12 @@ function checkForChanges() {
         url: "/api/v1/table/check-for-changes",
         method: "GET",
         data: {
-            last_checked: lastChangeCheck
+            last_checked: window.lastChangeCheck
         },
         dataType: "json",
         success: function (response) {
             // Uuenda viimase kontrolli ajatemplit
-            lastChangeCheck = response.timestamp;
+            window.lastChangeCheck = response.timestamp;
 
             // Kui on muudatusi, teavita kasutajat
             if (response.has_changes) {
@@ -569,8 +612,8 @@ function showDataChangeNotification(changes) {
     const username = latestChange.username;
 
     // Tõsta esile ka värskendamise nupp
-    if (typeof highlightRefreshButton === 'function') {
-        highlightRefreshButton(changes);
+    if (typeof window.appFunctions.highlightRefreshButton === 'function') {
+        window.appFunctions.highlightRefreshButton(changes);
     }
 
     // Loo teavituse element
@@ -605,7 +648,9 @@ function showDataChangeNotification(changes) {
     // Lisa klõpsamisel käsitlejad
     notification.find(".refresh-data-btn").click(function () {
         // Värskenda tabeli andmeid
-        refreshData(); // Kutsu meie uut funktsiooni selle asemel
+        if (window.appFunctions.refreshData) {
+            window.appFunctions.refreshData();
+        }
 
         // Eemalda teavitus
         notification.addClass("opacity-0 translate-x-10");
@@ -711,7 +756,7 @@ function getCellStyle(params) {
     const isDarkMode = document.body.classList.contains('dark-mode');
 
     // Highlight editable cells when in edit mode
-    if (window.appState.isEditMode && window.appState.editableColumns.includes(params.colDef.field)) {
+    if (window.isEditMode && window.editableColumns.includes(params.colDef.field)) {
         return {
             backgroundColor: isDarkMode ? "#93c5fd" : "#dbeafe",
             color: "#000000",
@@ -730,7 +775,7 @@ function getCellStyle(params) {
     return null;
 }
 
-// Need funktsioonid peavad olema ligipääsetavad globaalses ulatuses AG Grid'iga integreerimiseks
+// Export functions to global scope
 window.getEditableColumns = getEditableColumns;
 window.setupEditHandlers = setupEditHandlers;
 window.setupChangeNotifications = setupChangeNotifications;
