@@ -249,6 +249,11 @@
                 </button>
             </div>
 
+            <button id="deposit-btn" class="compact-btn btn-secondary">
+                <i class="fas fa-university text-xs mr-1"></i>
+                <span>Deposiit</span>
+            </button>
+
             <!-- Right section: action buttons -->
             <div class="flex items-center flex-wrap gap-1 sm:gap-2">
                 <!-- Edit mode button -->
@@ -828,6 +833,155 @@
     </div>
 </div>
 
+<!-- Deposit Modal - 95% Screen Size -->
+<div id="deposit-modal" class="fixed inset-0 flex items-center justify-center z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="deposit-backdrop"></div>
+
+    <!-- Modal takes 95% of screen width and height -->
+    <div class="modal-content z-10 relative flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-xl"
+         style="width: 95vw; height: 95vh; max-width: 95vw; max-height: 95vh;">
+
+        <!-- Header - Fixed height -->
+        <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg flex-shrink-0">
+            <h3 class="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
+                <i class="fas fa-university mr-2"></i>
+                <span>Deposiit</span>
+            </h3>
+            <button id="close-deposit-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Content area - Takes remaining space with minimal padding -->
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-hidden p-2 flex flex-col min-h-0">
+
+            <!-- Toolbar - Compact fixed height -->
+            <div id="deposit-toolbar"
+                 class="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <button id="import-deposit-csv-btn" class="compact-btn btn-primary">
+                    <i class="fas fa-file-import text-xs mr-1"></i>
+                    <span>Impordi CSV</span>
+                </button>
+                <button id="back-to-normal-view-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-arrow-left text-xs mr-1"></i>
+                    <span>Tagasi</span>
+                </button>
+
+                <!-- Table controls will be added here by JavaScript -->
+
+                <div class="ml-auto flex gap-2">
+                    <span id="deposit-row-count" class="text-sm text-gray-600 dark:text-gray-400 self-center">
+                        0 rida
+                    </span>
+                </div>
+            </div>
+
+            <!-- AG-Grid container - Takes almost all remaining space -->
+            <div class="flex-grow overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 min-h-0 relative">
+                <!-- AG-Grid will be rendered here and take full available height -->
+                <div id="deposit-ag-grid" class="ag-theme-alpine w-full h-full"></div>
+
+                <!-- Empty state (shown when no data) -->
+                <div id="deposit-empty-state"
+                     class="flex flex-col items-center justify-center text-center hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md">
+                    <i class="fas fa-database text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        Deposiidiandmed puuduvad
+                    </h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">
+                        Klõpsake "Impordi CSV" nuppu andmete laadimiseks
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSV File Browser Modal - Keep as is but ensure it's still above -->
+<div id="csv-browser-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" id="csv-browser-backdrop"></div>
+    <div class="modal-content w-11/12 max-w-4xl z-10 relative max-h-[90vh] flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-2xl border-2 border-blue-200 dark:border-blue-800">
+        <div class="flex justify-between items-center mb-2 bg-blue-50 dark:bg-blue-900 p-3 rounded-t-lg border-b border-blue-200 dark:border-blue-700">
+            <h3 class="text-lg font-semibold flex items-center text-blue-900 dark:text-blue-100">
+                <i class="fas fa-folder-open mr-2"></i>
+                <span>Vali CSV fail</span>
+            </h3>
+            <button id="close-csv-browser-modal"
+                    class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-auto p-3 min-h-[400px]">
+            <!-- Breadcrumb navigation -->
+            <div id="csv-breadcrumb"
+                 class="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span class="text-sm text-gray-600 dark:text-gray-400">Asukoht: </span>
+                <span id="csv-current-path" class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono">
+                    C:\TAITEMENETLUS\ÜLESANDED\Tööriistad\ROCKI
+                </span>
+            </div>
+
+            <!-- File browser table -->
+            <div id="csv-files-table-container"
+                 class="w-full overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-6"></th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Nimi
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Tüüp
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Suurus
+                        </th>
+                        <th scope="col"
+                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Muudetud
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody id="csv-files-table-body"
+                           class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:border-gray-700">
+                    <!-- Files will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Loading state -->
+            <div id="csv-browser-loading" class="text-center py-8 hidden">
+                <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
+                <p class="text-gray-600 dark:text-gray-400">Laadin faile...</p>
+            </div>
+
+            <!-- Error state -->
+            <div id="csv-browser-error" class="text-center py-8 hidden">
+                <i class="fas fa-exclamation-triangle text-2xl text-red-500 mb-2"></i>
+                <p class="text-red-600 dark:text-red-400" id="csv-browser-error-message">
+                    Viga failide laadimisel
+                </p>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 p-3 bg-blue-50 dark:bg-blue-900 rounded-b-lg border-t border-blue-200 dark:border-blue-700">
+            <button id="csv-cancel-btn" class="compact-btn btn-secondary">
+                <span>Tühista</span>
+            </button>
+            <button id="csv-select-btn" class="compact-btn btn-primary" disabled>
+                <span>Vali fail</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Application Script -->
 <script src="{{ versioned_static('js/global-bridge.js') }}"></script>
 <script src="{{ versioned_static('js/app.js') }}"></script>
@@ -844,6 +998,8 @@
 <script src="{{ versioned_static('js/koosta_dokument.js') }}"></script>
 <script src="{{ versioned_static('js/version-checker.js') }}"></script>
 <script src="{{ versioned_static('js/toimik_buttons_fix.js') }}"></script>
+<script src="{{ versioned_static('js/deposit.js') }}"></script>
+<link rel="stylesheet" href="{{ versioned_static('css/deposit.css') }}">
 
 <!-- Additional script for improved table container sizing -->
 <script>
@@ -914,6 +1070,7 @@
         // Call resizeTableContainer once layout is ready
         setTimeout(resizeTableContainer, 100);
     });
+</script>
 </script>
 </body>
 </html>
