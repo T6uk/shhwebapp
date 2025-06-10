@@ -13,10 +13,12 @@ import traceback
 import uuid
 from datetime import date
 from datetime import datetime
+from io import StringIO
 from typing import Optional
 
 import orjson
-from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request, Form
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import Query, Response, Form
 from sqlalchemy import or_
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +35,8 @@ from app.services.edit_service import (
     verify_edit_permission, get_editable_columns, update_cell_value,
     get_session_changes, undo_change, check_for_changes
 )
+
+# Make sure these are imported for the Koondaja functionality
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -2033,3 +2037,491 @@ async def browse_deposit_folder(path: str = ""):
     except Exception as e:
         logger.exception(f"Error browsing folder: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error browsing folder: {str(e)}")
+
+
+@router.get("/browse-koondaja-folder")
+async def browse_koondaja_folder(path: str = ""):
+    """Browse the Koondaja folder structure with multiple CSV folders"""
+    try:
+        base_path = r"C:\TAITEMENETLUS\ÜLESANDED\Tööriistad\ROCKI"
+
+        # Define the allowed folder structure for Koondaja
+        koondaja_folders = ["CSV", "Konto vv", "MTA", "Pension", "töötukassa"]
+
+        if path:
+            # Handle path normalization
+            path = path.replace('/', os.sep).replace('\\', os.sep)
+            full_path = os.path.join(base_path, path)
+        else:
+            # Return the main Koondaja folders
+            full_path = base_path
+
+        logger.info(f"Browsing Koondaja folder: {full_path}")
+
+        if not os.path.exists(full_path):
+            logger.error(f"Koondaja path does not exist: {full_path}")
+            return {
+                "success": False,
+                "error": f"Path does not exist: {full_path}",
+                "items": [],
+                "current_path": path
+            }
+
+        items = []
+
+        if not path:
+            # Return only the Koondaja-specific folders at root level
+            for folder_name in koondaja_folders:
+                folder_path = os.path.join(base_path, folder_name)
+                if os.path.exists(folder_path) and os.path.isdir(folder_path):
+                    try:
+                        stat_info = os.stat(folder_path)
+                        items.append({
+                            "name": folder_name,
+                            "type": "folder",
+                            "path": folder_name,
+                            "size": None,
+                            "modified": datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error getting folder info for {folder_name}: {str(e)}")
+                        continue
+        else:
+            # Browse within a specific folder
+            try:
+                for item in os.listdir(full_path):
+                    item_path = os.path.join(full_path, item)
+
+                    try:
+                        stat_info = os.stat(item_path)
+                        is_dir = os.path.isdir(item_path)
+
+                        # For Koondaja, we're primarily interested in CSV files
+                        if not is_dir and not item.lower().endswith('.csv'):
+                            continue
+
+                        relative_path = os.path.join(path, item) if path else item
+
+                        items.append({
+                            "name": item,
+                            "type": "folder" if is_dir else "file",
+                            "path": relative_path,
+                            "size": stat_info.st_size if not is_dir else None,
+                            "modified": datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error processing item {item}: {str(e)}")
+                        continue
+
+            except PermissionError:
+                logger.error(f"Permission denied accessing: {full_path}")
+                return {
+                    "success": False,
+                    "error": f"Permission denied accessing: {full_path}",
+                    "items": [],
+                    "current_path": path
+                }
+
+        # Sort items: folders first, then files, alphabetically
+        items.sort(key=lambda x: (x["type"] == "file", x["name"].lower()))
+
+        logger.info(f"Found {len(items)} items in Koondaja folder: {full_path}")
+
+        return {
+            "success": True,
+            "items": items,
+            "current_path": path,
+            "base_path": base_path
+        }
+
+    except Exception as e:
+        logger.exception(f"Error browsing Koondaja folder: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Error browsing folder: {str(e)}",
+            "items": [],
+            "current_path": path
+        }
+
+
+@router.post("/import-koondaja-csv")
+async def import_koondaja_csv(request: Request, db: AsyncSession = Depends(get_db)):
+    """Import CSV file for Koondaja data with folder-specific processing and database lookups - ENHANCED VERSION"""
+    try:
+        # Get the request body
+        try:
+            body = await request.json()
+            logger.info(f"Received Koondaja import request: {body}")
+        except Exception as e:
+            logger.error(f"Error parsing Koondaja request body: {str(e)}")
+            raise HTTPException(status_code=400, detail="Invalid JSON in request body")
+
+        file_path = body.get('file_path')
+        folder_type = body.get('folder_type', 'unknown')
+
+        if not file_path:
+            logger.error("No file_path provided in Koondaja request")
+            raise HTTPException(status_code=400, detail="File path is required")
+
+        # FIXED: Construct the full absolute path
+        base_path = r"C:\TAITEMENETLUS\ÜLESANDED\Tööriistad\ROCKI"
+
+        # Handle path normalization and construct full path
+        file_path = file_path.replace('/', os.sep).replace('\\', os.sep)
+        full_file_path = os.path.join(base_path, file_path)
+
+        logger.info(f"Attempting to import Koondaja CSV file: {full_file_path} (folder_type: {folder_type})")
+
+        if not os.path.exists(full_file_path):
+            logger.error(f"Koondaja file not found: {full_file_path}")
+            raise HTTPException(status_code=404, detail=f"File not found: {full_file_path}")
+
+        if not os.path.isfile(full_file_path):
+            logger.error(f"Koondaja path is not a file: {full_file_path}")
+            raise HTTPException(status_code=400, detail=f"Path is not a file: {full_file_path}")
+
+        data = []
+
+        # Try different encodings to handle Estonian characters
+        encodings = ['utf-8-sig', 'utf-8', 'windows-1252', 'iso-8859-15', 'cp1257']
+        content = None
+        used_encoding = None
+
+        for encoding in encodings:
+            try:
+                logger.debug(f"Trying encoding for Koondaja: {encoding}")
+                with open(full_file_path, 'r', encoding=encoding) as csvfile:
+                    content = csvfile.read()
+                    used_encoding = encoding
+                    logger.info(f"Successfully read Koondaja file with encoding: {encoding}")
+                    break
+            except UnicodeDecodeError as e:
+                logger.debug(f"Failed to read Koondaja file with encoding {encoding}: {str(e)}")
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error reading Koondaja file with encoding {encoding}: {str(e)}")
+                continue
+
+        if content is None:
+            logger.error("Could not read Koondaja file with any encoding")
+            raise HTTPException(status_code=400, detail="Could not decode file with any supported encoding")
+
+        # Parse CSV content
+        try:
+            # Try to detect delimiter
+            csv_sniffer = csv.Sniffer()
+            delimiter = csv_sniffer.sniff(content[:1024]).delimiter
+            logger.info(f"Detected delimiter for Koondaja: '{delimiter}'")
+        except Exception as e:
+            logger.warning(f"Could not detect delimiter for Koondaja, using default ';': {str(e)}")
+            delimiter = ';'
+
+        try:
+            csv_reader = csv.reader(StringIO(content), delimiter=delimiter)
+            rows = list(csv_reader)
+
+            logger.info(f"Koondaja CSV parsing successful. Total rows: {len(rows)}")
+
+            if not rows:
+                logger.warning("Koondaja CSV file is empty")
+                return {
+                    "success": True,
+                    "message": "File is empty",
+                    "data": [],
+                    "folder_type": folder_type,
+                    "encoding_used": used_encoding,
+                    "total_rows_processed": 0,
+                    "valid_rows": 0,
+                    "lookup_data": {"viitenumber_lookup": {}, "isikukood_lookup": {}}
+                }
+
+            # Process rows based on folder type
+            processed_rows = 0
+            row_count = len(rows)
+
+            for row_num, row in enumerate(rows, 1):
+                try:
+                    # Skip empty rows
+                    if not any(cell.strip() for cell in row if cell):
+                        continue
+
+                    # Process based on folder type
+                    if folder_type == 'konto_vv':
+                        processed_row = process_konto_vv_row(row, row_num)
+                    elif folder_type == 'csv':
+                        processed_row = process_csv_folder_row(row, row_num)
+                    elif folder_type == 'mta':
+                        processed_row = process_mta_row(row, row_num)
+                    elif folder_type == 'pension':
+                        processed_row = process_pension_row(row, row_num)
+                    elif folder_type == 'tootukassa':
+                        processed_row = process_tootukassa_row(row, row_num)
+                    else:
+                        # Default processing - just return the raw row as array
+                        processed_row = row
+
+                    if processed_row is not None:
+                        data.append(processed_row)
+                        processed_rows += 1
+
+                except Exception as e:
+                    logger.warning(f"Error processing Koondaja row {row_num}: {str(e)}")
+                    continue
+
+            logger.info(
+                f"Successfully processed {processed_rows} out of {row_count} Koondaja rows from {os.path.basename(full_file_path)}")
+
+            # ENHANCED: Perform database lookups for optimal performance
+            lookup_data = {}
+            if folder_type == 'konto_vv' and data:
+                try:
+                    logger.info("Performing batch database lookups for Konto vv data...")
+                    lookup_data = await perform_koondaja_database_lookups(db, data)
+                    logger.info(
+                        f"Database lookups completed: {len(lookup_data.get('viitenumber_lookup', {}))} viitenumber matches, {len(lookup_data.get('isikukood_lookup', {}))} isikukood matches")
+                except Exception as e:
+                    logger.error(f"Error performing database lookups: {str(e)}")
+                    lookup_data = {"viitenumber_lookup": {}, "isikukood_lookup": {}}
+            else:
+                lookup_data = {"viitenumber_lookup": {}, "isikukood_lookup": {}}
+
+            return {
+                "success": True,
+                "message": f"Successfully imported {len(data)} rows from {os.path.basename(full_file_path)}",
+                "data": data,
+                "folder_type": folder_type,
+                "encoding_used": used_encoding,
+                "total_rows_processed": row_count,
+                "valid_rows": len(data),
+                "lookup_data": lookup_data
+            }
+
+        except Exception as e:
+            logger.error(f"Error parsing Koondaja CSV content: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Error parsing CSV file: {str(e)}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error importing Koondaja CSV: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error importing CSV: {str(e)}")
+
+
+def process_konto_vv_row(row: list, row_num: int) -> list:
+    """Process a row from Konto vv folder according to specific mapping"""
+    try:
+        # Ensure row has enough columns by padding with empty strings
+        while len(row) < 20:
+            row.append('')
+
+        # Clean up the row data - strip whitespace and handle None values
+        cleaned_row = []
+        for i, cell in enumerate(row):
+            if cell is None:
+                cleaned_row.append('')
+            else:
+                cleaned_row.append(str(cell).strip())
+
+        logger.debug(f"Processing Konto vv row {row_num}: columns 10-13 = {cleaned_row[10:14]}")
+
+        # Return the cleaned row as array - transformation will happen in frontend
+        return cleaned_row
+
+    except Exception as e:
+        logger.warning(f"Error processing Konto vv row {row_num}: {str(e)}")
+        return None
+
+
+def process_csv_folder_row(row: list, row_num: int) -> list:
+    """Process a row from CSV folder - placeholder for future implementation"""
+    try:
+        # For now, return raw row - will be implemented later
+        return row
+    except Exception as e:
+        logger.warning(f"Error processing CSV folder row {row_num}: {str(e)}")
+        return None
+
+
+def process_mta_row(row: list, row_num: int) -> list:
+    """Process a row from MTA folder - placeholder for future implementation"""
+    try:
+        # For now, return raw row - will be implemented later
+        return row
+    except Exception as e:
+        logger.warning(f"Error processing MTA row {row_num}: {str(e)}")
+        return None
+
+
+def process_pension_row(row: list, row_num: int) -> list:
+    """Process a row from Pension folder - placeholder for future implementation"""
+    try:
+        # For now, return raw row - will be implemented later
+        return row
+    except Exception as e:
+        logger.warning(f"Error processing Pension row {row_num}: {str(e)}")
+        return None
+
+
+def process_tootukassa_row(row: list, row_num: int) -> list:
+    """Process a row from töötukassa folder - placeholder for future implementation"""
+    try:
+        # For now, return raw row - will be implemented later
+        return row
+    except Exception as e:
+        logger.warning(f"Error processing töötukassa row {row_num}: {str(e)}")
+        return None
+
+
+async def perform_koondaja_database_lookups(db: AsyncSession, csv_data: list) -> dict:
+    """
+    Perform batch database lookups for Koondaja data with optimal performance
+    Returns lookup maps for viitenumber and võlgniku_isikukood
+    """
+    try:
+        logger.info(f"Starting batch database lookups for {len(csv_data)} CSV rows")
+
+        # Extract unique values for batch lookup
+        viitenumbrid = set()
+        isikukoodid = set()
+
+        for row in csv_data:
+            if isinstance(row, list) and len(row) > 14:
+                # Viitenumber from 10th item (index 9)
+                viitenumber = str(row[9] if len(row) > 9 else '').strip()
+                if viitenumber:
+                    viitenumbrid.add(viitenumber)
+
+                # Isikukood from 15th item (index 14)
+                isikukood = str(row[14] if len(row) > 14 else '').strip()
+                if isikukood:
+                    isikukoodid.add(isikukood)
+
+        logger.info(
+            f"Found {len(viitenumbrid)} unique viitenumbrid and {len(isikukoodid)} unique isikukoodid for lookup")
+
+        # Initialize lookup maps
+        viitenumber_lookup = {}
+        isikukood_lookup = {}
+
+        # Get table information first
+        try:
+            # Get table schema information
+            schema_query = text("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name LIKE '%table%' OR name LIKE '%main%'
+                ORDER BY name
+            """)
+            schema_result = await db.execute(schema_query)
+            tables = [row[0] for row in schema_result.fetchall()]
+            logger.info(f"Available tables: {tables}")
+
+            # Try to find the main table name
+            main_table_name = None
+            for table in tables:
+                if 'main' in table.lower() or len(tables) == 1:
+                    main_table_name = table
+                    break
+
+            if not main_table_name and tables:
+                main_table_name = tables[0]  # Use first table as fallback
+
+            logger.info(f"Using table: {main_table_name}")
+
+        except Exception as e:
+            logger.warning(f"Could not determine table name, using 'main_table': {str(e)}")
+            main_table_name = "main_table"
+
+        # Batch lookup for viitenumber -> toimiku_nr
+        if viitenumbrid and main_table_name:
+            try:
+                viitenumber_list = list(viitenumbrid)
+
+                # Create parameterized query
+                placeholders = ','.join([f':vn{i}' for i in range(len(viitenumber_list))])
+                params = {f'vn{i}': vn for i, vn in enumerate(viitenumber_list)}
+
+                # Try different possible column combinations
+                viitenumber_queries = [
+                    f'SELECT "Viitenumber", "Toimiku nr lõplik" FROM "{main_table_name}" WHERE "Viitenumber" IN ({placeholders})',
+                    f'SELECT Viitenumber, "Toimiku nr lõplik" FROM "{main_table_name}" WHERE Viitenumber IN ({placeholders})',
+                    f'SELECT "Viitenumber", toimiku_nr FROM "{main_table_name}" WHERE "Viitenumber" IN ({placeholders})',
+                    f'SELECT viitenumber, toimiku_nr FROM "{main_table_name}" WHERE viitenumber IN ({placeholders})'
+                ]
+
+                for query in viitenumber_queries:
+                    try:
+                        logger.debug(f"Trying viitenumber query: {query}")
+                        result = await db.execute(text(query), params)
+                        rows = result.fetchall()
+
+                        for row in rows:
+                            key = str(row[0]).strip() if row[0] else ''
+                            value = str(row[1]).strip() if row[1] else ''
+                            if key:
+                                viitenumber_lookup[key] = value
+
+                        logger.info(f"Viitenumber lookup successful: {len(viitenumber_lookup)} matches found")
+                        break
+
+                    except Exception as e:
+                        logger.debug(f"Viitenumber query failed: {str(e)}")
+                        continue
+
+            except Exception as e:
+                logger.warning(f"Error in viitenumber batch lookup: {str(e)}")
+
+        # Batch lookup for isikukood -> toimiku_nr
+        if isikukoodid and main_table_name:
+            try:
+                isikukood_list = list(isikukoodid)
+
+                # Create parameterized query
+                placeholders = ','.join([f':ik{i}' for i in range(len(isikukood_list))])
+                params = {f'ik{i}': ik for i, ik in enumerate(isikukood_list)}
+
+                # Try different possible column combinations
+                isikukood_queries = [
+                    f'SELECT "Võlgniku reg isikukood", "Toimiku nr lõplik" FROM "{main_table_name}" WHERE "Võlgniku reg isikukood" IN ({placeholders})',
+                    f'SELECT "Isiku- või registrikood", "Toimiku nr lõplik" FROM "{main_table_name}" WHERE "Isiku- või registrikood" IN ({placeholders})',
+                    f'SELECT "Võlgniku reg isikukood", toimiku_nr FROM "{main_table_name}" WHERE "Võlgniku reg isikukood" IN ({placeholders})',
+                    f'SELECT "Isiku- või registrikood", toimiku_nr FROM "{main_table_name}" WHERE "Isiku- või registrikood" IN ({placeholders})',
+                    f'SELECT volgniku_isikukood, "Toimiku nr lõplik" FROM "{main_table_name}" WHERE volgniku_isikukood IN ({placeholders})',
+                    f'SELECT isikukood, "Toimiku nr lõplik" FROM "{main_table_name}" WHERE isikukood IN ({placeholders})'
+                ]
+
+                for query in isikukood_queries:
+                    try:
+                        logger.debug(f"Trying isikukood query: {query}")
+                        result = await db.execute(text(query), params)
+                        rows = result.fetchall()
+
+                        for row in rows:
+                            key = str(row[0]).strip() if row[0] else ''
+                            value = str(row[1]).strip() if row[1] else ''
+                            if key:
+                                isikukood_lookup[key] = value
+
+                        logger.info(f"Isikukood lookup successful: {len(isikukood_lookup)} matches found")
+                        break
+
+                    except Exception as e:
+                        logger.debug(f"Isikukood query failed: {str(e)}")
+                        continue
+
+            except Exception as e:
+                logger.warning(f"Error in isikukood batch lookup: {str(e)}")
+
+        logger.info(
+            f"Database lookups completed: {len(viitenumber_lookup)} viitenumber matches, {len(isikukood_lookup)} isikukood matches")
+
+        return {
+            "viitenumber_lookup": viitenumber_lookup,
+            "isikukood_lookup": isikukood_lookup
+        }
+
+    except Exception as e:
+        logger.error(f"Error performing database lookups: {str(e)}")
+        return {
+            "viitenumber_lookup": {},
+            "isikukood_lookup": {}
+        }
