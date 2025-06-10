@@ -31,6 +31,7 @@ from app.core.security import (
 )
 from app.core.cache import init_redis_pool
 from app.api.v1.endpoints import table
+from app.api.v1.endpoints import koondaja
 from app.api.v1.endpoints.auth import router as auth_router
 
 # Set up logging
@@ -60,6 +61,7 @@ templates.env.globals["versioned_static"] = lambda path: f"/static/{path}?v={cac
 
 # Include API routers
 app.include_router(table.router, prefix=settings.API_V1_STR)
+app.include_router(koondaja.router)
 app.include_router(auth_router)
 
 # OAuth2 scheme for getting token from Authorization header or cookie

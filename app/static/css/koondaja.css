@@ -1,0 +1,40 @@
+/* Koondaja specific styles */
+#koondaja-modal .ag-theme-alpine {
+    --ag-background-color: #ffffff;
+    --ag-header-background-color: #f3f4f6;
+    --ag-header-foreground-color: #374151;
+    --ag-borders: solid 1px #e5e7eb;
+    --ag-row-border-color: #e5e7eb;
+}
+
+.dark #koondaja-modal .ag-theme-alpine {
+    --ag-background-color: #1f2937;
+    --ag-header-background-color: #111827;
+    --ag-header-foreground-color: #f3f4f6;
+    --ag-borders: solid 1px #374151;
+    --ag-row-border-color: #374151;
+}
+
+#koondaja-modal .ag-row-hover {
+    background-color: #f9fafb;
+}
+
+.dark #koondaja-modal .ag-row-hover {
+    background-color: #374151;
+}
+
+/* Database column selector styles */
+#db-column-selector-modal {
+    z-index: 60; /* Higher than koondaja modal */
+}
+
+#db-columns-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Koondaja button highlight */
+#koondaja-btn.active {
+    background-color: #3b82f6;
+    color: white;
+}
