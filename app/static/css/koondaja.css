@@ -1,0 +1,454 @@
+/**
+ * AG-Grid Koondaja Module Styles
+ * Excel-like table functionality with modern design
+ */
+
+/* Import AG-Grid theme */
+@import url('https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css');
+@import url('https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css');
+
+/* Koondaja Modal Animations */
+#koondaja-modal {
+    backdrop-filter: blur(4px);
+    animation: koondajaFadeIn 0.2s ease-out;
+}
+
+#koondaja-modal.hidden {
+    animation: koondajaFadeOut 0.15s ease-in;
+}
+
+@keyframes koondajaFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes koondajaFadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+/* AG-Grid customizations for koondaja table */
+#koondaja-ag-grid {
+    width: 100%;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom AG-Grid theme overrides */
+#koondaja-ag-grid.ag-theme-alpine {
+    --ag-font-size: 12px;
+    --ag-font-family: 'Inter', sans-serif;
+    --ag-header-height: 40px;
+    --ag-row-height: 32px;
+    --ag-border-color: #e5e7eb;
+    --ag-header-background-color: #f9fafb;
+    --ag-odd-row-background-color: #f9fafb;
+    --ag-row-hover-color: rgba(34, 197, 94, 0.05);
+    --ag-selected-row-background-color: rgba(34, 197, 94, 0.1);
+    --ag-range-selection-background-color: rgba(34, 197, 94, 0.1);
+    --ag-range-selection-border-color: #22c55e;
+    --ag-header-column-resize-handle-color: #94a3b8;
+    --ag-header-column-resize-handle-width: 2px;
+    --ag-input-focus-border-color: #22c55e;
+    --ag-minichart-selected-chart-color: #22c55e;
+    --ag-minichart-selected-page-color: #22c55e;
+}
+
+/* Dark mode AG-Grid theme */
+.dark #koondaja-ag-grid.ag-theme-alpine {
+    --ag-background-color: #111827;
+    --ag-foreground-color: #f3f4f6;
+    --ag-border-color: #374151;
+    --ag-header-background-color: #1f2937;
+    --ag-header-foreground-color: #f3f4f6;
+    --ag-odd-row-background-color: #1f2937;
+    --ag-row-hover-color: rgba(34, 197, 94, 0.1);
+    --ag-selected-row-background-color: rgba(34, 197, 94, 0.2);
+    --ag-range-selection-background-color: rgba(34, 197, 94, 0.15);
+    --ag-header-column-resize-handle-color: #6b7280;
+    --ag-input-border-color: #374151;
+    --ag-input-focus-border-color: #22c55e;
+    --ag-secondary-foreground-color: #9ca3af;
+}
+
+/* Enhanced header styling */
+#koondaja-ag-grid .ag-header-cell {
+    border-right: 1px solid var(--ag-border-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+#koondaja-ag-grid .ag-header-cell-label {
+    padding: 0 8px;
+}
+
+/* Enhanced cell styling */
+#koondaja-ag-grid .ag-cell {
+    border-right: 1px solid var(--ag-border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+}
+
+/* Column resize handle enhancement */
+#koondaja-ag-grid .ag-header-cell-resize::after {
+    background-color: var(--ag-header-column-resize-handle-color);
+    width: var(--ag-header-column-resize-handle-width);
+}
+
+#koondaja-ag-grid .ag-header-cell-resize:hover::after {
+    background-color: #22c55e;
+    width: 3px;
+}
+
+/* Column moving visual feedback */
+#koondaja-ag-grid .ag-header-cell-moving {
+    background-color: rgba(34, 197, 94, 0.1) !important;
+    opacity: 0.7;
+}
+
+#koondaja-ag-grid .ag-header-cell-moving .ag-header-cell-label {
+    color: #22c55e !important;
+}
+
+/* Filter panel styling */
+#koondaja-ag-grid .ag-filter-panel {
+    border: 1px solid var(--ag-border-color);
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Pagination styling */
+#koondaja-ag-grid .ag-paging-panel {
+    border-top: 1px solid var(--ag-border-color);
+    background-color: var(--ag-header-background-color);
+    padding: 8px 16px;
+    font-size: 12px;
+}
+
+/* Context menu styling */
+#koondaja-ag-grid .ag-menu {
+    border: 1px solid var(--ag-border-color);
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+}
+
+#koondaja-ag-grid .ag-menu-option {
+    padding: 8px 12px;
+    transition: background-color 0.15s ease;
+}
+
+#koondaja-ag-grid .ag-menu-option:hover {
+    background-color: rgba(34, 197, 94, 0.1);
+}
+
+/* Toolbar styling */
+#koondaja-toolbar {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.dark #koondaja-toolbar {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-color: #475569;
+}
+
+/* Loading overlay styling */
+#koondaja-ag-grid .ag-overlay-loading-wrapper {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.dark #koondaja-ag-grid .ag-overlay-loading-wrapper {
+    background-color: rgba(17, 24, 39, 0.9);
+}
+
+/* Selection styling enhancements */
+#koondaja-ag-grid .ag-row-selected {
+    background-color: var(--ag-selected-row-background-color) !important;
+}
+
+#koondaja-ag-grid .ag-cell-range-selected {
+    background-color: var(--ag-range-selection-background-color) !important;
+}
+
+/* Column header menu button */
+#koondaja-ag-grid .ag-header-cell-menu-button {
+    color: #6b7280;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+}
+
+#koondaja-ag-grid .ag-header-cell:hover .ag-header-cell-menu-button {
+    opacity: 1;
+    color: #22c55e;
+}
+
+/* Filter floating elements */
+#koondaja-ag-grid .ag-floating-filter-input {
+    border: 1px solid var(--ag-border-color);
+    border-radius: 0.25rem;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+#koondaja-ag-grid .ag-floating-filter-input:focus {
+    border-color: var(--ag-input-focus-border-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+/* Modal Z-Index Management */
+#koondaja-modal {
+    z-index: 40 !important;
+}
+
+#koondaja-modal .modal-content {
+    z-index: 41 !important;
+    position: relative;
+    max-height: 95vh;
+    min-height: 95vh;
+}
+
+#koondaja-modal .absolute.inset-0 {
+    z-index: 40 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+/* Empty state styling */
+#koondaja-empty-state {
+    background: radial-gradient(circle at center, rgba(34, 197, 94, 0.05) 0%, transparent 70%);
+    border-radius: 0.75rem;
+    padding: 2.5rem 2rem;
+    min-width: 320px;
+    max-width: 400px;
+    width: auto;
+    border: 1px solid rgba(34, 197, 94, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+}
+
+.dark #koondaja-empty-state {
+    background: radial-gradient(circle at center, rgba(34, 197, 94, 0.1) 0%, transparent 70%);
+    border-color: rgba(34, 197, 94, 0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+#koondaja-empty-state .fa-chart-line {
+    animation: pulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 2px 4px rgba(34, 197, 94, 0.2));
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+/* Loading states for Koondaja */
+.koondaja-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 0.5rem;
+}
+
+.dark .koondaja-loading-overlay {
+    background: rgba(17, 24, 39, 0.9);
+}
+
+.koondaja-loading-overlay .fa-spinner {
+    animation: spin 1s linear infinite;
+    font-size: 2rem;
+    color: #22c55e;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Progress indicator */
+.koondaja-progress-container {
+    width: 100%;
+    max-width: 300px;
+    margin-top: 1rem;
+}
+
+.koondaja-progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dark .koondaja-progress-bar {
+    background-color: #374151;
+}
+
+.koondaja-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    #koondaja-ag-grid.ag-theme-alpine {
+        --ag-font-size: 11px;
+        --ag-header-height: 36px;
+        --ag-row-height: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    #koondaja-modal .modal-content {
+        width: 95vw;
+        max-width: none;
+        margin: 0.5rem;
+        max-height: 95vh;
+    }
+
+    #koondaja-ag-grid.ag-theme-alpine {
+        --ag-font-size: 10px;
+        --ag-header-height: 32px;
+        --ag-row-height: 24px;
+    }
+
+    #koondaja-toolbar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    #koondaja-toolbar .ml-auto {
+        margin-left: 0;
+        align-self: flex-end;
+    }
+
+    .koondaja-table-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    #koondaja-modal .modal-content {
+        width: 98vw;
+        margin: 0.25rem;
+        max-height: 98vh;
+    }
+
+    #koondaja-ag-grid.ag-theme-alpine {
+        --ag-font-size: 9px;
+        --ag-header-height: 28px;
+        --ag-row-height: 20px;
+    }
+}
+
+/* Focus management for modals */
+#koondaja-modal:focus-within #close-koondaja-modal {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+}
+
+/* Performance optimizations */
+#koondaja-ag-grid {
+    contain: layout style paint;
+    will-change: scroll-position;
+}
+
+/* Button improvements */
+.koondaja-compact-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.koondaja-compact-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.koondaja-compact-btn:active::before {
+    width: 120px;
+    height: 120px;
+}
+
+/* Enhanced scrollbar */
+#koondaja-ag-grid::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#koondaja-ag-grid::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+#koondaja-ag-grid::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    border: 1px solid #f1f5f9;
+}
+
+#koondaja-ag-grid::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark #koondaja-ag-grid::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+.dark #koondaja-ag-grid::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-color: #1f2937;
+}
+
+.dark #koondaja-ag-grid::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}

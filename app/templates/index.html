@@ -254,6 +254,11 @@
                 <span>Deposiit</span>
             </button>
 
+            <button id="koondaja-btn" class="compact-btn btn-secondary">
+                <i class="fas fa-chart-line text-xs mr-1"></i>
+                <span>Koondaja</span>
+            </button>
+
             <!-- Right section: action buttons -->
             <div class="flex items-center flex-wrap gap-1 sm:gap-2">
                 <!-- Edit mode button -->
@@ -955,20 +960,6 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Loading state -->
-            <div id="csv-browser-loading" class="text-center py-8 hidden">
-                <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
-                <p class="text-gray-600 dark:text-gray-400">Laadin faile...</p>
-            </div>
-
-            <!-- Error state -->
-            <div id="csv-browser-error" class="text-center py-8 hidden">
-                <i class="fas fa-exclamation-triangle text-2xl text-red-500 mb-2"></i>
-                <p class="text-red-600 dark:text-red-400" id="csv-browser-error-message">
-                    Viga failide laadimisel
-                </p>
-            </div>
         </div>
 
         <div class="flex justify-end gap-2 p-3 bg-blue-50 dark:bg-blue-900 rounded-b-lg border-t border-blue-200 dark:border-blue-700">
@@ -978,6 +969,71 @@
             <button id="csv-select-btn" class="compact-btn btn-primary" disabled>
                 <span>Vali fail</span>
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Koondaja Modal - 95% Screen Size -->
+<div id="koondaja-modal" class="fixed inset-0 flex items-center justify-center z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="koondaja-backdrop"></div>
+
+    <!-- Modal takes 95% of screen width and height -->
+    <div class="modal-content z-10 relative flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-xl"
+         style="width: 95vw; height: 95vh; max-width: 95vw; max-height: 95vh;">
+
+        <!-- Header - Fixed height -->
+        <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg flex-shrink-0">
+            <h3 class="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
+                <i class="fas fa-chart-line mr-2"></i>
+                <span>Koondaja</span>
+            </h3>
+            <button id="close-koondaja-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Content area - Takes remaining space with minimal padding -->
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-hidden p-2 flex flex-col min-h-0">
+
+            <!-- Toolbar - Compact fixed height -->
+            <div id="koondaja-toolbar"
+                 class="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <button id="load-koondaja-data-btn" class="compact-btn btn-primary">
+                    <i class="fas fa-download text-xs mr-1"></i>
+                    <span>Lae andmed</span>
+                </button>
+                <button id="back-from-koondaja-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-arrow-left text-xs mr-1"></i>
+                    <span>Tagasi</span>
+                </button>
+
+                <!-- Table controls will be added here by JavaScript -->
+
+                <div class="ml-auto flex gap-2">
+                    <span id="koondaja-row-count" class="text-sm text-gray-600 dark:text-gray-400 self-center">
+                        0 rida
+                    </span>
+                </div>
+            </div>
+
+            <!-- AG-Grid container - Takes almost all remaining space -->
+            <div class="flex-grow overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 min-h-0 relative">
+                <!-- AG-Grid will be rendered here and take full available height -->
+                <div id="koondaja-ag-grid" class="ag-theme-alpine w-full h-full"></div>
+
+                <!-- Empty state (shown when no data) -->
+                <div id="koondaja-empty-state"
+                     class="flex flex-col items-center justify-center text-center hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md">
+                    <i class="fas fa-chart-line text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        Koondaja andmed puuduvad
+                    </h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">
+                        Klõpsake "Lae andmed" nuppu andmete laadimiseks
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1000,6 +1056,8 @@
 <script src="{{ versioned_static('js/toimik_buttons_fix.js') }}"></script>
 <script src="{{ versioned_static('js/deposit.js') }}"></script>
 <link rel="stylesheet" href="{{ versioned_static('css/deposit.css') }}">
+<script src="{{ versioned_static('js/koondaja.js') }}"></script>
+<link rel="stylesheet" href="{{ versioned_static('css/koondaja.css') }}">
 
 <!-- Additional script for improved table container sizing -->
 <script>
