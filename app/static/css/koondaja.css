@@ -38,3 +38,133 @@
     background-color: #3b82f6;
     color: white;
 }
+
+.koondaja-invalid-row {
+    background-color: #fef2f2 !important;
+}
+
+.koondaja-invalid-row:hover {
+    background-color: #fee2e2 !important;
+}
+
+/* Custom cell styling for better visual feedback */
+.ag-cell.toimiku-nr-valid {
+    background-color: #dcfce7 !important;
+    border-left: 3px solid #16a34a !important;
+    font-weight: 500;
+}
+
+.ag-cell.toimiku-nr-invalid {
+    background-color: #fee2e2 !important;
+    border-left: 3px solid #dc2626 !important;
+    font-weight: 500;
+}
+
+/* Tooltip for validation status */
+.ag-cell[col-id="Toimiku_nr"] {
+    position: relative;
+}
+
+.validation-tooltip {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.ag-cell[col-id="Toimiku_nr"]:hover .validation-tooltip {
+    opacity: 1;
+}
+
+.koondaja-invalid-row {
+    background-color: #fef2f2 !important;
+}
+
+.koondaja-invalid-row:hover {
+    background-color: #fee2e2 !important;
+}
+
+/* Custom cell styling for better visual feedback */
+.ag-cell.toimiku-nr-valid {
+    background-color: #dcfce7 !important;
+    border-left: 3px solid #16a34a !important;
+    font-weight: 500;
+}
+
+.ag-cell.toimiku-nr-invalid {
+    background-color: #fee2e2 !important;
+    border-left: 3px solid #dc2626 !important;
+    font-weight: 500;
+}
+
+/* Column width toggle button states */
+#toggle-column-width-btn.active {
+    background-color: #eef2ff !important;
+    border-color: #c7d2fe !important;
+    color: #3730a3 !important;
+}
+
+/* Database column selector styling */
+.selected-column-checkbox:checked + label {
+    color: #166534;
+    font-weight: 500;
+}
+
+.available-column-checkbox:checked + label {
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+/* Column selector sections */
+#selected-columns-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#available-columns-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Smooth transitions for button states */
+button[id$="-columns-btn"] {
+    transition: all 0.2s ease-in-out;
+}
+
+button[id$="-columns-btn"]:disabled {
+    transform: scale(0.95);
+}
+
+/* Tooltip for validation status */
+.ag-cell[col-id="Toimiku_nr"] {
+    position: relative;
+}
+
+.validation-tooltip {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.ag-cell[col-id="Toimiku_nr"]:hover .validation-tooltip {
+    opacity: 1;
+}

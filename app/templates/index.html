@@ -1028,6 +1028,14 @@
                     <i class="fas fa-file-export text-xs mr-1"></i>
                     <span>Ekspordi</span>
                 </button>
+                <button id="toggle-column-width-btn"
+                        class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <span id="toggle-column-width-text">Fit Headers</span>
+                </button>
 
                 <div class="ml-auto flex gap-2">
         <span id="koondaja-row-count" class="text-sm text-gray-600 dark:text-gray-400 self-center">
@@ -1040,7 +1048,6 @@
             <div class="flex-grow overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 min-h-0 relative">
                 <!-- AG-Grid will be rendered here and take full available height -->
                 <div id="koondaja-ag-grid" class="ag-theme-alpine w-full h-full"></div>
-
 
                 <!-- Empty state (shown when no data) -->
                 <div id="koondaja-empty-state"

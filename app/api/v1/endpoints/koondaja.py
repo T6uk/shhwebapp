@@ -298,7 +298,6 @@ async def import_koondaja_csv(
 
                     if folder_name.lower() == "konto vv":
                         # Process Konto vv folder files
-                        # Log the row structure for debugging
                         logger.debug(f"Row {row_num}: {len(row)} columns - {row[:10] if len(row) > 10 else row}")
 
                         # Only process rows where 8th item (index 7) = 'C'
@@ -326,11 +325,11 @@ async def import_koondaja_csv(
                             if last_value.strip():
                                 try:
                                     lookup_query = text("""
-                                                            SELECT "toimiku_nr" 
-                                                            FROM "taitur_data" 
-                                                            WHERE "võlgniku_kood" = :last_value 
-                                                            LIMIT 1
-                                                        """)
+                                        SELECT "toimiku_nr" 
+                                        FROM "taitur_data" 
+                                        WHERE "võlgniku_kood" = :last_value 
+                                        LIMIT 1
+                                    """)
 
                                     db_result = await db.execute(lookup_query, {"last_value": last_value.strip()})
                                     db_row = db_result.fetchone()
@@ -352,11 +351,11 @@ async def import_koondaja_csv(
                             if viitenumber.strip():
                                 try:
                                     viitenumber_query = text("""
-                                                            SELECT "toimiku_nr" 
-                                                            FROM "taitur_data" 
-                                                            WHERE "viitenumber" = :viitenumber 
-                                                            LIMIT 1
-                                                        """)
+                                        SELECT "toimiku_nr" 
+                                        FROM "taitur_data" 
+                                        WHERE "viitenumber" = :viitenumber 
+                                        LIMIT 1
+                                    """)
 
                                     vn_result = await db.execute(viitenumber_query,
                                                                  {"viitenumber": viitenumber.strip()})
@@ -378,31 +377,56 @@ async def import_koondaja_csv(
                             # Initialize other required columns
                             row_data["Jaak_peale_makset"] = ""
 
-                            # NEW LOGIC: Check if Toimik_mk_jargi matches either Toimik_vn_jargi or Toimik_ik_jargi
+                            # Enhanced validation logic with detailed status tracking
                             toimik_mk = row_data["Toimik_mk_jargi"].strip()
                             toimik_vn = row_data["Toimik_vn_jargi"].strip()
                             toimik_ik = row_data["Toimik_ik_jargi"].strip()
 
-                            # Flag to track if we need to highlight cells in red
-                            needs_highlighting = False
+                            # Validation status tracking
+                            validation_status = {
+                                "is_valid": False,
+                                "match_source": None,
+                                "has_mk": bool(toimik_mk),
+                                "has_vn": bool(toimik_vn),
+                                "has_ik": bool(toimik_ik)
+                            }
 
                             if toimik_mk and (toimik_mk == toimik_vn or toimik_mk == toimik_ik):
                                 # Match found - use the matching value for Toimiku_nr
                                 row_data["Toimiku_nr"] = toimik_mk
-                                logger.debug(f"Row {row_num}: Match found - Toimiku_nr set to '{toimik_mk}'")
+                                validation_status["is_valid"] = True
+                                validation_status["match_source"] = "vn" if toimik_mk == toimik_vn else "ik"
+                                logger.debug(
+                                    f"Row {row_num}: Match found - Toimiku_nr set to '{toimik_mk}' (source: {validation_status['match_source']})")
                             else:
-                                # No match found - leave Toimiku_nr empty and flag for highlighting
+                                # No match found - leave Toimiku_nr empty
                                 row_data["Toimiku_nr"] = ""
-                                needs_highlighting = True
+                                validation_status["is_valid"] = False
                                 logger.warning(
                                     f"Row {row_num}: No match found - Toimik_mk_jargi='{toimik_mk}', Toimik_vn_jargi='{toimik_vn}', Toimik_ik_jargi='{toimik_ik}'")
 
-                            # Add highlighting flag to row data for later processing
-                            row_data["_needs_highlighting"] = needs_highlighting
+                            # Add validation metadata for frontend use
+                            row_data["_validation_status"] = validation_status
+                            row_data["_needs_highlighting"] = not validation_status["is_valid"]
+
+                            # Add a readable validation message for tooltips/debugging
+                            if validation_status["is_valid"]:
+                                row_data[
+                                    "_validation_message"] = f"Valid - matched with {validation_status['match_source']} lookup"
+                            else:
+                                reasons = []
+                                if not toimik_mk:
+                                    reasons.append("No toimiku number in selgitus")
+                                if not toimik_vn and not toimik_ik:
+                                    reasons.append("No database matches found")
+                                elif toimik_mk and toimik_vn and toimik_ik and toimik_mk != toimik_vn and toimik_mk != toimik_ik:
+                                    reasons.append("Toimiku numbers don't match")
+
+                                row_data["_validation_message"] = f"Invalid - {'; '.join(reasons)}"
 
                             data.append(row_data)
                             processed_rows += 1
-                            logger.debug(f"Added row {row_num} to data: {row_data}")
+                            logger.debug(f"Added row {row_num} to data: validation={validation_status['is_valid']}")
                         else:
                             logger.debug(
                                 f"Skipping row {row_num} - 8th item is '{row[7] if len(row) > 7 else 'N/A'}' (not 'C') or row too short ({len(row)} columns)")

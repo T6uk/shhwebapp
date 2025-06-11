@@ -8,7 +8,9 @@
     let koondajaData = [];
     let availableDbColumns = [];
     let currentColumns = [];
+    let selectedDbColumns = []; // Track selected DB columns
     let isLoading = false;
+    let isColumnsFittedToHeader = false; // Track column width state
 
     // Folders to process
     const KOONDAJA_FOLDERS = ['CSV', 'Konto vv', 'MTA', 'Pension', 'Töötukassa'];
@@ -45,7 +47,7 @@
     });
 
     function initializeKoondaja() {
-        // Button click handlers
+        // Existing button click handlers
         $('#koondaja-btn').click(showKoondajaModal);
         $('#close-koondaja-modal, #koondaja-backdrop').click(hideKoondajaModal);
         $('#load-koondaja-data-btn').click(loadAllKoondajaData);
@@ -53,10 +55,14 @@
         $('#clear-koondaja-data-btn').click(clearKoondajaData);
         $('#export-koondaja-btn').click(exportKoondajaData);
 
-        // DB column selector handlers
+        // Use the improved toggle function
+        $('#toggle-column-width-btn').click(toggleColumnWidthImproved);
+
+        // Rest of the handlers...
         $('#close-db-column-selector, #db-column-selector-backdrop').click(hideDbColumnSelector);
         $('#cancel-db-columns-btn').click(hideDbColumnSelector);
         $('#add-selected-columns-btn').click(addSelectedDbColumns);
+        $('#remove-selected-columns-btn').click(removeSelectedDbColumns);
         $('#db-column-search').on('input', filterDbColumns);
 
         // Initialize the grid when modal is first shown
@@ -65,6 +71,114 @@
                 initializeKoondajaGrid();
             }
         });
+    }
+
+    function toggleColumnWidth() {
+        if (!koondajaGridApi) {
+            showNotification('Grid not initialized', 'warning');
+            return;
+        }
+
+        const button = $('#toggle-column-width-btn');
+        const buttonText = $('#toggle-column-width-text');
+
+        if (isColumnsFittedToHeader) {
+            // Switch back to small/flex columns - use sizeColumnsToFit
+            koondajaGridApi.sizeColumnsToFit();
+            buttonText.text('Fit Headers');
+            isColumnsFittedToHeader = false;
+
+            // Update button styling to indicate inactive state
+            button.removeClass('bg-indigo-50 border-indigo-300 text-indigo-700')
+                .addClass('bg-white border-gray-300 text-gray-700');
+
+            showNotification('Columns resized to fit container', 'info');
+        } else {
+            // Auto-size columns to fit headers using the correct AG Grid method
+            try {
+                // Method 1: Try autoSizeAllColumns (newer versions)
+                if (typeof koondajaGridApi.autoSizeAllColumns === 'function') {
+                    koondajaGridApi.autoSizeAllColumns(false);
+                }
+                // Method 2: Try the columnApi approach (older versions)
+                else if (koondajaColumnApi && typeof koondajaColumnApi.autoSizeAllColumns === 'function') {
+                    koondajaColumnApi.autoSizeAllColumns(false);
+                }
+                // Method 3: Manual approach using getAllGridColumns and autoSizeColumns
+                else if (typeof koondajaGridApi.autoSizeColumns === 'function') {
+                    const allColumns = koondajaGridApi.getAllGridColumns();
+                    const columnIds = allColumns.map(col => col.getColId());
+                    koondajaGridApi.autoSizeColumns(columnIds, false);
+                }
+                // Method 4: Use columnApi autoSizeColumns if available
+                else if (koondajaColumnApi && typeof koondajaColumnApi.autoSizeColumns === 'function') {
+                    const allColumns = koondajaColumnApi.getAllColumns();
+                    const columnIds = allColumns.map(col => col.getColId());
+                    koondajaColumnApi.autoSizeColumns(columnIds, false);
+                }
+                // Method 5: Fallback to manual width setting
+                else {
+                    autoSizeColumnsManually();
+                }
+
+                buttonText.text('Small Columns');
+                isColumnsFittedToHeader = true;
+
+                // Update button styling to indicate active state
+                button.removeClass('bg-white border-gray-300 text-gray-700')
+                    .addClass('bg-indigo-50 border-indigo-300 text-indigo-700');
+
+                showNotification('Columns auto-sized to headers', 'info');
+
+            } catch (error) {
+                console.error('Error auto-sizing columns:', error);
+                showNotification('Viga veergude suuruse muutmisel', 'error');
+            }
+        }
+    }
+
+    function autoSizeColumnsManually() {
+        if (!koondajaGridApi) return;
+
+        try {
+            // Get all visible columns
+            const allColumns = koondajaGridApi.getAllGridColumns ?
+                koondajaGridApi.getAllGridColumns() :
+                (koondajaColumnApi ? koondajaColumnApi.getAllColumns() : []);
+
+            if (allColumns.length === 0) {
+                console.warn('No columns found for manual auto-sizing');
+                return;
+            }
+
+            // Calculate optimal width for each column
+            allColumns.forEach(column => {
+                if (column && column.getColDef) {
+                    const colDef = column.getColDef();
+                    const headerName = colDef.headerName || colDef.field || '';
+
+                    // Calculate width based on header text length
+                    // Rough estimate: 8px per character + padding
+                    const headerWidth = Math.max(headerName.length * 8 + 40, 100);
+
+                    // Set minimum and maximum widths
+                    const optimalWidth = Math.min(Math.max(headerWidth, 100), 300);
+
+                    // Apply the width
+                    if (koondajaColumnApi && typeof koondajaColumnApi.setColumnWidth === 'function') {
+                        koondajaColumnApi.setColumnWidth(column.getColId(), optimalWidth);
+                    } else if (typeof koondajaGridApi.setColumnWidth === 'function') {
+                        koondajaGridApi.setColumnWidth(column.getColId(), optimalWidth);
+                    }
+                }
+            });
+
+            console.log('Manual column auto-sizing completed');
+        } catch (error) {
+            console.error('Error in manual auto-sizing:', error);
+            // Final fallback - just use sizeColumnsToFit
+            koondajaGridApi.sizeColumnsToFit();
+        }
     }
 
     function showKoondajaModal() {
@@ -89,16 +203,44 @@
             defaultColDef: {
                 resizable: true,
                 minWidth: 100,
-                flex: 1
+                flex: 1,
+                sortable: true,
+                filter: true
             },
             animateRows: true,
             rowSelection: 'multiple',
             enableCellTextSelection: true,
             ensureDomOrder: true,
             suppressRowClickSelection: true,
+            // Enhanced styling options
+            suppressCellFocus: false,
+            enableRangeSelection: true,
+            // Custom row class for additional styling if needed
+            getRowClass: function (params) {
+                const rowData = params.data;
+                if (rowData && rowData._needs_highlighting) {
+                    return 'koondaja-invalid-row';
+                }
+                return '';
+            },
             onGridReady: function (params) {
                 koondajaGridApi = params.api;
-                koondajaColumnApi = params.columnApi;
+                koondajaColumnApi = params.columnApi; // This might be undefined in newer versions
+
+                // Log available methods for debugging
+                console.log('Grid API methods available:');
+                console.log('autoSizeAllColumns:', typeof koondajaGridApi.autoSizeAllColumns);
+                console.log('autoSizeColumns:', typeof koondajaGridApi.autoSizeColumns);
+                console.log('sizeColumnsToFit:', typeof koondajaGridApi.sizeColumnsToFit);
+
+                if (koondajaColumnApi) {
+                    console.log('Column API methods available:');
+                    console.log('autoSizeAllColumns:', typeof koondajaColumnApi.autoSizeAllColumns);
+                    console.log('autoSizeColumns:', typeof koondajaColumnApi.autoSizeColumns);
+                } else {
+                    console.log('Column API not available (newer AG Grid version)');
+                }
+
                 updateRowCount();
 
                 // Show empty state if no data
@@ -108,6 +250,15 @@
             },
             onRowDataUpdated: function () {
                 updateRowCount();
+                // Force refresh to apply cell styling
+                if (koondajaGridApi) {
+                    koondajaGridApi.refreshCells();
+                }
+            },
+            onFirstDataRendered: function (params) {
+                // This event fires when data is first rendered
+                // Good place to apply initial column sizing if needed
+                console.log('First data rendered, grid ready for column operations');
             }
         };
 
@@ -115,6 +266,120 @@
         new agGrid.Grid(gridDiv, gridOptions);
 
         currentColumns = [...defaultColumns];
+    }
+
+    // Alternative column width management with better compatibility
+    function getColumnSizingMethods() {
+        const methods = {
+            autoSizeAll: null,
+            autoSizeSpecific: null,
+            sizeToFit: null,
+            setColumnWidth: null
+        };
+
+        if (!koondajaGridApi) return methods;
+
+        // Check for auto-size all columns methods
+        if (typeof koondajaGridApi.autoSizeAllColumns === 'function') {
+            methods.autoSizeAll = () => koondajaGridApi.autoSizeAllColumns(false);
+        } else if (koondajaColumnApi && typeof koondajaColumnApi.autoSizeAllColumns === 'function') {
+            methods.autoSizeAll = () => koondajaColumnApi.autoSizeAllColumns(false);
+        }
+
+        // Check for auto-size specific columns methods
+        if (typeof koondajaGridApi.autoSizeColumns === 'function') {
+            methods.autoSizeSpecific = (columnIds) => koondajaGridApi.autoSizeColumns(columnIds, false);
+        } else if (koondajaColumnApi && typeof koondajaColumnApi.autoSizeColumns === 'function') {
+            methods.autoSizeSpecific = (columnIds) => koondajaColumnApi.autoSizeColumns(columnIds, false);
+        }
+
+        // Size to fit method
+        if (typeof koondajaGridApi.sizeColumnsToFit === 'function') {
+            methods.sizeToFit = () => koondajaGridApi.sizeColumnsToFit();
+        }
+
+        // Set column width method
+        if (koondajaColumnApi && typeof koondajaColumnApi.setColumnWidth === 'function') {
+            methods.setColumnWidth = (colId, width) => koondajaColumnApi.setColumnWidth(colId, width);
+        } else if (typeof koondajaGridApi.setColumnWidth === 'function') {
+            methods.setColumnWidth = (colId, width) => koondajaGridApi.setColumnWidth(colId, width);
+        }
+
+        return methods;
+    }
+
+// Improved toggle function using the compatibility layer
+    function toggleColumnWidthImproved() {
+        if (!koondajaGridApi) {
+            showNotification('Grid not initialized', 'warning');
+            return;
+        }
+
+        const button = $('#toggle-column-width-btn');
+        const buttonText = $('#toggle-column-width-text');
+        const methods = getColumnSizingMethods();
+
+        if (isColumnsFittedToHeader) {
+            // Switch back to small/flex columns
+            if (methods.sizeToFit) {
+                methods.sizeToFit();
+                buttonText.text('Fit Headers');
+                isColumnsFittedToHeader = false;
+
+                button.removeClass('bg-indigo-50 border-indigo-300 text-indigo-700')
+                    .addClass('bg-white border-gray-300 text-gray-700');
+
+                showNotification('Columns resized to fit container', 'info');
+            } else {
+                showNotification('Size to fit not available', 'warning');
+            }
+        } else {
+            // Auto-size columns to fit headers
+            let success = false;
+
+            if (methods.autoSizeAll) {
+                try {
+                    methods.autoSizeAll();
+                    success = true;
+                } catch (error) {
+                    console.error('Auto-size all failed:', error);
+                }
+            }
+
+            if (!success && methods.autoSizeSpecific) {
+                try {
+                    const allColumns = koondajaGridApi.getAllGridColumns ?
+                        koondajaGridApi.getAllGridColumns() :
+                        (koondajaColumnApi ? koondajaColumnApi.getAllColumns() : []);
+
+                    if (allColumns.length > 0) {
+                        const columnIds = allColumns.map(col => col.getColId());
+                        methods.autoSizeSpecific(columnIds);
+                        success = true;
+                    }
+                } catch (error) {
+                    console.error('Auto-size specific failed:', error);
+                }
+            }
+
+            if (!success) {
+                // Manual fallback
+                autoSizeColumnsManually();
+                success = true;
+            }
+
+            if (success) {
+                buttonText.text('Small Columns');
+                isColumnsFittedToHeader = true;
+
+                button.removeClass('bg-white border-gray-300 text-gray-700')
+                    .addClass('bg-indigo-50 border-indigo-300 text-indigo-700');
+
+                showNotification('Columns auto-sized to headers', 'info');
+            } else {
+                showNotification('Viga veergude suuruse muutmisel', 'error');
+            }
+        }
     }
 
     function loadAllKoondajaData() {
@@ -254,6 +519,16 @@
             $('#koondaja-empty-state').addClass('hidden');
             koondajaGridApi.setRowData(koondajaData);
             updateRowCount();
+
+            // Force refresh cells to apply styling after data update
+            setTimeout(() => {
+                if (koondajaGridApi) {
+                    koondajaGridApi.refreshCells({
+                        force: true,
+                        suppressFlash: true
+                    });
+                }
+            }, 100);
         }
     }
 
@@ -330,44 +605,136 @@
     function hideDbColumnSelector() {
         $('#db-column-selector-modal').addClass('hidden');
         $('#db-column-search').val('');
+
+        // Clear any dynamically created buttons to prevent duplicates
+        $('#add-selected-columns-btn, #remove-selected-columns-btn').off('click.columnSelector');
     }
 
     function displayDbColumns() {
         const container = $('#db-columns-list');
         container.empty();
 
-        // Filter out columns that are already in the grid
-        const existingFields = currentColumns.map(col => col.field);
-        const availableColumns = availableDbColumns.filter(col =>
-            !existingFields.includes(col.field)
-        );
+        // Get currently selected DB column fields (excluding default columns)
+        const defaultFields = defaultColumns.map(col => col.field);
+        const currentDbFields = currentColumns
+            .filter(col => !defaultFields.includes(col.field))
+            .map(col => col.field);
 
-        if (availableColumns.length === 0) {
-            container.html('<p class="text-gray-500 text-center py-4">Kõik veerud on juba lisatud</p>');
+        if (availableDbColumns.length === 0) {
+            container.html('<p class="text-gray-500 text-center py-4">Andmebaasi veerge ei leitud</p>');
             return;
         }
 
-        availableColumns.forEach(function (col) {
-            const item = $(`
-                <div class="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
-                    <input type="checkbox" id="db-col-${col.field}" 
+        // Create sections for selected and available columns
+        const selectedColumns = availableDbColumns.filter(col => currentDbFields.includes(col.field));
+        const availableColumns = availableDbColumns.filter(col => !currentDbFields.includes(col.field));
+
+        // Add selected columns section if any exist
+        if (selectedColumns.length > 0) {
+            const selectedSection = $(`
+            <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Valitud veerud (${selectedColumns.length})</h4>
+                <div class="border rounded-md bg-green-50 border-green-200 p-2">
+                    <div id="selected-columns-list"></div>
+                </div>
+            </div>
+        `);
+            container.append(selectedSection);
+
+            const selectedContainer = $('#selected-columns-list');
+            selectedColumns.forEach(function (col) {
+                const item = $(`
+                <div class="flex items-center p-2 hover:bg-green-100 rounded">
+                    <input type="checkbox" id="selected-col-${col.field}" 
                            data-field="${col.field}" 
                            data-title="${col.title}"
-                           class="mr-2">
-                    <label for="db-col-${col.field}" class="flex-grow cursor-pointer">
+                           class="mr-2 selected-column-checkbox" 
+                           checked>
+                    <label for="selected-col-${col.field}" class="flex-grow cursor-pointer">
+                        <span class="font-medium text-green-800">${col.title}</span>
+                        <span class="text-xs text-green-600 ml-2">(${col.field})</span>
+                    </label>
+                    <span class="text-xs text-green-600 font-medium">LISATUD</span>
+                </div>
+            `);
+                selectedContainer.append(item);
+            });
+        }
+
+        // Add available columns section
+        if (availableColumns.length > 0) {
+            const availableSection = $(`
+            <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Saadaolevad veerud (${availableColumns.length})</h4>
+                <div class="border rounded-md p-2">
+                    <div id="available-columns-list"></div>
+                </div>
+            </div>
+        `);
+            container.append(availableSection);
+
+            const availableContainer = $('#available-columns-list');
+            availableColumns.forEach(function (col) {
+                const item = $(`
+                <div class="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                    <input type="checkbox" id="available-col-${col.field}" 
+                           data-field="${col.field}" 
+                           data-title="${col.title}"
+                           class="mr-2 available-column-checkbox">
+                    <label for="available-col-${col.field}" class="flex-grow cursor-pointer">
                         <span class="font-medium">${col.title}</span>
                         <span class="text-xs text-gray-500 ml-2">(${col.field})</span>
                     </label>
                 </div>
             `);
-            container.append(item);
-        });
+                availableContainer.append(item);
+            });
+        } else if (selectedColumns.length === 0) {
+            container.html('<p class="text-gray-500 text-center py-4">Kõik veerud on juba lisatud</p>');
+        }
+
+        // Update button states
+        updateColumnSelectorButtons();
+    }
+
+    function updateColumnSelectorButtons() {
+        const hasSelectedToAdd = $('.available-column-checkbox:checked').length > 0;
+        const hasSelectedToRemove = $('.selected-column-checkbox:checked').length > 0;
+
+        // Update or create the add button
+        if ($('#add-selected-columns-btn').length === 0) {
+            $('#cancel-db-columns-btn').after(`
+            <button id="add-selected-columns-btn" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                Lisa valitud
+            </button>
+        `);
+            $('#add-selected-columns-btn').click(addSelectedDbColumns);
+        }
+
+        // Update or create the remove button
+        if ($('#remove-selected-columns-btn').length === 0) {
+            $('#add-selected-columns-btn').after(`
+            <button id="remove-selected-columns-btn" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed ml-2">
+                Eemalda valitud
+            </button>
+        `);
+            $('#remove-selected-columns-btn').click(removeSelectedDbColumns);
+        }
+
+        // Enable/disable buttons based on selections
+        $('#add-selected-columns-btn').prop('disabled', !hasSelectedToAdd);
+        $('#remove-selected-columns-btn').prop('disabled', !hasSelectedToRemove);
+
+        // Add change handlers to update button states
+        $('.available-column-checkbox, .selected-column-checkbox').off('change.columnSelector').on('change.columnSelector', updateColumnSelectorButtons);
     }
 
     function filterDbColumns() {
         const searchTerm = $('#db-column-search').val().toLowerCase();
 
-        $('#db-columns-list > div').each(function () {
+        $('#available-columns-list > div, #selected-columns-list > div').each(function () {
             const text = $(this).text().toLowerCase();
             $(this).toggle(text.includes(searchTerm));
         });
@@ -376,7 +743,7 @@
     function addSelectedDbColumns() {
         const selectedColumns = [];
 
-        $('#db-columns-list input:checked').each(function () {
+        $('.available-column-checkbox:checked').each(function () {
             const field = $(this).data('field');
             const title = $(this).data('title');
 
@@ -385,7 +752,10 @@
                 headerName: title,
                 editable: false,
                 sortable: true,
-                filter: true
+                filter: true,
+                resizable: true,
+                minWidth: 100,
+                flex: 1
             });
         });
 
@@ -396,6 +766,7 @@
 
         // Add selected columns to the grid
         currentColumns = [...currentColumns, ...selectedColumns];
+        selectedDbColumns = [...selectedDbColumns, ...selectedColumns.map(col => col.field)];
 
         if (koondajaGridApi) {
             koondajaGridApi.setColumnDefs(currentColumns);
@@ -406,8 +777,34 @@
             }
         }
 
-        hideDbColumnSelector();
+        // Refresh the column selector display
+        displayDbColumns();
         showNotification(`Lisatud ${selectedColumns.length} veergu`, 'success');
+    }
+
+    function removeSelectedDbColumns() {
+        const columnsToRemove = [];
+
+        $('.selected-column-checkbox:checked').each(function () {
+            columnsToRemove.push($(this).data('field'));
+        });
+
+        if (columnsToRemove.length === 0) {
+            showNotification('Palun valige vähemalt üks veerg eemaldamiseks', 'warning');
+            return;
+        }
+
+        // Remove columns from current columns array
+        currentColumns = currentColumns.filter(col => !columnsToRemove.includes(col.field));
+        selectedDbColumns = selectedDbColumns.filter(field => !columnsToRemove.includes(field));
+
+        if (koondajaGridApi) {
+            koondajaGridApi.setColumnDefs(currentColumns);
+        }
+
+        // Refresh the column selector display
+        displayDbColumns();
+        showNotification(`Eemaldatud ${columnsToRemove.length} veergu`, 'success');
     }
 
     function fetchDbColumnData(newFields) {
