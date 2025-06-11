@@ -1,11 +1,11 @@
-# koondaja_routes.py (or whatever your file is named)
+# koondaja_routes.py - Updated with toimiku_nr_loplik logic
 import csv
-import json
 import logging
 import os
 import re
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
@@ -19,8 +19,375 @@ from app.models.user import User
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create router with proper prefix to match JavaScript calls
+# Create router with proper prefix
 router = APIRouter(prefix="/api/v1/koondaja", tags=["koondaja"])
+
+# Column definitions for easy maintenance and extension
+KOONDAJA_COLUMNS = {
+    "toimiku_nr_loplik": {"name": "Toimiku nr lõplik", "source": "calculated"},
+    "toimiku_nr_selgituses": {"name": "Toimiku nr selgituses", "source": "extracted"},
+    "toimiku_nr_viitenumbris": {"name": "Toimiku nr viitenumbris", "source": "db_lookup"},
+    "dokumendi_nr": {"name": "Dokumendi nr", "source": "csv", "index": 1},
+    "kande_kpv": {"name": "Kande kpv", "source": "csv", "index": 2},
+    "arvelduskonto_nr": {"name": "Arvelduskonto nr", "source": "csv", "index": 3},
+    "panga_tunnus_nimi": {"name": "Panga tunnus nimi", "source": "csv", "index": 4},
+    "panga_tunnus": {"name": "Panga tunnus", "source": "csv", "index": 5},
+    "nimi_baasis": {"name": "Nimi baasis", "source": "db", "field": "võlgnik"},
+    "noude_sisu": {"name": "Nõude sisu", "source": "db", "field": "nõude_sisu"},
+    "toimiku_jaak": {"name": "Toimiku jääk", "source": "db", "field": "võla_jääk"},
+    "staatus_baasis": {"name": "Staatus baasis", "source": "db", "field": "staatus"},
+    "toimikute_arv": {"name": "Toimikute arv tööbaasis", "source": "calculated"},
+    "toimikute_jaakide_summa": {"name": "Toimikute jääkide summa tööbaasis", "source": "calculated"},
+    "vahe": {"name": "Vahe", "source": "calculated"},
+    "elatus_miinimumid": {"name": "Elatus-miinimumid", "source": "empty"},
+    "laekumiste_arv": {"name": "Laekumiste arv", "source": "calculated"},
+    "laekumised_kokku": {"name": "Laekumised kokku", "source": "calculated"},
+    "tagastamised": {"name": "Tagastamised", "source": "empty"},
+    "s_v": {"name": "S/V", "source": "csv", "index": 7},
+    "summa": {"name": "Summa", "source": "csv", "index": 8},
+    "viitenumber": {"name": "Viitenumber", "source": "csv", "index": 9},
+    "arhiveerimistunnus": {"name": "Arhiveerimistunnus", "source": "csv", "index": 10},
+    "makse_selgitus": {"name": "Makse selgitus", "source": "csv", "index": 11},
+    "valuuta": {"name": "Valuuta", "source": "fixed", "value": "EUR"},
+    "isiku_registrikood": {"name": "Isiku- või registrikood", "source": "csv", "index": 14},
+    "laekumise_tunnus": {"name": "Laekumise tunnus", "source": "empty"},
+    "laekumise_kood": {"name": "Laekumise kood deposiidis", "source": "empty"},
+    "kliendi_konto": {"name": "Kliendi konto", "source": "csv", "index": 0},
+    "em_markus": {"name": "EM märkus", "source": "db", "field": "rmp_märkused"},
+    "toimiku_markused": {"name": "Toimiku märkused", "source": "db", "field": "märkused"}
+}
+
+
+def safe_number_conversion(value: Any, default: float = 0.0) -> float:
+    """Safely convert a value to float, handling Estonian number format."""
+    if value is None:
+        return default
+
+    try:
+        if isinstance(value, (int, float)):
+            return float(value)
+
+        if isinstance(value, str):
+            cleaned = value.strip()
+            if not cleaned:
+                return default
+
+            # Handle Estonian number format
+            cleaned = cleaned.replace(' ', '').replace(',', '.')
+
+            if cleaned.startswith('-'):
+                return -float(cleaned[1:])
+
+            return float(cleaned)
+
+        return float(value)
+
+    except (ValueError, TypeError, AttributeError):
+        logger.debug(f"Could not convert '{value}' to float, using default {default}")
+        return default
+
+
+def extract_toimiku_number(text: str) -> Optional[str]:
+    """Extract toimiku number from text using pattern matching."""
+    if not text:
+        return None
+
+    # Look for pattern like xxx/xxx/xxx
+    match = re.search(r'(\d+/\d+/\d+)', text)
+    if match:
+        return match.group(1)
+
+    return None
+
+
+async def get_database_info(db: AsyncSession, toimiku_numbers: List[str], viitenumbers: List[str],
+                            registrikoodid: List[str]) -> Dict[str, Dict]:
+    """Fetch all required database information in one efficient query including võlgnik names."""
+    if not toimiku_numbers and not viitenumbers and not registrikoodid:
+        return {"by_toimiku": {}, "by_viitenumber": {}, "by_registrikood": {}, "by_name": {}}
+
+    try:
+        # Build query to get all needed fields
+        query = text("""
+            SELECT 
+                "toimiku_nr",
+                "viitenumber",
+                "võlgnik",
+                "nõude_sisu",
+                "võla_jääk",
+                "staatus",
+                "rmp_märkused",
+                "märkused",
+                "võlgniku_kood"
+            FROM "taitur_data"
+            WHERE "toimiku_nr" = ANY(:toimiku_numbers) 
+               OR "viitenumber" = ANY(:viitenumbers)
+               OR "võlgniku_kood" = ANY(:registrikoodid)
+        """)
+
+        result = await db.execute(query, {
+            "toimiku_numbers": toimiku_numbers or [],
+            "viitenumbers": viitenumbers or [],
+            "registrikoodid": registrikoodid or []
+        })
+
+        rows = result.fetchall()
+
+        # Create lookup dictionaries
+        data_by_toimiku = {}
+        data_by_viitenumber = {}
+        data_by_registrikood = {}
+        data_by_name = {}  # NEW: Add name-based lookup
+
+        for row in rows:
+            row_dict = {
+                "toimiku_nr": row[0],
+                "viitenumber": row[1],
+                "võlgnik": row[2],
+                "nõude_sisu": row[3],
+                "võla_jääk": row[4],
+                "staatus": row[5],
+                "rmp_märkused": row[6],
+                "märkused": row[7],
+                "võlgniku_kood": row[8]
+            }
+
+            if row[0]:  # toimiku_nr
+                data_by_toimiku[row[0]] = row_dict
+            if row[1]:  # viitenumber
+                data_by_viitenumber[row[1]] = row_dict
+            if row[8]:  # võlgniku_kood
+                data_by_registrikood[row[8]] = row_dict
+            if row[2]:  # võlgnik (name)
+                # For name lookup, we might have multiple records per name,
+                # so store as a list and we'll use the first one with a toimiku_nr
+                if row[2] not in data_by_name:
+                    data_by_name[row[2]] = []
+                data_by_name[row[2]].append(row_dict)
+
+        return {
+            "by_toimiku": data_by_toimiku,
+            "by_viitenumber": data_by_viitenumber,
+            "by_registrikood": data_by_registrikood,
+            "by_name": data_by_name  # NEW: Add name-based lookup
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching database info: {str(e)}")
+        return {"by_toimiku": {}, "by_viitenumber": {}, "by_registrikood": {}, "by_name": {}}
+
+
+async def calculate_aggregates(db: AsyncSession, all_rows: List[Dict]) -> Dict[str, Dict]:
+    """Calculate aggregate values for toimiku statistics."""
+    try:
+        # Get all unique võlgnik names
+        volgnik_names = list(set(row.get("nimi_baasis", "") for row in all_rows if row.get("nimi_baasis")))
+
+        if not volgnik_names:
+            return {}
+
+        # Query to get counts and sums by võlgnik
+        query = text("""
+            SELECT 
+                "võlgnik",
+                COUNT(DISTINCT "toimiku_nr") as toimiku_count,
+                SUM("võla_jääk") as total_jaak
+            FROM "taitur_data"
+            WHERE "võlgnik" = ANY(:names)
+            GROUP BY "võlgnik"
+        """)
+
+        result = await db.execute(query, {"names": volgnik_names})
+        rows = result.fetchall()
+
+        aggregates = {}
+        for row in rows:
+            aggregates[row[0]] = {
+                "count": row[1],
+                "sum": float(row[2]) if row[2] else 0.0
+            }
+
+        return aggregates
+
+    except Exception as e:
+        logger.error(f"Error calculating aggregates: {str(e)}")
+        return {}
+
+
+def determine_toimiku_nr_loplik(row_data: Dict[str, Any], db_info: Dict[str, Dict]) -> tuple[
+    Optional[str], bool, Optional[str]]:
+    """
+    Determine the final toimiku number based on the extended business logic.
+    Returns tuple: (toimiku_nr_loplik, has_valid_toimiku, match_source)
+
+    Extended Logic:
+    1. If "Toimiku nr selgituses" equals "Toimiku nr viitenumbris" (from viitenumber lookup), use it
+    2. OR if "Toimiku nr selgituses" equals toimiku_nr from database row matching isiku_registrikood, use it
+    3. OR if we can find toimiku_nr through "Nimi baasis"/võlgnik lookup, use that
+    4. Else leave empty (invalid)
+
+    match_source values: 'viitenumber', 'registrikood', 'name', None
+    """
+    toimiku_selgituses = row_data.get("toimiku_nr_selgituses", "")
+    viitenumber = row_data.get("viitenumber", "")
+    isiku_registrikood = row_data.get("isiku_registrikood", "")
+
+    # Get toimiku_nr_viitenumbris from database lookup by viitenumber (10th CSV item)
+    toimiku_viitenumbris = ""
+    if viitenumber and viitenumber in db_info["by_viitenumber"]:
+        db_record = db_info["by_viitenumber"][viitenumber]
+        toimiku_viitenumbris = db_record.get("toimiku_nr", "")
+
+    # Get toimiku_nr from database lookup by isiku_registrikood (15th CSV item)
+    toimiku_from_registrikood = ""
+    if isiku_registrikood and isiku_registrikood in db_info["by_registrikood"]:
+        db_record = db_info["by_registrikood"][isiku_registrikood]
+        toimiku_from_registrikood = db_record.get("toimiku_nr", "")
+
+    # Store the viitenumbris value for display
+    row_data["toimiku_nr_viitenumbris"] = toimiku_viitenumbris
+
+    # Validation logic:
+    # 1. If toimiku_selgituses equals toimiku_viitenumbris, it's valid
+    if toimiku_selgituses and toimiku_selgituses == toimiku_viitenumbris:
+        return toimiku_selgituses, True, 'viitenumber'
+
+    # 2. If toimiku_selgituses equals toimiku_nr from registrikood lookup, it's valid
+    if toimiku_selgituses and toimiku_selgituses == toimiku_from_registrikood:
+        return toimiku_selgituses, True, 'registrikood'
+
+    # 3. NEW: Check for toimiku_nr by name lookup ("Nimi baasis"/võlgnik)
+    # Find any database record that could provide the name, then look up toimiku_nr by that name
+    potential_name = ""
+    name_based_toimiku = ""
+
+    # Try to get name from various database lookups
+    if viitenumber and viitenumber in db_info["by_viitenumber"]:
+        potential_name = db_info["by_viitenumber"][viitenumber].get("võlgnik", "")
+    elif isiku_registrikood and isiku_registrikood in db_info["by_registrikood"]:
+        potential_name = db_info["by_registrikood"][isiku_registrikood].get("võlgnik", "")
+    elif toimiku_selgituses and toimiku_selgituses in db_info["by_toimiku"]:
+        potential_name = db_info["by_toimiku"][toimiku_selgituses].get("võlgnik", "")
+
+    # If we have a name, look for any toimiku_nr associated with that võlgnik
+    if potential_name and potential_name in db_info.get("by_name", {}):
+        # Get the first record with a toimiku_nr for this name
+        name_records = db_info["by_name"][potential_name]
+        for record in name_records:
+            if record.get("toimiku_nr"):
+                name_based_toimiku = record.get("toimiku_nr")
+                break
+
+        # If we found a toimiku_nr through name lookup, use it
+        if name_based_toimiku:
+            row_data["nimi_baasis"] = potential_name  # Store the name we used
+            logger.debug(f"Name-based lookup successful: '{potential_name}' -> '{name_based_toimiku}'")
+            return name_based_toimiku, True, 'name'
+
+    # No validation passed - leave empty (will be highlighted in light blue)
+    return "", False, None
+
+
+def process_konto_vv_row(
+        row: List[str],
+        row_num: int,
+        db_info: Dict[str, Dict],
+        aggregates: Dict[str, Dict],
+        payment_stats: Dict[str, Dict]
+) -> Optional[Dict[str, Any]]:
+    """Process a single row from Konto vv CSV file with updated toimiku validation logic."""
+
+    # Skip rows that don't have S/V = 'C'
+    if len(row) <= 7 or row[7] != 'C':
+        return None
+
+    row_data = {}
+
+    # Process CSV fields
+    for field_key, field_info in KOONDAJA_COLUMNS.items():
+        if field_info["source"] == "csv" and "index" in field_info:
+            idx = field_info["index"]
+            row_data[field_key] = row[idx] if len(row) > idx else ""
+        elif field_info["source"] == "empty":
+            row_data[field_key] = ""
+        elif field_info["source"] == "fixed":
+            row_data[field_key] = field_info.get("value", "")
+
+    # Extract toimiku number from selgitus (makse_selgitus = CSV index 11)
+    makse_selgitus = row_data.get("makse_selgitus", "")
+    toimiku_from_selgitus = extract_toimiku_number(makse_selgitus)
+    row_data["toimiku_nr_selgituses"] = toimiku_from_selgitus or ""
+
+    # Determine final toimiku number using extended validation logic
+    toimiku_nr_loplik, has_valid_toimiku, match_source = determine_toimiku_nr_loplik(row_data, db_info)
+    row_data["toimiku_nr_loplik"] = toimiku_nr_loplik
+    row_data["has_valid_toimiku"] = has_valid_toimiku  # Flag for frontend styling
+    row_data[
+        "match_source"] = match_source  # Track how the toimiku was found ('viitenumber', 'registrikood', 'name', None)
+
+    # Find the best database record for additional data
+    viitenumber = row_data.get("viitenumber", "")
+    isiku_registrikood = row_data.get("isiku_registrikood", "")
+    db_record = None
+
+    # Priority: 1) by final toimiku_nr, 2) by viitenumber, 3) by registrikood
+    if toimiku_nr_loplik and toimiku_nr_loplik in db_info["by_toimiku"]:
+        db_record = db_info["by_toimiku"][toimiku_nr_loplik]
+    elif viitenumber and viitenumber in db_info["by_viitenumber"]:
+        db_record = db_info["by_viitenumber"][viitenumber]
+    elif isiku_registrikood and isiku_registrikood in db_info["by_registrikood"]:
+        db_record = db_info["by_registrikood"][isiku_registrikood]
+
+    # Fill in database fields
+    if db_record:
+        row_data["nimi_baasis"] = db_record.get("võlgnik", "")
+        row_data["noude_sisu"] = db_record.get("nõude_sisu", "")
+        row_data["toimiku_jaak"] = db_record.get("võla_jääk", 0.0)
+        row_data["staatus_baasis"] = db_record.get("staatus", "")
+        row_data["em_markus"] = db_record.get("rmp_märkused", "")
+        row_data["toimiku_markused"] = db_record.get("märkused", "")
+
+        # Get aggregates for this võlgnik
+        volgnik_name = db_record.get("võlgnik", "")
+        if volgnik_name and volgnik_name in aggregates:
+            row_data["toimikute_arv"] = aggregates[volgnik_name]["count"]
+            row_data["toimikute_jaakide_summa"] = aggregates[volgnik_name]["sum"]
+        else:
+            row_data["toimikute_arv"] = 0
+            row_data["toimikute_jaakide_summa"] = 0.0
+
+        # Calculate Vahe (difference between database balance and CSV amount)
+        csv_summa = safe_number_conversion(row_data.get("summa", 0))
+        db_jaak = safe_number_conversion(db_record.get("võla_jääk", 0))
+        row_data["vahe"] = db_jaak - csv_summa
+    else:
+        # No database record found
+        row_data["nimi_baasis"] = ""
+        row_data["noude_sisu"] = ""
+        row_data["toimiku_jaak"] = 0.0
+        row_data["staatus_baasis"] = ""
+        row_data["em_markus"] = ""
+        row_data["toimiku_markused"] = ""
+        row_data["toimikute_arv"] = 0
+        row_data["toimikute_jaakide_summa"] = 0.0
+        row_data["vahe"] = 0.0
+
+    # Add payment statistics based on "Toimiku nr selgituses"
+    toimiku_selgituses = row_data.get("toimiku_nr_selgituses", "")
+    if toimiku_selgituses and toimiku_selgituses in payment_stats:
+        row_data["laekumiste_arv"] = payment_stats[toimiku_selgituses]["count"]
+        # Format the total back to Estonian format for display
+        total_amount = payment_stats[toimiku_selgituses]["total"]
+        if isinstance(total_amount, (int, float)):
+            # Convert back to Estonian format (comma as decimal separator)
+            row_data["laekumised_kokku"] = str(total_amount).replace('.', ',')
+        else:
+            row_data["laekumised_kokku"] = str(total_amount)
+    else:
+        row_data["laekumiste_arv"] = 1  # Current row counts as 1
+        row_data["laekumised_kokku"] = row_data.get("summa", "")
+
+    return row_data
 
 
 @router.get("/browse-koondaja-folder")
@@ -33,7 +400,6 @@ async def browse_koondaja_folder(
         base_path = r"C:\TAITEMENETLUS\ÜLESANDED\Tööriistad\ROCKI"
 
         if path:
-            # Handle path normalization
             path = path.replace('/', os.sep).replace('\\', os.sep)
             full_path = os.path.join(base_path, path)
         else:
@@ -65,12 +431,11 @@ async def browse_koondaja_folder(
 
                 try:
                     if os.path.isdir(item_path):
-                        # Construct relative path properly
                         relative_path = os.path.join(path, item) if path else item
                         items.append({
                             "name": item,
                             "type": "folder",
-                            "path": relative_path.replace(os.sep, '/'),  # Use forward slashes for consistency
+                            "path": relative_path.replace(os.sep, '/'),
                             "full_path": item_path
                         })
                     elif item.lower().endswith('.csv'):
@@ -78,7 +443,7 @@ async def browse_koondaja_folder(
                         items.append({
                             "name": item,
                             "type": "file",
-                            "path": item_path,  # Full path for files
+                            "path": item_path,
                             "size": stats.st_size,
                             "modified": datetime.fromtimestamp(stats.st_mtime).strftime("%d.%m.%Y %H:%M")
                         })
@@ -93,7 +458,7 @@ async def browse_koondaja_folder(
                 "items": []
             }
 
-        # Sort: folders first, then files, both alphabetically
+        # Sort: folders first, then files
         items.sort(key=lambda x: (x["type"] == "file", x["name"].lower()))
 
         logger.info(f"Found {len(items)} items in {full_path}")
@@ -164,7 +529,6 @@ async def list_koondaja_files(
                 "folder": folder
             }
 
-        # Sort files by name
         files.sort(key=lambda x: x["name"].lower())
 
         logger.info(f"Found {len(files)} CSV files in {folder}")
@@ -187,39 +551,28 @@ async def import_koondaja_csv(
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(get_current_active_user)
 ):
-    """Import CSV file for Koondaja data"""
+    """Import CSV file for Koondaja data with new column structure"""
     try:
-        # Get the request body
-        try:
-            body = await request.json()
-            logger.info(f"Received Koondaja import request body: {body}")
-        except Exception as e:
-            logger.error(f"Error parsing request body: {str(e)}")
-            raise HTTPException(status_code=400, detail="Invalid JSON in request body")
-
+        body = await request.json()
         file_path = body.get('file_path')
-        folder_name = body.get('folder_name')  # Can be passed explicitly
+        folder_name = body.get('folder_name')
 
         if not file_path:
-            logger.error("No file_path provided in request")
             raise HTTPException(status_code=400, detail="File path is required")
 
         logger.info(f"Attempting to import Koondaja CSV file: {file_path}")
 
         if not os.path.exists(file_path):
-            logger.error(f"File not found: {file_path}")
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
 
         if not os.path.isfile(file_path):
-            logger.error(f"Path is not a file: {file_path}")
             raise HTTPException(status_code=400, detail=f"Path is not a file: {file_path}")
 
-        # Determine which folder this file is from
         if not folder_name:
             folder_name = os.path.basename(os.path.dirname(file_path))
         logger.info(f"Processing file from folder: {folder_name}")
 
-        # Skip if not Konto vv (for now)
+        # Skip if not Konto vv
         if folder_name.lower() != "konto vv":
             logger.info(f"Skipping folder '{folder_name}' - not implemented yet")
             return {
@@ -232,231 +585,112 @@ async def import_koondaja_csv(
 
         data = []
 
-        # Try different encodings to handle Estonian characters
+        # Try different encodings
         encodings = ['utf-8-sig', 'utf-8', 'windows-1252', 'iso-8859-15', 'cp1257']
         content = None
         used_encoding = None
 
         for encoding in encodings:
             try:
-                logger.debug(f"Trying encoding: {encoding}")
                 with open(file_path, 'r', encoding=encoding) as csvfile:
                     content = csvfile.read()
                     used_encoding = encoding
                     logger.info(f"Successfully read file with encoding: {encoding}")
                     break
-            except UnicodeDecodeError as e:
-                logger.debug(f"Failed to read with encoding {encoding}: {str(e)}")
-                continue
-            except Exception as e:
-                logger.error(f"Unexpected error reading file with encoding {encoding}: {str(e)}")
+            except UnicodeDecodeError:
                 continue
 
         if content is None:
-            logger.error("Unable to decode file with any supported encoding")
             raise HTTPException(status_code=400, detail="Unable to decode file with supported encodings")
 
         if not content.strip():
-            logger.error("File is empty")
             raise HTTPException(status_code=400, detail="File is empty")
 
-        # Parse CSV content based on folder type
-        try:
-            lines = content.split('\n')
-            csv_reader = csv.reader(lines, delimiter=';')
+        # First pass: collect all toimiku numbers, viitenumbers, and registrikoodid for database lookup
+        lines = content.split('\n')
+        csv_reader = csv.reader(lines, delimiter=';')
 
-            # No header row to skip since CSVs don't have headers
+        all_toimiku_numbers = []
+        all_viitenumbers = []
+        all_registrikoodid = []
+        all_rows = []
+        payment_stats = defaultdict(lambda: {"count": 0, "total": 0.0})
 
-            row_count = 0
-            processed_rows = 0
+        for row in csv_reader:
+            if not row or len(row) < 10:
+                continue
 
-            for row_num, row in enumerate(csv_reader, start=1):
-                if not row:  # Skip completely empty rows
-                    continue
+            # Clean row data
+            cleaned_row = [str(field).strip() if field is not None else "" for field in row]
 
-                row_count += 1
+            # Only process rows where S/V = 'C'
+            if len(cleaned_row) > 7 and cleaned_row[7] == 'C':
+                all_rows.append(cleaned_row)
 
-                # Clean row data - strip whitespace from all fields and handle None values
-                cleaned_row = []
-                for field in row:
-                    if field is None:
-                        cleaned_row.append("")
-                    else:
-                        cleaned_row.append(str(field).strip())
+                # Extract toimiku number from selgitus
+                if len(cleaned_row) > 11:
+                    toimiku_num = extract_toimiku_number(cleaned_row[11])
+                    if toimiku_num:
+                        all_toimiku_numbers.append(toimiku_num)
 
-                row = cleaned_row
+                # Get viitenumber
+                if len(cleaned_row) > 9 and cleaned_row[9]:
+                    all_viitenumbers.append(cleaned_row[9])
 
-                # Skip rows that are essentially empty
-                if len([f for f in row if f.strip()]) < 3:
-                    logger.debug(f"Skipping row {row_num} - insufficient data")
-                    continue
+                # Get registrikood
+                if len(cleaned_row) > 14 and cleaned_row[14]:
+                    all_registrikoodid.append(cleaned_row[14])
 
-                row_data = {}
+                # Calculate payment statistics
+                identifier = None
+                if len(cleaned_row) > 9 and cleaned_row[9]:  # viitenumber
+                    identifier = cleaned_row[9]
+                elif len(cleaned_row) > 11:  # toimiku from selgitus
+                    identifier = extract_toimiku_number(cleaned_row[11])
 
-                try:
-                    # Updated section for the import_koondaja_csv function in koondaja_routes.py
+                if identifier and len(cleaned_row) > 8:
+                    payment_amount = safe_number_conversion(cleaned_row[8], 0.0)
+                    payment_stats[identifier]["count"] += 1
+                    payment_stats[identifier]["total"] += payment_amount
 
-                    if folder_name.lower() == "konto vv":
-                        # Process Konto vv folder files
-                        logger.debug(f"Row {row_num}: {len(row)} columns - {row[:10] if len(row) > 10 else row}")
+        # Get all database info at once
+        db_info = await get_database_info(db, all_toimiku_numbers, all_viitenumbers, all_registrikoodid)
 
-                        # Only process rows where 8th item (index 7) = 'C'
-                        if len(row) > 7 and row[7] == 'C':
-                            logger.debug(f"Processing Konto vv row {row_num} with {len(row)} columns")
+        # Get aggregates
+        temp_rows = []
+        for row in all_rows:
+            temp_data = process_konto_vv_row(row, 0, db_info, {}, {})
+            if temp_data:
+                temp_rows.append(temp_data)
 
-                            # Map columns according to specification
-                            row_data["Esimene"] = row[10] if len(row) > 10 else ""
-                            row_data["Viitenumber"] = row[9] if len(row) > 9 else ""
-                            row_data["Selgitus"] = row[11] if len(row) > 11 else ""
-                            row_data["Makse_summa"] = row[8] if len(row) > 8 else ""
+        aggregates = await calculate_aggregates(db, temp_rows)
 
-                            # Extract toimiku number from Selgitus and store in "Toimik_mk_jargi"
-                            selgitus = row_data["Selgitus"]
-                            toimiku_match = re.search(r'(\d+/\d+/\d+)', selgitus)
-                            if toimiku_match:
-                                row_data["Toimik_mk_jargi"] = toimiku_match.group(1)
-                            else:
-                                row_data["Toimik_mk_jargi"] = ""
+        # Process each row with all the data
+        row_count = 0
+        processed_rows = 0
 
-                            # Get the last value from the CSV row for database lookup (for Toimik_ik_jargi)
-                            last_value = row[-1] if row else ""
+        for row_num, row in enumerate(all_rows, start=1):
+            row_count += 1
 
-                            # Look up toimiku_nr from database using the last CSV value
-                            if last_value.strip():
-                                try:
-                                    lookup_query = text("""
-                                        SELECT "toimiku_nr" 
-                                        FROM "taitur_data" 
-                                        WHERE "võlgniku_kood" = :last_value 
-                                        LIMIT 1
-                                    """)
+            row_data = process_konto_vv_row(row, row_num, db_info, aggregates, dict(payment_stats))
 
-                                    db_result = await db.execute(lookup_query, {"last_value": last_value.strip()})
-                                    db_row = db_result.fetchone()
+            if row_data:
+                data.append(row_data)
+                processed_rows += 1
 
-                                    if db_row:
-                                        row_data["Toimik_ik_jargi"] = db_row[0]
-                                    else:
-                                        row_data["Toimik_ik_jargi"] = ""
-                                        logger.debug(f"No matching toimiku_nr found for last value: {last_value}")
+        logger.info(
+            f"Successfully processed {processed_rows} out of {row_count} rows from {os.path.basename(file_path)}")
 
-                                except Exception as e:
-                                    logger.warning(f"Error looking up toimiku_nr for row {row_num}: {str(e)}")
-                                    row_data["Toimik_ik_jargi"] = ""
-                            else:
-                                row_data["Toimik_ik_jargi"] = ""
-
-                            # Look up toimiku_nr from database using Viitenumber (for Toimik_vn_jargi)
-                            viitenumber = row_data["Viitenumber"]
-                            if viitenumber.strip():
-                                try:
-                                    viitenumber_query = text("""
-                                        SELECT "toimiku_nr" 
-                                        FROM "taitur_data" 
-                                        WHERE "viitenumber" = :viitenumber 
-                                        LIMIT 1
-                                    """)
-
-                                    vn_result = await db.execute(viitenumber_query,
-                                                                 {"viitenumber": viitenumber.strip()})
-                                    vn_row = vn_result.fetchone()
-
-                                    if vn_row:
-                                        row_data["Toimik_vn_jargi"] = vn_row[0]
-                                    else:
-                                        row_data["Toimik_vn_jargi"] = ""
-                                        logger.debug(f"No matching toimiku_nr found for viitenumber: {viitenumber}")
-
-                                except Exception as e:
-                                    logger.warning(
-                                        f"Error looking up toimiku_nr by viitenumber for row {row_num}: {str(e)}")
-                                    row_data["Toimik_vn_jargi"] = ""
-                            else:
-                                row_data["Toimik_vn_jargi"] = ""
-
-                            # Initialize other required columns
-                            row_data["Jaak_peale_makset"] = ""
-
-                            # Enhanced validation logic with detailed status tracking
-                            toimik_mk = row_data["Toimik_mk_jargi"].strip()
-                            toimik_vn = row_data["Toimik_vn_jargi"].strip()
-                            toimik_ik = row_data["Toimik_ik_jargi"].strip()
-
-                            # Validation status tracking
-                            validation_status = {
-                                "is_valid": False,
-                                "match_source": None,
-                                "has_mk": bool(toimik_mk),
-                                "has_vn": bool(toimik_vn),
-                                "has_ik": bool(toimik_ik)
-                            }
-
-                            if toimik_mk and (toimik_mk == toimik_vn or toimik_mk == toimik_ik):
-                                # Match found - use the matching value for Toimiku_nr
-                                row_data["Toimiku_nr"] = toimik_mk
-                                validation_status["is_valid"] = True
-                                validation_status["match_source"] = "vn" if toimik_mk == toimik_vn else "ik"
-                                logger.debug(
-                                    f"Row {row_num}: Match found - Toimiku_nr set to '{toimik_mk}' (source: {validation_status['match_source']})")
-                            else:
-                                # No match found - leave Toimiku_nr empty
-                                row_data["Toimiku_nr"] = ""
-                                validation_status["is_valid"] = False
-                                logger.warning(
-                                    f"Row {row_num}: No match found - Toimik_mk_jargi='{toimik_mk}', Toimik_vn_jargi='{toimik_vn}', Toimik_ik_jargi='{toimik_ik}'")
-
-                            # Add validation metadata for frontend use
-                            row_data["_validation_status"] = validation_status
-                            row_data["_needs_highlighting"] = not validation_status["is_valid"]
-
-                            # Add a readable validation message for tooltips/debugging
-                            if validation_status["is_valid"]:
-                                row_data[
-                                    "_validation_message"] = f"Valid - matched with {validation_status['match_source']} lookup"
-                            else:
-                                reasons = []
-                                if not toimik_mk:
-                                    reasons.append("No toimiku number in selgitus")
-                                if not toimik_vn and not toimik_ik:
-                                    reasons.append("No database matches found")
-                                elif toimik_mk and toimik_vn and toimik_ik and toimik_mk != toimik_vn and toimik_mk != toimik_ik:
-                                    reasons.append("Toimiku numbers don't match")
-
-                                row_data["_validation_message"] = f"Invalid - {'; '.join(reasons)}"
-
-                            data.append(row_data)
-                            processed_rows += 1
-                            logger.debug(f"Added row {row_num} to data: validation={validation_status['is_valid']}")
-                        else:
-                            logger.debug(
-                                f"Skipping row {row_num} - 8th item is '{row[7] if len(row) > 7 else 'N/A'}' (not 'C') or row too short ({len(row)} columns)")
-
-                    else:
-                        # Handle other folders (to be implemented)
-                        logger.warning(f"Folder '{folder_name}' processing not yet implemented")
-                        continue
-
-                except Exception as e:
-                    logger.warning(f"Error processing row {row_num}: {str(e)}")
-                    logger.debug(f"Row data that caused error: {row}")
-                    continue
-
-            logger.info(
-                f"Successfully processed {processed_rows} out of {row_count} rows from {os.path.basename(file_path)}")
-
-            return {
-                "success": True,
-                "message": f"Successfully imported {len(data)} rows from {os.path.basename(file_path)}",
-                "data": data,
-                "folder_type": folder_name.lower(),
-                "encoding_used": used_encoding,
-                "total_rows_processed": row_count,
-                "valid_rows": len(data)
-            }
-
-        except Exception as e:
-            logger.error(f"Error parsing CSV content: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Error parsing CSV file: {str(e)}")
+        return {
+            "success": True,
+            "message": f"Successfully imported {len(data)} rows from {os.path.basename(file_path)}",
+            "data": data,
+            "folder_type": folder_name.lower(),
+            "encoding_used": used_encoding,
+            "total_rows_processed": row_count,
+            "valid_rows": len(data),
+            "columns": KOONDAJA_COLUMNS  # Send column definitions to frontend
+        }
 
     except HTTPException:
         raise
@@ -483,7 +717,7 @@ async def fetch_koondaja_columns(
                 "data": []
             }
 
-        # Build query to fetch requested fields for the given toimiku numbers
+        # Build query to fetch requested fields
         field_list = ', '.join([f'"{field}"' for field in fields])
         placeholders = ', '.join([f':tn_{i}' for i in range(len(toimiku_numbers))])
 
@@ -505,7 +739,7 @@ async def fetch_koondaja_columns(
             row_dict = {}
             for key in row._mapping.keys():
                 value = row._mapping[key]
-                # Handle datetime objects for JSON serialization
+                # Handle datetime objects
                 if hasattr(value, 'isoformat'):
                     row_dict[str(key)] = value.isoformat()
                 else:
