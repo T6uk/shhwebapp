@@ -690,3 +690,395 @@ button[id$="-columns-btn"]:disabled {
 #toimikuleidja-table-container::-webkit-scrollbar-thumb:hover {
     background: #a1a1a1;
 }
+
+.koondaja-row-updated {
+    background-color: #dcfce7 !important; /* Light green background */
+    transition: background-color 1.5s ease-out;
+}
+
+.dark .koondaja-row-updated {
+    background-color: #14532d !important; /* Dark green for dark mode */
+}
+
+/* Improved button states */
+.toimikuleidja-btn-ready {
+    background-color: #dbeafe !important;
+    border-color: #3b82f6 !important;
+    color: #1d4ed8 !important;
+}
+
+.toimikuleidja-btn-ready:hover {
+    background-color: #bfdbfe !important;
+}
+
+/* Row selection highlight in Toimikuleidja */
+.toimikuleidja-row-selected {
+    background-color: #dbeafe !important;
+    border-left: 3px solid #3b82f6 !important;
+}
+
+.dark .toimikuleidja-row-selected {
+    background-color: #1e3a8a !important;
+}
+
+/* Button styling for select buttons */
+.toimiku-select-btn {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.toimiku-select-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.koondaja-new-row-flash {
+    background-color: #dcfce7 !important;
+    border-left: 4px solid #16a34a !important;
+    animation: newRowPulse 1.5s ease-in-out;
+}
+
+.dark .koondaja-new-row-flash {
+    background-color: #14532d !important;
+    border-left: 4px solid #22c55e !important;
+}
+
+@keyframes newRowPulse {
+    0% {
+        background-color: #bbf7d0;
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: #dcfce7;
+        transform: scale(1.01);
+    }
+    100% {
+        background-color: #dcfce7;
+        transform: scale(1);
+    }
+}
+
+.dark .koondaja-new-row-flash {
+    animation: newRowPulseDark 1.5s ease-in-out;
+}
+
+@keyframes newRowPulseDark {
+    0% {
+        background-color: #22c55e;
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: #14532d;
+        transform: scale(1.01);
+    }
+    100% {
+        background-color: #14532d;
+        transform: scale(1);
+    }
+}
+
+/* Ensure new rows have proper spacing */
+.ag-row[row-index] {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .ag-row[row-index] {
+    border-bottom: 1px solid #374151;
+}
+
+
+/* Tagastused Modal Styles */
+#tagastused-modal {
+    z-index: 50; /* Same level as koondaja modal */
+}
+
+#tagastused-modal .ag-theme-alpine {
+    --ag-background-color: #ffffff;
+    --ag-header-background-color: #f3f4f6;
+    --ag-header-foreground-color: #374151;
+    --ag-borders: solid 1px #e5e7eb;
+    --ag-row-border-color: #e5e7eb;
+}
+
+.dark #tagastused-modal .ag-theme-alpine {
+    --ag-background-color: #1f2937;
+    --ag-header-background-color: #111827;
+    --ag-header-foreground-color: #f3f4f6;
+    --ag-borders: solid 1px #374151;
+    --ag-row-border-color: #374151;
+}
+
+#tagastused-modal .ag-row-hover {
+    background-color: #f9fafb;
+}
+
+.dark #tagastused-modal .ag-row-hover {
+    background-color: #374151;
+}
+
+/* Tagastused button styling */
+#tagastused-btn:not(:disabled) {
+    border-color: #f59e0b;
+    color: #d97706;
+}
+
+#tagastused-btn:not(:disabled):hover {
+    background-color: #fef3c7;
+    border-color: #f59e0b;
+}
+
+/* Summary section styling */
+#tagastused-modal .bg-gray-50 {
+    border-top: 2px solid #e5e7eb;
+}
+
+.dark #tagastused-modal .bg-gray-50 {
+    border-top: 2px solid #374151;
+}
+
+/* Summary grid styling */
+#tagastused-modal .grid .flex {
+    border-bottom: 1px dotted #d1d5db;
+    padding: 0.25rem 0;
+}
+
+#tagastused-modal .grid .flex:last-child {
+    border-bottom: none;
+}
+
+.dark #tagastused-modal .grid .flex {
+    border-bottom: 1px dotted #6b7280;
+}
+
+/* Currency formatting in summary */
+#tagastused-modal [id^="summary-"] {
+    font-family: 'Courier New', monospace;
+    text-align: right;
+    min-width: 80px;
+}
+
+/* Highlight main totals */
+#summary-tagastamised,
+#summary-tagastamised-baasi,
+#summary-laekus-kokku,
+#summary-baasi-ei-kanta {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.dark #summary-tagastamised,
+.dark #summary-tagastamised-baasi,
+.dark #summary-laekus-kokku,
+.dark #summary-baasi-ei-kanta {
+    color: #f9fafb;
+}
+
+/* Positive values in green */
+.text-green-600 {
+    color: #16a34a !important;
+}
+
+.dark .text-green-600 {
+    color: #22c55e !important;
+}
+
+/* Responsive adjustments for summary */
+@media (max-width: 768px) {
+    #tagastused-modal .grid.grid-cols-1.md\\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+
+    #tagastused-modal .flex.justify-between {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    #tagastused-modal [id^="summary-"] {
+        margin-top: 0.25rem;
+        text-align: left;
+    }
+}
+
+/* Empty state styling */
+#tagastused-empty-state {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-radius: 8px;
+    border: 2px dashed #d1d5db;
+}
+
+.dark #tagastused-empty-state {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border-color: #374151;
+}
+
+/* Toolbar improvements */
+#tagastused-toolbar {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.dark #tagastused-toolbar {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+/* Button hover effects */
+#tagastused-toolbar button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid cell styling for better readability */
+#tagastused-ag-grid .ag-cell {
+    border-right: 1px solid #f3f4f6;
+}
+
+.dark #tagastused-ag-grid .ag-cell {
+    border-right: 1px solid #374151;
+}
+
+/* Header styling */
+#tagastused-ag-grid .ag-header-cell {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-bottom: 2px solid #d1d5db;
+}
+
+.dark #tagastused-ag-grid .ag-header-cell {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    border-bottom: 2px solid #374151;
+}
+
+/* Row selection */
+#tagastused-ag-grid .ag-row-selected {
+    background-color: #fef3c7 !important;
+}
+
+.dark #tagastused-ag-grid .ag-row-selected {
+    background-color: #78350f !important;
+}
+
+/* Focus styling */
+#tagastused-ag-grid .ag-cell-focus {
+    border: 2px solid #f59e0b !important;
+    outline: none;
+}
+
+/* Loading animation for refresh button */
+#refresh-tagastused-btn.loading {
+    pointer-events: none;
+}
+
+#refresh-tagastused-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Summary section header */
+#tagastused-modal h4 {
+    border-bottom: 2px solid #f59e0b;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Divider lines in summary */
+#tagastused-modal hr {
+    margin: 0.5rem 0;
+}
+
+/* Modal animation */
+#tagastused-modal:not(.hidden) {
+    animation: slideInFromBottom 0.3s ease-out;
+}
+
+@keyframes slideInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Container height management */
+#tagastused-ag-grid {
+    min-height: 300px;
+}
+
+/* Column header wrapping */
+#tagastused-ag-grid .ag-header-cell-label {
+    white-space: normal !important;
+    line-height: 1.2 !important;
+    padding: 0.25rem 0;
+}
+
+#tagastused-ag-grid .ag-header-cell {
+    height: auto !important;
+    min-height: 40px !important;
+}
+
+/* Improved number alignment */
+#tagastused-ag-grid .ag-cell[col-id="tagastamised"] {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+}
+
+/* Status column styling */
+#tagastused-ag-grid .ag-cell[col-id="staatus_baasis"] {
+    font-weight: 500;
+}
+
+/* Toimiku nr column styling */
+#tagastused-ag-grid .ag-cell[col-id="toimiku_nr"] {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.dark #tagastused-ag-grid .ag-cell[col-id="toimiku_nr"] {
+    color: #f9fafb;
+}
+
+/* Summary value highlighting */
+#tagastused-modal [id$="-kokku"],
+#tagastused-modal [id$="-baasi"],
+#tagastused-modal [id$="-kanta"] {
+    background-color: #fef3c7;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    border: 1px solid #f59e0b;
+}
+
+.dark #tagastused-modal [id$="-kokku"],
+.dark #tagastused-modal [id$="-baasi"],
+.dark #tagastused-modal [id$="-kanta"] {
+    background-color: #78350f;
+    border-color: #f59e0b;
+    color: #fbbf24;
+}
+
+/* Scrollbar styling for the grid */
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}

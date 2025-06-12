@@ -1012,26 +1012,57 @@
             <!-- Toolbar - Compact fixed height -->
             <div id="koondaja-toolbar"
                  class="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+
+                <!-- Primary action buttons -->
                 <button id="load-koondaja-data-btn" class="compact-btn btn-primary">
                     <i class="fas fa-download text-xs mr-1"></i>
                     <span>Lae andmed</span>
                 </button>
+
                 <button id="add-db-columns-btn" class="compact-btn btn-secondary">
                     <i class="fas fa-database text-xs mr-1"></i>
                     <span>Lisa andmebaasi veerud</span>
                 </button>
+
+                <!-- Row management buttons -->
+                <button id="add-row-btn" class="compact-btn btn-secondary" disabled>
+                    <i class="fas fa-plus text-xs mr-1"></i>
+                    <span>Lisa rida</span>
+                </button>
+
+<!--                <button id="validate-new-rows-btn" class="compact-btn btn-secondary" disabled>-->
+<!--                    <i class="fas fa-check-circle text-xs mr-1"></i>-->
+<!--                    <span>Valideeri uued</span>-->
+<!--                </button>-->
+
+<!--                <button id="remove-new-rows-btn" class="compact-btn btn-secondary" disabled>-->
+<!--                    <i class="fas fa-trash-alt text-xs mr-1"></i>-->
+<!--                    <span>Eemalda uued</span>-->
+<!--                </button>-->
+
+                <!-- Toimikuleidja button -->
+                <button id="toimikuleidja-btn" class="compact-btn btn-secondary" disabled title="Lae esmalt andmed">
+                    <i class="fas fa-search text-xs mr-1"></i>
+                    <span>Toimikuleidja</span>
+                </button>
+
+                <!-- ADD THE TAGASTUSED BUTTON HERE, AFTER toimikuleidja-btn -->
+                <button id="tagastused-btn" class="compact-btn btn-secondary" disabled title="Ava tagastuste aruanne">
+                    <i class="fas fa-undo text-xs mr-1"></i>
+                    <span>Tagastused</span>
+                </button>
+
+                <!-- Utility buttons -->
                 <button id="clear-koondaja-data-btn" class="compact-btn btn-secondary">
                     <i class="fas fa-trash text-xs mr-1"></i>
                     <span>Tühjenda</span>
                 </button>
+
                 <button id="export-koondaja-btn" class="compact-btn btn-secondary">
                     <i class="fas fa-file-export text-xs mr-1"></i>
                     <span>Ekspordi</span>
                 </button>
-                <button id="toimikuleidja-btn" class="compact-btn btn-secondary" disabled>
-                    <i class="fas fa-search text-xs mr-1"></i>
-                    <span>Toimikuleidja</span>
-                </button>
+
                 <button id="toggle-column-width-btn"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1042,9 +1073,9 @@
                 </button>
 
                 <div class="ml-auto flex gap-2">
-        <span id="koondaja-row-count" class="text-sm text-gray-600 dark:text-gray-400 self-center">
-            0 rida
-        </span>
+                    <span id="koondaja-row-count" class="text-sm text-gray-600 dark:text-gray-400 self-center">
+                        0 rida
+                    </span>
                 </div>
             </div>
 
@@ -1184,6 +1215,124 @@
                 <i class="fas fa-times text-xs mr-1"></i>
                 <span>Sulge</span>
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tagastused Modal -->
+<div id="tagastused-modal" class="fixed inset-0 flex items-center justify-center z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="tagastused-backdrop"></div>
+
+    <!-- Modal takes 95% of screen width and height -->
+    <div class="modal-content z-10 relative flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-xl"
+         style="width: 95vw; height: 95vh; max-width: 95vw; max-height: 95vh;">
+
+        <!-- Header - Fixed height -->
+        <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg flex-shrink-0">
+            <h3 class="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
+                <i class="fas fa-undo mr-2"></i>
+                <span>Tagastused ja ümberkanded</span>
+            </h3>
+            <button id="close-tagastused-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Content area - Takes remaining space with minimal padding -->
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-hidden p-2 flex flex-col min-h-0">
+
+            <!-- Toolbar - Compact fixed height -->
+            <div id="tagastused-toolbar"
+                 class="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+
+                <button id="refresh-tagastused-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-sync-alt text-xs mr-1"></i>
+                    <span>Värskenda</span>
+                </button>
+
+                <button id="export-tagastused-btn" class="compact-btn btn-secondary">
+                    <i class="fas fa-file-export text-xs mr-1"></i>
+                    <span>Ekspordi</span>
+                </button>
+
+                <div class="ml-auto flex gap-2">
+                    <span id="tagastused-row-count" class="text-sm text-gray-600 dark:text-gray-400 self-center">
+                        0 rida
+                    </span>
+                </div>
+            </div>
+
+            <!-- AG-Grid container - Takes most remaining space -->
+            <div class="flex-grow overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 min-h-0 relative"
+                 style="flex: 1 1 70%;">
+                <!-- AG-Grid will be rendered here -->
+                <div id="tagastused-ag-grid" class="ag-theme-alpine w-full h-full"></div>
+
+                <!-- Empty state -->
+                <div id="tagastused-empty-state"
+                     class="flex flex-col items-center justify-center text-center hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md">
+                    <i class="fas fa-undo text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        Tagastuste andmed puuduvad
+                    </h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">
+                        Lae esmalt koondaja andmed
+                    </p>
+                </div>
+            </div>
+
+            <!-- Summary section - Fixed height at bottom -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mt-2 flex-shrink-0"
+                 style="flex: 0 0 auto; min-height: 200px;">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Kokkuvõte</h4>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <!-- Left column -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between py-1">
+                            <span class="text-gray-700 dark:text-gray-300">Tagastamised ja ümberkanded</span>
+                            <span id="summary-tagastamised" class="font-mono font-medium">0,00 €</span>
+                        </div>
+                        <hr class="border-gray-300 dark:border-gray-600">
+                        <div class="flex justify-between py-1 pl-4">
+                            <span class="text-gray-600 dark:text-gray-400">sh arhiivis</span>
+                            <span id="summary-arhiivis" class="font-mono">0,00 €</span>
+                        </div>
+                        <div class="flex justify-between py-1 pl-4">
+                            <span class="text-gray-600 dark:text-gray-400">Ümberkanne SEB deposiiti</span>
+                            <span id="summary-seb-deposit" class="font-mono">0,00 €</span>
+                        </div>
+                        <hr class="border-gray-300 dark:border-gray-600">
+                        <div class="flex justify-between py-1">
+                            <span class="text-gray-700 dark:text-gray-300">Baasiväline kokku</span>
+                            <span id="summary-baasivaline" class="font-mono font-medium">0,00 €</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-gray-700 dark:text-gray-300">Tagastamised baasi</span>
+                            <span id="summary-tagastamised-baasi" class="font-mono font-medium">0,00 €</span>
+                        </div>
+                    </div>
+
+                    <!-- Right column -->
+                    <div class="space-y-2">
+                        <hr class="border-gray-300 dark:border-gray-600">
+                        <div class="flex justify-between py-1">
+                            <span id="summary-date-range"
+                                  class="text-gray-700 dark:text-gray-300">Kuupäev laekus kokku</span>
+                            <span id="summary-laekus-kokku" class="font-mono font-medium">0,00 €</span>
+                        </div>
+                        <div class="flex justify-between py-1 pl-4">
+                            <span class="text-gray-600 dark:text-gray-400">sh baasi kandmiseks</span>
+                            <span id="summary-baasi-kandmiseks" class="font-mono">0,00 €</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-gray-700 dark:text-gray-300">baasi ei kanta</span>
+                            <span id="summary-baasi-ei-kanta" class="font-mono font-medium">0,00 €</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -860,3 +860,69 @@ async def search_toimikud(
     except Exception as e:
         logger.exception(f"Error searching toimikud: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error searching toimikud: {str(e)}")
+
+
+@router.post("/fetch-isikukoodid")
+async def fetch_isikukoodid(
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Fetch isikukoodid (võlgniku_kood) for given võlgniku names for Tagastused modal"""
+    try:
+        body = await request.json()
+        volgniku_nimed = body.get('volgniku_nimed', [])
+
+        if not volgniku_nimed:
+            return {
+                "success": True,
+                "data": []
+            }
+
+        # Clean and filter the names
+        valid_names = [name.strip() for name in volgniku_nimed if name and name.strip()]
+
+        if not valid_names:
+            return {
+                "success": True,
+                "data": []
+            }
+
+        logger.info(f"Fetching isikukoodid for {len(valid_names)} võlgniku names")
+
+        # Query to get võlgniku_kood for each võlgnik name
+        # Use DISTINCT to avoid duplicates since multiple toimikud can have same võlgnik
+        query = text("""
+            SELECT DISTINCT 
+                "võlgnik",
+                "võlgniku_kood"
+            FROM "taitur_data"
+            WHERE "võlgnik" = ANY(:names)
+            AND "võlgniku_kood" IS NOT NULL 
+            AND "võlgniku_kood" != ''
+            ORDER BY "võlgnik"
+        """)
+
+        result = await db.execute(query, {"names": valid_names})
+        rows = result.fetchall()
+
+        # Convert to list of dicts
+        data = []
+        for row in rows:
+            data.append({
+                "võlgnik": row[0] or '',
+                "võlgniku_kood": row[1] or ''
+            })
+
+        logger.info(f"Found isikukoodid for {len(data)} võlgniku names")
+
+        return {
+            "success": True,
+            "data": data,
+            "count": len(data),
+            "requested_count": len(valid_names)
+        }
+
+    except Exception as e:
+        logger.exception(f"Error fetching isikukoodid: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching isikukoodid: {str(e)}")
