@@ -11,6 +11,8 @@
     let selectedDbColumns = [];
     let isLoading = false;
     let isColumnsFittedToHeader = false;
+    let toimikuleidjaData = [];
+    let selectedKoondajaRow = null;
 
     // Folders to process
     const KOONDAJA_FOLDERS = ['CSV', 'Konto vv', 'MTA', 'Pension', 'Töötukassa'];
@@ -443,6 +445,11 @@
         $('#validate-new-rows-btn').click(validateNewRowsAgainstDatabase);
         $('#remove-new-rows-btn').click(removeAllNewRows);
 
+        // ADD THIS NEW HANDLER
+        $('#toimikuleidja-btn').click(openToimikuleidjaModal);
+        $('#close-toimikuleidja-modal, #toimikuleidja-backdrop, #close-toimikuleidja-btn').click(closeToimikuleidjaModal);
+        $('#toimikuleidja-search-btn').click(searchToimikud);
+
         // Other existing handlers...
         $('#close-db-column-selector, #db-column-selector-backdrop').click(hideDbColumnSelector);
         $('#cancel-db-columns-btn').click(hideDbColumnSelector);
@@ -463,6 +470,38 @@
 
         // Handle selection changes for toolbar button states
         $(document).on('koondajaSelectionChanged', updateToolbarButtonStates);
+
+        // ADD THESE NEW HANDLERS
+        // Enter key support for search fields
+        $('#toimikuleidja-otsing, #toimikuleidja-selgitus').keypress(function (e) {
+            if (e.which === 13) { // Enter key
+                searchToimikud();
+            }
+        });
+
+        // Update button state based on Koondaja selection
+        $(document).on('koondajaSelectionChanged', updateToimikuleidjaButtonState);
+    }
+
+    function updateToimikuleidjaButtonState() {
+        if (!koondajaGridApi) {
+            $('#toimikuleidja-btn').prop('disabled', true);
+            return;
+        }
+
+        const selectedRows = koondajaGridApi.getSelectedRows();
+        const hasSelection = selectedRows.length > 0;
+        const hasData = koondajaData && koondajaData.length > 0;
+
+        $('#toimikuleidja-btn').prop('disabled', !hasData);
+
+        if (hasSelection) {
+            $('#toimikuleidja-btn').find('span').text('Toimikuleidja (valitud)');
+            $('#toimikuleidja-btn').attr('title', 'Otsi toimikuid valitud rea põhjal');
+        } else {
+            $('#toimikuleidja-btn').find('span').text('Toimikuleidja');
+            $('#toimikuleidja-btn').attr('title', hasData ? 'Otsi toimikuid' : 'Lae esmalt andmed');
+        }
     }
 
 
@@ -632,7 +671,7 @@
         const hasModifiedNewRows = koondajaData.some(row => row._isNewRow && row._isModified);
         const hasSelection = koondajaGridApi ? koondajaGridApi.getSelectedRows().length > 0 : false;
 
-        // Add Row button - enabled if we have data
+        // Existing button states...
         const addBtn = $('#add-row-btn');
         addBtn.prop('disabled', !hasData);
 
@@ -649,11 +688,11 @@
             addBtn.attr('title', 'Lae esmalt andmed');
         }
 
-        // Validate button - enabled if we have modified new rows
         $('#validate-new-rows-btn').prop('disabled', !hasModifiedNewRows);
-
-        // Remove button - enabled if we have new rows
         $('#remove-new-rows-btn').prop('disabled', !hasNewRows);
+
+        // ADD TOIMIKULEIDJA BUTTON STATE
+        updateToimikuleidjaButtonState();
 
         // Update button text to show counts
         if (hasNewRows) {
@@ -671,7 +710,6 @@
             $('#validate-new-rows-btn').find('span').text('Valideeri uued');
         }
 
-        // Update visual states
         updateButtonVisualStates(hasData, hasNewRows, hasModifiedNewRows);
     }
 
@@ -821,6 +859,60 @@
         currentColumns = [...defaultColumns];
     }
 
+    function openToimikuleidjaModal() {
+        if (!koondajaGridApi || !koondajaData || koondajaData.length === 0) {
+            showNotification('Koondaja andmeid pole laetud', 'warning');
+            return;
+        }
+
+        const selectedRows = koondajaGridApi.getSelectedRows();
+        selectedKoondajaRow = selectedRows.length > 0 ? selectedRows[0] : null;
+
+        // Show modal
+        $('#toimikuleidja-modal').removeClass('hidden');
+
+        // Prefill fields
+        prefillSearchFields();
+
+        // Reset states
+        resetToimikuleidjaModalStates();
+
+        // Auto-search if we have selection
+        if (selectedKoondajaRow) {
+            setTimeout(searchToimikud, 300);
+        }
+    }
+
+    function closeToimikuleidjaModal() {
+        $('#toimikuleidja-modal').addClass('hidden');
+        clearToimikuleidjaSearchResults();
+        selectedKoondajaRow = null;
+    }
+
+    function prefillSearchFields() {
+        let otsingValue = '';
+        let selgitusValue = '';
+
+        if (selectedKoondajaRow) {
+            // Prefill "Otsing" with "Isiku- või registrikood" - this is what we search by
+            otsingValue = selectedKoondajaRow.isiku_registrikood || '';
+
+            // Prefill "Selgitus" with "Toimiku nr selgituses" - just for reference/display
+            selgitusValue = selectedKoondajaRow.toimiku_nr_selgituses || '';
+        }
+
+        $('#toimikuleidja-otsing').val(otsingValue);
+        $('#toimikuleidja-selgitus').val(selgitusValue);
+    }
+
+    function resetToimikuleidjaModalStates() {
+        $('#toimikuleidja-loading').addClass('hidden');
+        $('#toimikuleidja-empty').addClass('hidden');
+        $('#toimikuleidja-initial').removeClass('hidden');
+        $('#toimikuleidja-table-container').removeClass('hidden');
+        $('#toimikuleidja-result-count').text('0 tulemust');
+    }
+
     function validateNewRow(rowData, rowIndex) {
         // Basic validation for new rows
         if (!rowData._isNewRow) return;
@@ -842,6 +934,229 @@
             });
         }
     }
+
+    function searchToimikud() {
+        const searchValue = $('#toimikuleidja-otsing').val().trim(); // võlgniku_kood
+        // Note: selgitus field is just for display/reference, not used in search
+
+        if (!searchValue) {
+            showNotification('Sisestage isiku- või registrikood', 'warning');
+            return;
+        }
+
+        // Show loading state
+        showToimikuleidjaLoadingState();
+
+        // Make API call - only send search_value (võlgniku_kood)
+        $.ajax({
+            url: '/api/v1/koondaja/search-toimikud',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                search_value: searchValue
+                // selgitus_value is not sent - it's just for reference
+            }),
+            success: function (response) {
+                hideToimikuleidjaLoadingState();
+
+                if (response.success && response.data) {
+                    toimikuleidjaData = response.data;
+                    displayToimikuleidjaSearchResults();
+
+                    const count = response.data.length;
+                    $('#toimikuleidja-result-count').text(`${count} tulemust`);
+
+                    if (count === 0) {
+                        showToimikuleidjaEmptyState();
+                    } else {
+                        // Update message to show what we searched for
+                        const searchInfo = `Leitud ${count} toimikut isiku/ettevõtte koodile: ${searchValue}`;
+                        console.log(searchInfo);
+                    }
+                } else {
+                    showToimikuleidjaEmptyState();
+                    showNotification('Toimikuid ei leitud', 'info');
+                }
+            },
+            error: function (xhr) {
+                hideToimikuleidjaLoadingState();
+                showToimikuleidjaEmptyState();
+
+                const errorMsg = xhr.responseJSON?.detail || 'Otsingu viga';
+                showNotification(errorMsg, 'error');
+                console.error('Toimikuleidja search error:', xhr);
+            }
+        });
+    }
+
+    function showToimikuleidjaLoadingState() {
+        $('#toimikuleidja-initial').addClass('hidden');
+        $('#toimikuleidja-empty').addClass('hidden');
+        $('#toimikuleidja-loading').removeClass('hidden');
+        $('#toimikuleidja-table-container').addClass('hidden');
+    }
+
+    function hideToimikuleidjaLoadingState() {
+        $('#toimikuleidja-loading').addClass('hidden');
+        $('#toimikuleidja-table-container').removeClass('hidden');
+    }
+
+    function showToimikuleidjaEmptyState() {
+        $('#toimikuleidja-initial').addClass('hidden');
+        $('#toimikuleidja-empty').removeClass('hidden');
+        $('#toimikuleidja-table-container').addClass('hidden');
+    }
+
+    function displayToimikuleidjaSearchResults() {
+        const tbody = $('#toimikuleidja-table-body');
+        tbody.empty();
+
+        if (!toimikuleidjaData || toimikuleidjaData.length === 0) {
+            showToimikuleidjaEmptyState();
+            return;
+        }
+
+        toimikuleidjaData.forEach(function (row, index) {
+            const tr = createToimikuleidjaTableRow(row, index);
+            tbody.append(tr);
+        });
+
+        $('#toimikuleidja-initial').addClass('hidden');
+        $('#toimikuleidja-empty').addClass('hidden');
+    }
+
+    function createToimikuleidjaTableRow(rowData, index) {
+        // Format currency
+        const jääk = typeof rowData.võla_jääk === 'number' ?
+            rowData.võla_jääk.toFixed(2).replace('.', ',') + ' €' :
+            (rowData.võla_jääk || '0,00 €');
+
+        // Build sissenõudja display string
+        const sissenõudja = [
+            rowData.sissenõudja_eesnimi,
+            rowData.sissenõudja_perenimi,
+            rowData.sissenõudja_kood ? `(${rowData.sissenõudja_kood})` : ''
+        ].filter(part => part && part.trim()).join(' ');
+
+        const tr = $(`
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" data-index="${index}">
+            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                ${escapeHtml(rowData.toimiku_nr || '')}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                ${escapeHtml(rowData.võlgnik || '')}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                ${escapeHtml(sissenõudja)}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-mono currency-cell">
+                ${jääk}
+            </td>
+            <td class="px-4 py-3 text-sm">
+                <button class="toimiku-select-btn" data-index="${index}" title="Vali see toimik">
+                    <i class="fas fa-check text-xs"></i>
+                </button>
+            </td>
+        </tr>
+    `);
+
+        // Add click handlers
+        tr.find('.toimiku-select-btn').click(function (e) {
+            e.stopPropagation();
+            selectToimik(index);
+        });
+
+        tr.click(function () {
+            selectToimik(index);
+        });
+
+        return tr;
+    }
+
+    function selectToimik(index) {
+        if (!toimikuleidjaData[index]) return;
+
+        const selectedToimik = toimikuleidjaData[index];
+
+        // Update the Koondaja row if we have a selected row
+        if (selectedKoondajaRow && koondajaGridApi) {
+            // Find the row in the grid data
+            const koondajaRowIndex = koondajaData.findIndex(row => row === selectedKoondajaRow);
+
+            if (koondajaRowIndex !== -1) {
+                // Update the row data
+                koondajaData[koondajaRowIndex].toimiku_nr_loplik = selectedToimik.toimiku_nr;
+                koondajaData[koondajaRowIndex].nimi_baasis = selectedToimik.võlgnik;
+                koondajaData[koondajaRowIndex].toimiku_jaak = selectedToimik.võla_jääk;
+                koondajaData[koondajaRowIndex].staatus_baasis = selectedToimik.staatus;
+                koondajaData[koondajaRowIndex].has_valid_toimiku = true;
+                koondajaData[koondajaRowIndex].match_source = 'toimikuleidja_manual';
+
+                // Mark as modified if it's a new row
+                if (koondajaData[koondajaRowIndex]._isNewRow) {
+                    koondajaData[koondajaRowIndex]._isModified = true;
+                }
+
+                // Refresh the grid
+                updateGrid();
+
+                showNotification(`Toimik ${selectedToimik.toimiku_nr} valitud ja andmed uuendatud`, 'success');
+            }
+        } else {
+            showNotification(`Toimik ${selectedToimik.toimiku_nr} valitud`, 'info');
+        }
+
+        // Close modal
+        closeToimikuleidjaModal();
+    }
+
+    function clearToimikuleidjaSearchResults() {
+        $('#toimikuleidja-table-body').empty();
+        toimikuleidjaData = [];
+        resetToimikuleidjaModalStates();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+// 5. UPDATE the window.KoondajaModule export to include Toimikuleidja functions
+    window.KoondajaModule = {
+        show: showKoondajaModal,
+        hide: hideKoondajaModal,
+        getData: function () {
+            return koondajaData;
+        },
+        clearData: clearKoondajaData,
+        exportData: exportKoondajaData,
+        addRow: function (afterIndex = -1) {
+            if (afterIndex === -1) {
+                afterIndex = koondajaData.length - 1;
+            }
+            insertRowAfter(afterIndex);
+        },
+        validateNewRows: validateNewRowsAgainstDatabase,
+        getNewRows: function () {
+            return koondajaData.filter(row => row._isNewRow);
+        },
+        removeNewRows: function () {
+            const newRowCount = koondajaData.filter(row => row._isNewRow).length;
+            if (newRowCount > 0 && confirm(`Remove ${newRowCount} new rows?`)) {
+                koondajaData = koondajaData.filter(row => !row._isNewRow);
+                updateGrid();
+                showNotification(`Removed ${newRowCount} new rows`, 'success');
+            }
+        },
+        // ADD THESE NEW EXPORTS
+        toimikuleidja: {
+            open: openToimikuleidjaModal,
+            close: closeToimikuleidjaModal,
+            search: searchToimikud
+        }
+    };
 
 // Add toolbar button for adding rows (optional)
     function addRowToolbarButton() {

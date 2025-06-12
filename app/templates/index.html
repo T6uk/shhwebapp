@@ -1028,6 +1028,10 @@
                     <i class="fas fa-file-export text-xs mr-1"></i>
                     <span>Ekspordi</span>
                 </button>
+                <button id="toimikuleidja-btn" class="compact-btn btn-secondary" disabled>
+                    <i class="fas fa-search text-xs mr-1"></i>
+                    <span>Toimikuleidja</span>
+                </button>
                 <button id="toggle-column-width-btn"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1058,6 +1062,128 @@
                     </p>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toimikuleidja Modal -->
+<div id="toimikuleidja-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" id="toimikuleidja-backdrop"></div>
+    <div class="modal-content w-11/12 max-w-5xl z-10 relative max-h-[90vh] flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-xl">
+        <div class="flex justify-between items-center mb-2 bg-gray-100 dark:bg-gray-800 p-3 rounded-t-lg flex-shrink-0">
+            <h3 class="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
+                <i class="fas fa-search mr-2"></i>
+                <span>Toimikuleidja</span>
+            </h3>
+            <button id="close-toimikuleidja-modal"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-900 flex-grow overflow-auto p-3 min-h-0">
+            <!-- Search fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div>
+                    <label for="toimikuleidja-otsing"
+                           class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Otsing (Isiku- või registrikood)
+                    </label>
+                    <input type="text" id="toimikuleidja-otsing"
+                           class="compact-input w-full"
+                           placeholder="Sisesta isiku- või registrikood...">
+                </div>
+                <div>
+                    <label for="toimikuleidja-selgitus"
+                           class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Selgitus (Toimiku nr)
+                    </label>
+                    <input type="text" id="toimikuleidja-selgitus"
+                           class="compact-input w-full"
+                           placeholder="Sisesta toimiku number...">
+                </div>
+            </div>
+
+            <!-- Search button -->
+            <div class="flex justify-center mb-4">
+                <button id="toimikuleidja-search-btn" class="compact-btn btn-primary">
+                    <i class="fas fa-search text-xs mr-2"></i>
+                    <span>Otsi toimikuid</span>
+                </button>
+            </div>
+
+            <!-- Results table -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div id="toimikuleidja-table-container" class="overflow-auto max-h-96">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col"
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Toimiku nr
+                            </th>
+                            <th scope="col"
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Võlgnik
+                            </th>
+                            <th scope="col"
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Sissenõudja
+                            </th>
+                            <th scope="col"
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Toimiku jääk
+                            </th>
+                            <th scope="col"
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                Tegevused
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody id="toimikuleidja-table-body"
+                               class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Loading state -->
+                <div id="toimikuleidja-loading" class="hidden p-8 text-center">
+                    <div class="flex justify-center items-center space-x-3">
+                        <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span class="text-gray-600 dark:text-gray-400">Otsin toimikuid...</span>
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div id="toimikuleidja-initial" class="p-8 text-center">
+                    <div class="text-gray-400 dark:text-gray-600 mb-4">
+                        <i class="fas fa-search text-4xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400 mb-2">Valmis otsinguks</h3>
+                    <p class="text-gray-400 dark:text-gray-500">Leitakse kõik toimikud valitud isiku/ettevõtte kohta</p>
+                </div>
+
+                <!-- Empty state -->
+                <div id="toimikuleidja-empty" class="hidden p-8 text-center">
+                    <div class="text-gray-400 dark:text-gray-600 mb-4">
+                        <i class="fas fa-search text-4xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400 mb-2">Toimikuid ei leitud</h3>
+                    <p class="text-gray-400 dark:text-gray-500">Selle isiku/ettevõtte kohta pole toimikuid
+                        andmebaasis</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-b-lg flex justify-between items-center flex-shrink-0">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                <span id="toimikuleidja-result-count">0 tulemust</span>
+            </div>
+            <button id="close-toimikuleidja-btn" class="compact-btn btn-secondary">
+                <i class="fas fa-times text-xs mr-1"></i>
+                <span>Sulge</span>
+            </button>
         </div>
     </div>
 </div>

@@ -445,3 +445,248 @@ button[id$="-columns-btn"]:disabled {
         justify-content: center;
     }
 }
+
+/* ADD THESE STYLES to your koondaja.css file (paste-4.txt) */
+
+/* Toimikuleidja modal specific styles */
+#toimikuleidja-modal {
+    z-index: 60; /* Higher than koondaja modal */
+}
+
+#toimikuleidja-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Hover effects for table rows */
+#toimikuleidja-table-body tr:hover {
+    background-color: #f9fafb;
+}
+
+.dark #toimikuleidja-table-body tr:hover {
+    background-color: #374151;
+}
+
+/* Button styling in table */
+.toimiku-select-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toimiku-select-btn:hover {
+    background-color: #2563eb;
+}
+
+.toimiku-select-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Search field focus styling */
+#toimikuleidja-otsing:focus,
+#toimikuleidja-selgitus:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+/* Result count styling */
+#toimikuleidja-result-count {
+    font-weight: 500;
+}
+
+/* Toimikuleidja button states */
+#toimikuleidja-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#toimikuleidja-btn:not(:disabled):hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+/* Loading animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Compact table styling for better mobile support */
+@media (max-width: 768px) {
+    #toimikuleidja-modal .modal-content {
+        width: 98vw;
+        max-width: 98vw;
+        margin: 1vh;
+    }
+
+    #toimikuleidja-table-container table {
+        font-size: 0.75rem;
+    }
+
+    #toimikuleidja-table-container th,
+    #toimikuleidja-table-container td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    /* Stack search fields on mobile */
+    #toimikuleidja-modal .grid.grid-cols-1.md\\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sticky header improvement */
+#toimikuleidja-table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.dark #toimikuleidja-table-container thead th {
+    background-color: #1f2937;
+    border-bottom: 2px solid #374151;
+}
+
+/* Table row selection highlighting */
+#toimikuleidja-table-body tr {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#toimikuleidja-table-body tr:hover {
+    background-color: #f0f9ff !important;
+}
+
+.dark #toimikuleidja-table-body tr:hover {
+    background-color: #1e3a8a !important;
+}
+
+/* Currency formatting in table */
+.currency-cell {
+    font-family: 'Courier New', monospace;
+    text-align: right;
+}
+
+/* Search form styling */
+#toimikuleidja-modal .grid.gap-4 {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+}
+
+.dark #toimikuleidja-modal .grid.gap-4 {
+    border-color: #374151;
+}
+
+/* Enhanced button hover effects */
+#toimikuleidja-search-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#close-toimikuleidja-btn:hover,
+#close-toimikuleidja-modal:hover {
+    transform: scale(1.05);
+}
+
+/* Success state for selected row */
+.toimiku-selected {
+    background-color: #dcfce7 !important;
+    border-left: 3px solid #16a34a !important;
+}
+
+.dark .toimiku-selected {
+    background-color: #14532d !important;
+}
+
+/* Table header improvements */
+#toimikuleidja-table-container thead {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.dark #toimikuleidja-table-container thead {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+/* Enhanced search button styling */
+#toimikuleidja-search-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+#toimikuleidja-search-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+#toimikuleidja-search-btn:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* Input field improvements */
+#toimikuleidja-otsing,
+#toimikuleidja-selgitus {
+    transition: all 0.2s ease;
+}
+
+#toimikuleidja-otsing:focus,
+#toimikuleidja-selgitus:focus {
+    transform: scale(1.02);
+}
+
+/* Modal animation */
+#toimikuleidja-modal:not(.hidden) {
+    animation: fadeInModal 0.3s ease-out;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Scrollbar styling for table */
+#toimikuleidja-table-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+#toimikuleidja-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#toimikuleidja-table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#toimikuleidja-table-container::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}

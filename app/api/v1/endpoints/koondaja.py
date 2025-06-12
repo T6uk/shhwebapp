@@ -1,4 +1,4 @@
-# koondaja_routes.py - Updated with toimiku_nr_loplik logic
+# koondaja.py - Updated with toimiku_nr_loplik logic
 import csv
 import logging
 import os
@@ -756,3 +756,107 @@ async def fetch_koondaja_columns(
     except Exception as e:
         logger.exception(f"Error fetching Koondaja columns: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching columns: {str(e)}")
+
+
+# ADD THIS ENDPOINT to your koondaja_routes.py file (at the end, before the last endpoint)
+
+@router.post("/search-toimikud")
+async def search_toimikud(
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Search for toimikud based on võlgniku_kood (registrikood) or toimiku number"""
+    try:
+        body = await request.json()
+        search_value = body.get('search_value', '').strip()  # This is isiku_registrikood from Koondaja
+        selgitus_value = body.get('selgitus_value', '').strip()  # This is toimiku_nr_selgituses from Koondaja
+
+        if not search_value and not selgitus_value:
+            return {
+                "success": False,
+                "message": "Vähemalt üks otsinguparameeter on kohustuslik",
+                "data": []
+            }
+
+        # Build query conditions
+        conditions = []
+        params = {}
+
+        if search_value:
+            # Search by võlgniku_kood (registrikood) - exact match
+            conditions.append('"võlgniku_kood" = :search_value')
+            params['search_value'] = search_value
+            logger.info(f"Searching for võlgniku_kood = {search_value}")
+
+        if selgitus_value:
+            # Search by toimiku_nr - using LIKE for partial matches
+            conditions.append('"toimiku_nr" LIKE :toimiku_pattern')
+            params['toimiku_pattern'] = f'%{selgitus_value}%'
+            logger.info(f"Searching for toimiku_nr LIKE %{selgitus_value}%")
+
+        # Use OR if both conditions exist
+        where_clause = ' OR '.join(conditions)
+
+        # Query to get all required toimiku information
+        query = text(f"""
+            SELECT 
+                "toimiku_nr",
+                "võlgnik",
+                "sissenõudja_eesnimi",
+                "sissenõudja_perenimi", 
+                "sissenõudja_kood",
+                "võla_jääk",
+                "staatus",
+                "võlgniku_kood"
+            FROM "taitur_data"
+            WHERE {where_clause}
+            ORDER BY "toimiku_nr"
+            LIMIT 500
+        """)
+
+        result = await db.execute(query, params)
+        rows = result.fetchall()
+
+        # Convert to list of dicts with all required fields
+        data = []
+        for row in rows:
+            # Build sissenõudja display name
+            sissenõudja_parts = []
+            if row[2]:  # sissenõudja_eesnimi
+                sissenõudja_parts.append(row[2])
+            if row[3]:  # sissenõudja_perenimi
+                sissenõudja_parts.append(row[3])
+            if row[4]:  # sissenõudja_kood
+                sissenõudja_parts.append(f"({row[4]})")
+
+            sissenõudja_display = ' '.join(sissenõudja_parts) if sissenõudja_parts else ''
+
+            data.append({
+                "toimiku_nr": row[0],
+                "võlgnik": row[1] or '',
+                "sissenõudja_eesnimi": row[2] or '',
+                "sissenõudja_perenimi": row[3] or '',
+                "sissenõudja_kood": row[4] or '',
+                "sissenõudja": sissenõudja_display,  # Combined display field
+                "võla_jääk": float(row[5]) if row[5] is not None else 0.0,
+                "staatus": row[6] or '',
+                "võlgniku_kood": row[7] or ''
+            })
+
+        logger.info(
+            f"Found {len(data)} toimikud matching search criteria (search_value='{search_value}', selgitus_value='{selgitus_value}')")
+
+        return {
+            "success": True,
+            "data": data,
+            "count": len(data),
+            "search_params": {
+                "võlgniku_kood": search_value,
+                "toimiku_nr_pattern": selgitus_value
+            }
+        }
+
+    except Exception as e:
+        logger.exception(f"Error searching toimikud: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error searching toimikud: {str(e)}")
