@@ -1,0 +1,163 @@
+/* app/static/css/modules/koondaja.css */
+/* Koondaja module specific styles */
+
+/* Koondaja button states */
+#koondaja-btn.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+}
+
+#koondaja-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#koondaja-btn:not(:disabled):hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+/* Koondaja modal specific */
+#koondaja-modal .ag-theme-alpine {
+    --ag-background-color: var(--bg-surface);
+    --ag-header-background-color: var(--bg-primary);
+    --ag-header-foreground-color: var(--text-primary);
+    --ag-borders: solid 1px var(--border-primary);
+    --ag-row-border-color: var(--border-primary);
+    --ag-foreground-color: var(--text-primary);
+}
+
+#koondaja-modal .ag-row-hover {
+    background-color: var(--bg-primary);
+}
+
+/* Koondaja toolbar */
+#koondaja-toolbar {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-surface) 100%);
+    border: 1px solid var(--border-primary);
+}
+
+#koondaja-toolbar button {
+    transition: all var(--transition-normal);
+}
+
+#koondaja-toolbar button:disabled {
+    transform: scale(0.95);
+    opacity: 0.5;
+}
+
+#koondaja-toolbar button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Button state indicators */
+#add-row-btn:not(:disabled) {
+    border-color: var(--success);
+    color: var(--success-dark);
+}
+
+#validate-new-rows-btn:not(:disabled) {
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+#remove-new-rows-btn:not(:disabled) {
+    border-color: var(--danger);
+    color: var(--danger-dark);
+}
+
+#toimikuleidja-btn:not(:disabled) {
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+#tagastused-btn:not(:disabled) {
+    border-color: var(--warning);
+    color: var(--warning-dark);
+}
+
+#laekumised-btn:not(:disabled) {
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+/* Column width toggle button */
+#toggle-column-width-btn.active {
+    background-color: var(--primary-50) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-dark) !important;
+}
+
+/* Validation indicators */
+#koondaja-invalid-count {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    background-color: var(--danger-bg);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    line-height: 1.25;
+    color: var(--danger-dark);
+    border: 1px solid var(--danger);
+}
+
+#koondaja-validation-summary {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-primary);
+}
+
+/* Koondaja row count */
+#koondaja-row-count {
+    font-weight: var(--font-weight-medium);
+    background-color: var(--bg-primary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+}
+
+/* Database column selector specific */
+#db-columns-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.selected-column-checkbox:checked + label {
+    color: var(--success-dark);
+    font-weight: var(--font-weight-medium);
+}
+
+.available-column-checkbox:checked + label {
+    color: var(--primary-dark);
+    font-weight: var(--font-weight-medium);
+}
+
+#selected-columns-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#available-columns-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Loading modal specific */
+#koondaja-loading-progress {
+    background-color: var(--primary-color);
+    height: 0.5rem;
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+#koondaja-loading-status {
+    font-weight: var(--font-weight-medium);
+}
+
+#koondaja-loading-details {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}

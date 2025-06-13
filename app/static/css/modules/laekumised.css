@@ -1,0 +1,207 @@
+/* app/static/css/modules/laekumised.css */
+/* Laekumised module specific styles */
+
+/* Header specific styling */
+#laekumised-modal .modal-content > div:first-child {
+    background: linear-gradient(to right, #2563eb, #4f46e5);
+    color: white;
+    padding: var(--space-4) var(--space-6);
+}
+
+#laekumised-person-counter {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Action buttons in header */
+#laekumised-ok-btn,
+#laekumised-skip-btn {
+    font-weight: var(--font-weight-semibold);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-lg);
+}
+
+#laekumised-ok-btn {
+    background-color: var(--success);
+}
+
+#laekumised-ok-btn:hover {
+    background-color: var(--success-dark);
+    box-shadow: var(--shadow-xl);
+}
+
+#laekumised-skip-btn {
+    background-color: #6b7280;
+}
+
+#laekumised-skip-btn:hover {
+    background-color: #4b5563;
+    box-shadow: var(--shadow-xl);
+}
+
+/* Content area */
+#laekumised-content {
+    background-color: var(--bg-primary);
+    padding: var(--space-6);
+}
+
+/* Loading indicator */
+#laekumised-loading {
+    background-color: rgba(248, 250, 252, 0.95);
+}
+
+#laekumised-loading > div {
+    background-color: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-primary);
+}
+
+/* Person Information Card */
+#laekumised-toimik {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-family-mono);
+}
+
+#laekumised-staatus {
+    display: inline-block;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold);
+    background-color: var(--success-bg);
+    color: var(--success-dark);
+}
+
+/* Financial table styling */
+/* Financial table styling */
+.laekumised-person-card table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.laekumised-person-card table th {
+    padding: var(--space-3);
+    text-align: left;
+    font-weight: var(--font-weight-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    background-color: var(--bg-primary);
+}
+
+.laekumised-person-card table td {
+    padding: var(--space-3);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family-mono);
+    text-align: center;
+}
+
+.laekumised-person-card table tr:hover {
+    background-color: var(--bg-primary);
+}
+
+/* Payment total card */
+#laekumised-kokku-summa {
+    font-size: 1.875rem;
+    font-weight: var(--font-weight-bold);
+}
+
+#kpv-laekunud-summa {
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Distribution method radio buttons */
+input[type="radio"][name="distribution-method"] {
+    width: 1rem;
+    height: 1rem;
+    color: var(--primary-color);
+}
+
+input[type="radio"][name="distribution-method"]:checked {
+    background-color: var(--primary-color);
+}
+
+/* Protection calculation */
+#elatus-miinimum-select,
+#ulalpeetavad-select {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    background-color: white;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+}
+
+#remaining-amount {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    font-family: var(--font-family-mono);
+}
+
+#koik-tagasi-btn {
+    background-color: rgba(255, 255, 255, 0.8);
+    color: var(--warning-dark);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-md);
+}
+
+#koik-tagasi-btn:hover {
+    background-color: white;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Case details */
+#laekumised-case-noude-sisu {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    min-height: 4rem;
+    overflow-y: auto;
+}
+
+#laekumised-case-menetluse-kpv {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    font-family: var(--font-family-mono);
+}
+
+/* Financial items color coding */
+#pohi-noue-laekumine,
+#tasu-laekumine,
+#kokku-laekumine {
+    color: var(--primary-color);
+}
+
+#kokku-algne,
+#kokku-laekumine,
+#kokku-jaak {
+    font-weight: var(--font-weight-bold);
+}
+
+#kokku-laekumine {
+    color: var(--success);
+}
+
+/* Additional info styling */
+#avalduse-laekumise-kpv,
+#menetluse-alg-kpv,
+#vanem-laps-18,
+#pool-tasust {
+    font-family: var(--font-family-mono);
+}

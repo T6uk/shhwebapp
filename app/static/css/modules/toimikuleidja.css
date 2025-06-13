@@ -1,0 +1,113 @@
+/* app/static/css/modules/toimikuleidja.css */
+/* Toimikuleidja module specific styles */
+
+/* Search fields */
+#toimikuleidja-otsing,
+#toimikuleidja-selgitus {
+    width: 100%;
+}
+
+#toimikuleidja-otsing:focus,
+#toimikuleidja-selgitus:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+    transform: scale(1.02);
+}
+
+/* Search button */
+#toimikuleidja-search-btn {
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Results table */
+#toimikuleidja-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#toimikuleidja-table-body tr {
+    transition: background-color var(--transition-fast);
+}
+
+#toimikuleidja-table-body tr:hover {
+    background-color: var(--bg-primary);
+}
+
+/* Select button */
+.toimiku-select-btn {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    font-weight: var(--font-weight-medium);
+}
+
+.toimiku-select-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.toimiku-select-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Selected row */
+.toimikuleidja-row-selected {
+    background-color: var(--primary-100) !important;
+    border-left: 3px solid var(--primary-color) !important;
+}
+
+/* Result count */
+#toimikuleidja-result-count {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+}
+
+/* Loading state */
+#toimikuleidja-loading {
+    padding: var(--space-8);
+    text-align: center;
+}
+
+#toimikuleidja-loading .animate-spin {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--primary-color);
+    border-top-color: transparent;
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+/* States styling */
+#toimikuleidja-initial,
+#toimikuleidja-empty {
+    padding: var(--space-8);
+    text-align: center;
+}
+
+#toimikuleidja-initial i,
+#toimikuleidja-empty i {
+    font-size: 3rem;
+    margin-bottom: var(--space-4);
+    opacity: 0.5;
+}
+
+#toimikuleidja-initial h3,
+#toimikuleidja-empty h3 {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+#toimikuleidja-initial p,
+#toimikuleidja-empty p {
+    color: var(--text-secondary);
+}

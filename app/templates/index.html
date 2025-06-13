@@ -50,18 +50,38 @@
     <!-- 1. Base Variables - MUST BE FIRST -->
     <link rel="stylesheet" href="{{ versioned_static('css/base-variables.css') }}">
 
-    <!-- 2. Main Styles - Core component definitions -->
-    <link rel="stylesheet" href="{{ versioned_static('css/styles.css') }}">
+    <!-- 2. Base Reset - Foundation styles -->
+    <link rel="stylesheet" href="{{ versioned_static('css/base-reset.css') }}">
 
-    <!-- 3. Compact UI - Alternative component system -->
-    <link rel="stylesheet" href="{{ versioned_static('css/compact-ui.css') }}">
+    <!-- 3. Core Layout -->
+    <link rel="stylesheet" href="{{ versioned_static('css/layout.css') }}">
 
-    <!-- 4. Custom App Styles - App-specific enhancements -->
-    <link rel="stylesheet" href="{{ versioned_static('css/custom.css') }}">
+    <!-- 4. Components -->
+    <link rel="stylesheet" href="{{ versioned_static('css/components.css') }}">
 
-    <!-- 5. Module-specific styles (load last to allow overrides) -->
-    <link rel="stylesheet" href="{{ versioned_static('css/koondaja.css') }}">
-    <link rel="stylesheet" href="{{ versioned_static('css/laekumised.css') }}">
+    <!-- 5. AG Grid Theme -->
+    <link rel="stylesheet" href="{{ versioned_static('css/ag-grid-theme.css') }}">
+
+    <!-- 6. Modals -->
+    <link rel="stylesheet" href="{{ versioned_static('css/modals.css') }}">
+
+    <!-- 7. Animations -->
+    <link rel="stylesheet" href="{{ versioned_static('css/animations.css') }}">
+
+    <!-- 8. Utilities -->
+    <link rel="stylesheet" href="{{ versioned_static('css/utilities.css') }}">
+
+    <!-- 9. Module-specific styles -->
+    <link rel="stylesheet" href="{{ versioned_static('css/modules/koondaja.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/modules/laekumised.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/modules/tagastused.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/modules/toimikuleidja.css') }}">
+
+    <!-- 10. Dark Mode - Load after all component styles -->
+    <link rel="stylesheet" href="{{ versioned_static('css/dark-mode.css') }}">
+
+    <!-- 11. Responsive - Load last to ensure media queries take precedence -->
+    <link rel="stylesheet" href="{{ versioned_static('css/responsive.css') }}">
 
     <script>
         // Check for dark mode preference and apply immediately to prevent flash

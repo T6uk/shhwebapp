@@ -1,0 +1,176 @@
+/* app/static/css/modals.css */
+/* All modal styling */
+
+/* Base modal styles */
+.modal-content {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    border: 1px solid var(--border-primary);
+    padding: var(--space-6);
+}
+
+/* Column visibility modal */
+#column-modal {
+    z-index: var(--z-modal);
+}
+
+#column-checkboxes {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Save filter modal */
+#save-filter-modal {
+    z-index: var(--z-modal);
+}
+
+/* Virtual file modal */
+#virtuaaltoimik-modal {
+    z-index: var(--z-modal);
+}
+
+#files-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Document templates modal */
+#document-templates-modal {
+    z-index: var(--z-modal);
+}
+
+/* Koondaja modal */
+#koondaja-modal {
+    z-index: var(--z-modal);
+}
+
+/* Koondaja loading modal */
+#koondaja-loading-modal {
+    z-index: var(--z-modal-high);
+}
+
+/* Toimikuleidja modal */
+#toimikuleidja-modal {
+    z-index: calc(var(--z-modal) + 20);
+}
+
+/* Tagastused modal */
+#tagastused-modal {
+    z-index: var(--z-modal);
+}
+
+/* Laekumised modal */
+#laekumised-modal {
+    z-index: calc(var(--z-modal) + 50);
+}
+
+/* Database column selector modal */
+#db-column-selector-modal {
+    z-index: calc(var(--z-modal) + 10);
+}
+
+/* Modal backdrop */
+[id$="-backdrop"] {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+/* Modal close button */
+[id^="close-"] {
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: var(--space-2);
+}
+
+[id^="close-"]:hover {
+    color: var(--text-primary);
+}
+
+/* Modal headers */
+.modal-content > div:first-child {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-4);
+    margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-4) calc(-1 * var(--space-6));
+    border-bottom: 1px solid var(--border-primary);
+}
+
+/* Empty states in modals */
+[id$="-empty-state"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+[id$="-empty-state"] i {
+    font-size: 3rem;
+    margin-bottom: var(--space-4);
+    opacity: 0.5;
+}
+
+[id$="-empty-state"] h3 {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+/* Error states in modals */
+[id$="-error-state"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    text-align: center;
+}
+
+[id$="-error-state"] i {
+    font-size: 3rem;
+    margin-bottom: var(--space-4);
+    color: var(--danger);
+}
+
+/* Loading states in modals */
+[id$="-loading"] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-8);
+}
+
+/* Table styling within modals */
+.modal-content table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modal-content thead th {
+    text-align: left;
+    font-weight: var(--font-weight-semibold);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border-primary);
+    background-color: var(--bg-primary);
+}
+
+.modal-content tbody td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border-primary);
+    font-size: var(--font-size-base);
+}
+
+.modal-content tbody tr:hover {
+    background-color: var(--bg-primary);
+}

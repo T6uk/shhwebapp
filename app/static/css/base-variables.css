@@ -8,6 +8,7 @@
     --primary-light: #dbeafe;
     --primary-50: #eff6ff;
     --primary-100: #dbeafe;
+    --primary-200: #bfdbfe;
     --primary-500: #3b82f6;
     --primary-600: #2563eb;
     --primary-700: #1d4ed8;
@@ -110,6 +111,7 @@
 
     /* Typography */
     --font-family-base: 'Inter', system-ui, sans-serif;
+    --font-family-mono: 'Courier New', Consolas, monospace;
     --font-weight-normal: 400;
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
@@ -125,7 +127,6 @@
 }
 
 /* Dynamic Color Context Variables */
-/* These change based on light/dark mode */
 :root {
     --bg-primary: var(--light-bg);
     --bg-surface: var(--light-surface);
@@ -149,20 +150,4 @@
     --text-secondary: var(--dark-text-secondary);
     --text-muted: var(--dark-text-muted);
     --shadow-context: var(--shadow-dark-md);
-}
-
-/* Legacy variable mappings for backward compatibility */
-:root {
-    --secondary-color: var(--text-secondary);
-    --card-bg: var(--bg-surface);
-    --card-border: var(--border-primary);
-    --border-light: var(--border-primary);
-    --border-dark: var(--border-strong);
-    --dark-card-bg: var(--dark-surface);
-    --dark-card-border: var(--dark-border);
-    --dark-text-primary: var(--dark-text-primary);
-    --dark-text-secondary: var(--dark-text-secondary);
-    --dark-border: var(--dark-border);
-    --dark-hover: var(--dark-surface-strong);
-    --dark-input-bg: var(--dark-surface-strong);
 }
