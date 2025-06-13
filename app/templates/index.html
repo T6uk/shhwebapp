@@ -47,116 +47,40 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Custom Styles -->
+    <!-- 1. Base Variables - MUST BE FIRST -->
+    <link rel="stylesheet" href="{{ versioned_static('css/base-variables.css') }}">
+
+    <!-- 2. Main Styles - Core component definitions -->
     <link rel="stylesheet" href="{{ versioned_static('css/styles.css') }}">
-    <link rel="stylesheet" href="{{ versioned_static('css/custom.css') }}">
+
+    <!-- 3. Compact UI - Alternative component system -->
     <link rel="stylesheet" href="{{ versioned_static('css/compact-ui.css') }}">
 
-    <style>
-        /* Additional responsive CSS utilities */
-        @media (max-width: 480px) {
-            .xs\:inline-block {
-                display: inline-block;
-            }
+    <!-- 4. Custom App Styles - App-specific enhancements -->
+    <link rel="stylesheet" href="{{ versioned_static('css/custom.css') }}">
 
-            .xs\:hidden {
-                display: none;
-            }
-        }
-
-        /* Optimize dropdown positioning for mobile */
-        @media (max-width: 640px) {
-            .dropdown-menu {
-                position: fixed;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                top: auto;
-                margin: 0;
-                width: 100%;
-                max-height: 80vh;
-                border-radius: 1rem 1rem 0 0;
-                box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-                z-index: 50;
-            }
-
-            .filter-row {
-                margin-bottom: 0.75rem;
-            }
-
-            .compact-filter-remove-btn {
-                align-self: flex-end;
-            }
-        }
-
-        /* Larger screen optimizations */
-        @media (min-width: 1280px) {
-            #table-container {
-                min-height: 600px;
-            }
-
-            .container {
-                max-width: 1400px;
-            }
-        }
-
-        /* Make buttons more compact on mobile but keep them usable */
-        @media (max-width: 640px) {
-            .compact-btn {
-                padding-left: 0.5rem !important;
-                padding-right: 0.5rem !important;
-                min-width: 2rem;
-            }
-        }
-
-        /* Search bar specific styles */
-        .search-bar .compact-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-        }
-
-        .search-bar .compact-btn {
-            height: 100%;
-            min-width: 32px;
-        }
-    </style>
+    <!-- 5. Module-specific styles (load last to allow overrides) -->
+    <link rel="stylesheet" href="{{ versioned_static('css/koondaja.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/laekumised.css') }}">
 
     <script>
         // Check for dark mode preference and apply immediately to prevent flash
         (function () {
-            if (localStorage.getItem('darkMode') === 'true') {
+            const isDarkMode = localStorage.getItem('darkMode') === 'true' ||
+                document.documentElement.getAttribute('data-theme') === 'dark';
+
+            if (isDarkMode) {
                 document.documentElement.classList.add('dark');
                 document.body.classList.add('dark-mode');
-                document.body.style.backgroundColor = '#111827';
-                document.body.style.color = '#f3f4f6';
 
+                // Apply immediate dark mode styles to prevent flash
                 const style = document.createElement('style');
                 style.textContent = `
-                .card, .dropdown-menu, .loading-card, .filter-panel, .modal-content {
-                    background-color: #1f2937 !important;
-                    border-color: #374151 !important;
-                    color: #f3f4f6 !important;
-                }
-                .btn-secondary:not(.bg-yellow-500):not(.bg-red-500):not(.bg-green-500) {
-                    background-color: #374151 !important;
-                    color: #f3f4f6 !important;
-                    border-color: #4b5563 !important;
-                }
-                input, select, .input-control, .filter-select, .filter-input {
-                    background-color: #374151 !important;
-                    color: #f3f4f6 !important;
-                    border-color: #4b5563 !important;
-                }
-                .loading-overlay {
-                    background-color: rgba(17, 24, 39, 0.8) !important;
-                }
-                .ag-theme-alpine {
-                    --ag-background-color: #1f2937;
-                    --ag-header-background-color: #111827;
-                    --ag-foreground-color: #f3f4f6;
-                }
-            `;
+                    body {
+                        background-color: #0f172a !important;
+                        color: #f1f5f9 !important;
+                    }
+                `;
                 document.head.appendChild(style);
             }
         })();
@@ -898,6 +822,11 @@
                     <span>Tagastused</span>
                 </button>
 
+                <button id="laekumised-btn" class="compact-btn btn-secondary" title="Ava laekumiste töötlus">
+                    <i class="fas fa-coins text-xs mr-1"></i>
+                    <span>Laekumised</span>
+                </button>
+
                 <!-- Utility buttons -->
                 <button id="clear-koondaja-data-btn" class="compact-btn btn-secondary">
                     <i class="fas fa-trash text-xs mr-1"></i>
@@ -1221,6 +1150,397 @@
     </div>
 </div>
 
+<!-- Enhanced Laekumised Modal -->
+<div id="laekumised-modal" class="fixed inset-0 flex items-center justify-center z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" id="laekumised-backdrop"></div>
+
+    <!-- Modal takes 90% of screen with modern design -->
+    <div class="modal-content z-10 relative flex flex-col bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700"
+         style="width: 90vw; height: 90vh; max-width: 90vw; max-height: 90vh;">
+
+        <!-- Enhanced Header with Action Buttons -->
+        <div class="flex justify-between items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-xl flex-shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white bg-opacity-20 rounded-lg p-2">
+                    <i class="fas fa-coins text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold">Laekumiste Töötlus</h3>
+                    <div class="flex items-center space-x-2 text-blue-100">
+                        <span class="text-sm">Isik</span>
+                        <span id="laekumised-person-counter"
+                              class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-semibold">1 / 1</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons in Header -->
+            <div class="flex items-center space-x-3">
+                <button id="laekumised-ok-btn"
+                        class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl">
+                    <i class="fas fa-check"></i>
+                    <span class="hidden sm:inline">Kinnita & Jätka</span>
+                    <span class="sm:hidden">OK</span>
+                </button>
+
+                <button id="laekumised-skip-btn"
+                        class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl">
+                    <i class="fas fa-forward"></i>
+                    <span class="hidden sm:inline">Jäta Vahele</span>
+                    <span class="sm:hidden">Skip</span>
+                </button>
+
+                <button id="close-laekumised-modal"
+                        class="text-white hover:text-gray-200 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-2 transition-all duration-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Enhanced Content Area -->
+        <div id="laekumised-content"
+             class="bg-gray-50 dark:bg-gray-800 flex-grow overflow-auto p-6 min-h-0 relative">
+
+            <!-- Loading indicator -->
+            <div id="laekumised-loading"
+                 class="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 bg-opacity-95 hidden z-10">
+                <div class="bg-white dark:bg-gray-900 rounded-xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div>
+                            <div class="text-lg font-semibold text-gray-900 dark:text-gray-100">Laadin andmeid...</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Palun oodake</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
+
+                <!-- LEFT SECTION: Person & Financial Info (5 columns) -->
+                <div class="xl:col-span-5 space-y-6">
+
+                    <!-- Person Information Card -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                                <i class="fas fa-user-circle mr-2 text-blue-600"></i>
+                                Isiku Andmed
+                            </h4>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Toimiku
+                                            Number</label>
+                                        <div id="laekumised-toimik"
+                                             class="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Võlgnik</label>
+                                        <div id="laekumised-volgnik"
+                                             class="text-sm font-medium text-gray-800 dark:text-gray-200"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Sissenõudja</label>
+                                        <div id="laekumised-sissenoudja"
+                                             class="text-sm text-gray-700 dark:text-gray-300"></div>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Asja
+                                            Liik</label>
+                                        <div id="laekumised-asja-liik"
+                                             class="text-sm text-gray-700 dark:text-gray-300"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Staatus</label>
+                                        <div id="laekumised-staatus"
+                                             class="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Märkused</label>
+                                        <div id="laekumised-markused"
+                                             class="text-sm text-gray-700 dark:text-gray-300 max-h-16 overflow-y-auto"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Breakdown Card -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                                <i class="fas fa-chart-pie mr-2 text-green-600"></i>
+                                Finantsiline Jaotus
+                            </h4>
+                        </div>
+                        <div class="p-6">
+                            <!-- Financial Table -->
+                            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Komponent
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Algne
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Laekumine
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Jääk
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            Põhinõue
+                                        </td>
+                                        <td id="pohi-noue-algne"
+                                            class="px-4 py-3 text-sm font-mono text-center text-gray-900 dark:text-gray-100">
+                                            0,00 €
+                                        </td>
+                                        <td id="pohi-noue-laekumine"
+                                            class="px-4 py-3 text-sm font-mono text-center text-blue-600 dark:text-blue-400">
+                                            0,00 €
+                                        </td>
+                                        <td id="pohi-noue-jaak"
+                                            class="px-4 py-3 text-sm font-mono text-center text-gray-900 dark:text-gray-100">
+                                            0,00 €
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">Tasu
+                                            ja täitekulu
+                                        </td>
+                                        <td id="tasu-algne"
+                                            class="px-4 py-3 text-sm font-mono text-center text-gray-900 dark:text-gray-100">
+                                            0,00 €
+                                        </td>
+                                        <td id="tasu-laekumine"
+                                            class="px-4 py-3 text-sm font-mono text-center text-blue-600 dark:text-blue-400">
+                                            0,00 €
+                                        </td>
+                                        <td id="tasu-jaak"
+                                            class="px-4 py-3 text-sm font-mono text-center text-gray-900 dark:text-gray-100">
+                                            0,00 €
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-green-50 dark:bg-green-900 dark:bg-opacity-20 font-semibold">
+                                        <td class="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">Kokku
+                                        </td>
+                                        <td id="kokku-algne"
+                                            class="px-4 py-3 text-sm font-mono font-bold text-center text-gray-900 dark:text-gray-100">
+                                            0,00 €
+                                        </td>
+                                        <td id="kokku-laekumine"
+                                            class="px-4 py-3 text-sm font-mono font-bold text-center text-green-600 dark:text-green-400">
+                                            0,00 €
+                                        </td>
+                                        <td id="kokku-jaak"
+                                            class="px-4 py-3 text-sm font-mono font-bold text-center text-gray-900 dark:text-gray-100">
+                                            0,00 €
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Additional Info -->
+                            <div class="mt-4 grid grid-cols-2 gap-4 text-xs">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Avalduse laekumine:</span>
+                                        <span id="avalduse-laekumise-kpv"
+                                              class="font-mono text-gray-900 dark:text-gray-100">-</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Menetluse algus:</span>
+                                        <span id="menetluse-alg-kpv" class="font-mono text-gray-900 dark:text-gray-100">-</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Vanem laps 18:</span>
+                                        <span id="vanem-laps-18"
+                                              class="font-mono text-gray-900 dark:text-gray-100">-</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Pool tasust:</span>
+                                        <span id="pool-tasust"
+                                              class="font-mono text-gray-900 dark:text-gray-100">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MIDDLE SECTION: Distribution Method Only (4 columns) -->
+                <div class="xl:col-span-4 space-y-6">
+
+                    <!-- Payment Total Card -->
+                    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white overflow-hidden">
+                        <div class="p-6 text-center">
+                            <div class="bg-white bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-euro-sign text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-semibold mb-2">Laekus Kokku</h4>
+                            <div id="laekumised-kokku-summa" class="text-3xl font-bold mb-2">0,00 €</div>
+                            <div class="text-green-100 text-sm">
+                                Kuupäeval laekunud: <span id="kpv-laekunud-summa" class="font-semibold">0,00 €</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribution Method Card -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                                <i class="fas fa-sliders-h mr-2 text-purple-600"></i>
+                                Jaotuse Meetod
+                            </h4>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 gap-3">
+                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                                    <input type="radio" name="distribution-method" value="proportional"
+                                           class="h-4 w-4 text-blue-600" checked>
+                                    <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Proportsionaalselt</span>
+                                </label>
+                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                                    <input type="radio" name="distribution-method" value="proportional_fixed"
+                                           class="h-4 w-4 text-blue-600">
+                                    <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Proportsionaalselt paika</span>
+                                </label>
+                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                                    <input type="radio" name="distribution-method" value="principal_first"
+                                           class="h-4 w-4 text-blue-600">
+                                    <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Põhinõue enne</span>
+                                </label>
+                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                                    <input type="radio" name="distribution-method" value="executor_fee_first"
+                                           class="h-4 w-4 text-blue-600">
+                                    <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Täituritasu enne</span>
+                                </label>
+                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                                    <input type="radio" name="distribution-method" value="only_maintenance"
+                                           class="h-4 w-4 text-blue-600">
+                                    <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Üksnes al.tasu</span>
+                                </label>
+                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                                    <input type="radio" name="distribution-method" value="custom"
+                                           class="h-4 w-4 text-blue-600">
+                                    <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Oma äranägemise järgi</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT SECTION: Case Details & Protection Calculation (3 columns) -->
+                <div class="xl:col-span-3 space-y-6">
+
+                    <!-- Case Details Card -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                                <i class="fas fa-file-alt mr-2 text-gray-600"></i>
+                                Toimiku Detailid
+                            </h4>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Nõude
+                                    Sisu</label>
+                                <div id="laekumised-case-noude-sisu"
+                                     class="text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 rounded-lg p-3 min-h-[4rem] overflow-y-auto"></div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Menetluse
+                                    Algus</label>
+                                <div id="laekumised-case-menetluse-kpv"
+                                     class="text-sm font-mono text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 rounded-lg p-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Protection Calculation Card (Moved from middle section) -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                                <i class="fas fa-shield-alt mr-2 text-yellow-600"></i>
+                                Kaitse Kalkulatsioon
+                            </h4>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Elatusmiinimum</label>
+                                    <select id="elatus-miinimum-select"
+                                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="0">Ei kohaldata</option>
+                                        <option value="292">292 €</option>
+                                        <option value="325">325 €</option>
+                                        <option value="400">400 €</option>
+                                        <option value="500">500 €</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ülalpeetavad</label>
+                                    <select id="ulalpeetavad-select"
+                                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="0">0</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9</option>
+                                        <option value="10">10</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900 dark:to-orange-900 dark:bg-opacity-20 rounded-lg p-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-700 dark:text-gray-300">Kasutamiseks
+                                            jääb:
+                                        </div>
+                                        <div id="remaining-amount"
+                                             class="text-2xl font-bold text-yellow-700 dark:text-yellow-400 font-mono">
+                                            0,00 €
+                                        </div>
+                                    </div>
+                                    <button id="koik-tagasi-btn"
+                                            class="bg-white bg-opacity-80 hover:bg-opacity-100 text-yellow-800 dark:text-yellow-200 dark:bg-gray-800 dark:bg-opacity-80 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg">
+                                        <i class="fas fa-undo mr-2"></i>
+                                        Tagasi
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
 <div id="koondaja-loading-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
     <div class="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm"></div>
     <div class="modal-content w-11/12 max-w-md z-10 relative bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6">
@@ -1253,7 +1573,7 @@
     </div>
 </div>
 
-<!-- Application Script -->
+<!-- Application Scripts - Load in dependency order -->
 <script src="{{ versioned_static('js/global-bridge.js') }}"></script>
 <script src="{{ versioned_static('js/app.js') }}"></script>
 <script src="{{ versioned_static('js/modules/core.js') }}"></script>
@@ -1269,14 +1589,13 @@
 <script src="{{ versioned_static('js/koosta_dokument.js') }}"></script>
 <script src="{{ versioned_static('js/version-checker.js') }}"></script>
 <script src="{{ versioned_static('js/toimik_buttons_fix.js') }}"></script>
-<script src="{{ versioned_static('js/deposit.js') }}"></script>
-<link rel="stylesheet" href="{{ versioned_static('css/deposit.css') }}">
-<link rel="stylesheet" href="{{ versioned_static('css/koondaja.css') }}">
+
 <!-- Koondaja Modular Architecture - Load in exact order -->
 <script src="{{ versioned_static('js/koondaja-shared.js') }}"></script>
 <script src="{{ versioned_static('js/koondaja-grid.js') }}"></script>
 <script src="{{ versioned_static('js/toimikuleidja.js') }}"></script>
 <script src="{{ versioned_static('js/tagastused.js') }}"></script>
+<script src="{{ versioned_static('js/laekumised.js') }}"></script>
 <script src="{{ versioned_static('js/koondaja-validation.js') }}"></script>
 <script src="{{ versioned_static('js/koondaja-main.js') }}"></script>
 
@@ -1349,7 +1668,6 @@
         // Call resizeTableContainer once layout is ready
         setTimeout(resizeTableContainer, 100);
     });
-</script>
 </script>
 </body>
 </html>

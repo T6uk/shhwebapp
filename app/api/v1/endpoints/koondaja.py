@@ -926,3 +926,330 @@ async def fetch_isikukoodid(
     except Exception as e:
         logger.exception(f"Error fetching isikukoodid: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching isikukoodid: {str(e)}")
+
+
+@router.post("/fetch-person-data")
+async def fetch_person_data(
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Fetch detailed person data for Laekumised modal"""
+    try:
+        body = await request.json()
+        toimiku_nr = body.get('toimiku_nr', '').strip()
+
+        logger.info(f"Fetching person data for toimiku_nr: '{toimiku_nr}'")
+
+        if not toimiku_nr:
+            logger.warning("No toimiku_nr provided in request")
+            return {
+                "success": False,
+                "message": "Toimiku number is required",
+                "data": {}
+            }
+
+        def safe_date_format(value):
+            """Safely format date value to ISO string"""
+            if value is None:
+                return ''
+            try:
+                if hasattr(value, 'isoformat'):
+                    return value.isoformat()
+                elif hasattr(value, 'strftime'):
+                    return value.strftime('%Y-%m-%d')
+                elif isinstance(value, str):
+                    return value.strip()
+                else:
+                    return str(value) if value else ''
+            except Exception as e:
+                logger.debug(f"Error formatting date value '{value}': {e}")
+                return ''
+
+        def safe_float(value):
+            """Safely convert value to float"""
+            if value is None:
+                return 0.0
+            try:
+                if isinstance(value, (int, float)):
+                    return float(value)
+                elif isinstance(value, str):
+                    # Handle Estonian format
+                    cleaned = value.strip().replace(' ', '').replace(',', '.')
+                    return float(cleaned) if cleaned else 0.0
+                else:
+                    return float(value)
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Error converting value '{value}' to float: {e}")
+                return 0.0
+
+        def safe_string(value):
+            """Safely convert value to string"""
+            if value is None:
+                return ''
+            try:
+                return str(value).strip()
+            except Exception as e:
+                logger.debug(f"Error converting value '{value}' to string: {e}")
+                return ''
+
+        # Query to get all required person and case information including financial breakdown
+        query = text("""
+            SELECT 
+                "toimiku_nr",
+                "võlgnik",
+                "sissenõudja_eesnimi",
+                "sissenõudja_perenimi", 
+                "sissenõudja_kood",
+                "asjas_sõnades",
+                "nõude_sisu",
+                "staatus",
+                "märkused",
+                "rmp_märkused",
+                "menetluse_alg_kpv",
+                "võla_jääk",
+                "võlgniku_kood",
+                "nõude_suurus",
+                "tm_alust_tasu_koos_km",
+                "lisatasu_koos_km",
+                "täituritasu_suurus",
+                "tasu_ja_täitekulu_jääk",
+                "avalduse_laekumise_kpv",
+                "vanem_laps_18_kpv",
+                "vabatahtlikku_täitmise_lõpp_kpv",
+                "pool_tasust"
+            FROM "taitur_data"
+            WHERE "toimiku_nr" = :toimiku_nr
+            LIMIT 1
+        """)
+
+        logger.debug(f"Executing query for toimiku_nr: {toimiku_nr}")
+        result = await db.execute(query, {"toimiku_nr": toimiku_nr})
+        row = result.fetchone()
+
+        if not row:
+            logger.warning(f"No data found for toimiku_nr: {toimiku_nr}")
+            # Try alternative search methods
+            alt_query = text("""
+                SELECT COUNT(*) FROM "taitur_data" WHERE "toimiku_nr" LIKE :pattern
+            """)
+            alt_result = await db.execute(alt_query, {"pattern": f"%{toimiku_nr}%"})
+            alt_count = alt_result.scalar()
+
+            logger.info(f"Alternative search found {alt_count} matches for pattern '%{toimiku_nr}%'")
+
+            return {
+                "success": True,
+                "message": f"No exact match found for toimiku number: {toimiku_nr}",
+                "data": {},
+                "debug_info": {
+                    "requested_toimiku": toimiku_nr,
+                    "similar_matches": alt_count
+                }
+            }
+
+        logger.info(f"Found data for toimiku_nr: {toimiku_nr}")
+
+        # Convert row to dictionary with all required fields and proper type handling
+        try:
+            person_data = {
+                "toimiku_nr": safe_string(row[0]),
+                "volgnik": safe_string(row[1]),
+                "sissenoudja_eesnimi": safe_string(row[2]),
+                "sissenoudja_perenimi": safe_string(row[3]),
+                "sissenoudja_kood": safe_string(row[4]),
+                "asjas_sonades": safe_string(row[5]),
+                "noude_sisu": safe_string(row[6]),
+                "staatus": safe_string(row[7]),
+                "markused": safe_string(row[8]),
+                "rmp_markused": safe_string(row[9]),
+                "menetluse_alg_kpv": safe_date_format(row[10]),
+                "vola_jaak": safe_float(row[11]),
+                "volgniku_kood": safe_string(row[12]),
+                # Financial breakdown fields
+                "noude_suurus": safe_float(row[13]),
+                "tm_alust_tasu_koos_km": safe_float(row[14]),
+                "lisatasu_koos_km": safe_float(row[15]),
+                "taituritasu_suurus": safe_float(row[16]),
+                "tasu_ja_taitekulu_jaak": safe_float(row[17]),
+                # Additional date fields
+                "avalduse_laekumise_kpv": safe_date_format(row[18]),
+                "vanem_laps_18_kpv": safe_date_format(row[19]),
+                "vabatahtlikku_taimise_lopp_kpv": safe_date_format(row[20]),
+                "pool_tasust": safe_float(row[21])
+            }
+
+            logger.info(f"Successfully processed person data for {toimiku_nr}")
+            logger.debug(f"Person data keys: {list(person_data.keys())}")
+
+            return {
+                "success": True,
+                "data": person_data
+            }
+
+        except Exception as conversion_error:
+            logger.error(f"Error converting row data for {toimiku_nr}: {str(conversion_error)}")
+            logger.error(f"Raw row data: {row}")
+            raise
+
+    except Exception as e:
+        logger.exception(f"Error fetching person data for toimiku_nr '{toimiku_nr}': {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error fetching person data: {str(e)}",
+            "data": {},
+            "error": str(e)
+        }
+
+
+@router.post("/fetch-previous-payments")
+async def fetch_previous_payments(
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Fetch previous payment history for a toimiku (for future implementation)"""
+    try:
+        body = await request.json()
+        toimiku_nr = body.get('toimiku_nr', '').strip()
+
+        if not toimiku_nr:
+            return {
+                "success": False,
+                "message": "Toimiku number is required",
+                "data": []
+            }
+
+        logger.info(f"Fetching previous payments for toimiku_nr: {toimiku_nr}")
+
+        # For now, return empty array - this will be implemented later
+        # when payment history table structure is defined
+
+        # Future query would be something like:
+        # query = text("""
+        #     SELECT
+        #         "payment_date",
+        #         "amount",
+        #         "payment_type",
+        #         "description"
+        #     FROM "payment_history"
+        #     WHERE "toimiku_nr" = :toimiku_nr
+        #     ORDER BY "payment_date" DESC
+        #     LIMIT 50
+        # """)
+
+        return {
+            "success": True,
+            "data": [],
+            "message": "Previous payments functionality will be implemented later"
+        }
+
+    except Exception as e:
+        logger.exception(f"Error fetching previous payments: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching previous payments: {str(e)}")
+
+
+@router.post("/save-payment-distribution")
+async def save_payment_distribution(
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Save payment distribution decision (for future implementation)"""
+    try:
+        body = await request.json()
+        toimiku_nr = body.get('toimiku_nr', '').strip()
+        distribution_method = body.get('distribution_method', '')
+        elatus_minimum = body.get('elatus_minimum', 0)
+        ulalpeetavad = body.get('ulalpeetavad', 0)
+        total_amount = body.get('total_amount', 0.0)
+        remaining_amount = body.get('remaining_amount', 0.0)
+
+        if not toimiku_nr:
+            return {
+                "success": False,
+                "message": "Toimiku number is required"
+            }
+
+        logger.info(f"Saving payment distribution for toimiku_nr: {toimiku_nr}")
+        logger.info(f"Distribution method: {distribution_method}")
+        logger.info(f"Elatus minimum: {elatus_minimum}, Ulalpeetavad: {ulalpeetavad}")
+        logger.info(f"Total: {total_amount}, Remaining: {remaining_amount}")
+
+        # For now, just log the decision - actual saving will be implemented later
+        # when payment processing table structure is defined
+
+        # Future implementation would save to a payment_decisions table:
+        # INSERT INTO payment_decisions (
+        #     toimiku_nr,
+        #     distribution_method,
+        #     elatus_minimum,
+        #     ulalpeetavad,
+        #     total_amount,
+        #     remaining_amount,
+        #     processed_by,
+        #     processed_at
+        # ) VALUES (...)
+
+        return {
+            "success": True,
+            "message": f"Payment distribution recorded for {toimiku_nr}",
+            "data": {
+                "toimiku_nr": toimiku_nr,
+                "distribution_method": distribution_method,
+                "elatus_minimum": elatus_minimum,
+                "ulalpeetavad": ulalpeetavad,
+                "total_amount": total_amount,
+                "remaining_amount": remaining_amount,
+                "processed_by": current_user.username,
+                "status": "recorded"
+            }
+        }
+
+    except Exception as e:
+        logger.exception(f"Error saving payment distribution: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error saving payment distribution: {str(e)}")
+
+
+@router.get("/payment-statistics")
+async def get_payment_statistics(
+        toimiku_nr: str = None,
+        date_from: str = None,
+        date_to: str = None,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+):
+    """Get payment statistics for reporting (for future implementation)"""
+    try:
+        logger.info(f"Fetching payment statistics - toimiku: {toimiku_nr}, from: {date_from}, to: {date_to}")
+
+        # For now, return mock statistics
+        # Future implementation would query actual payment data
+
+        statistics = {
+            "total_payments": 0,
+            "total_amount": 0.0,
+            "distribution_methods": {
+                "proportional": 0,
+                "proportional_fixed": 0,
+                "principal_first": 0,
+                "executor_fee_first": 0,
+                "only_maintenance": 0,
+                "custom": 0
+            },
+            "protected_amounts": {
+                "total_protected": 0.0,
+                "average_elatus_minimum": 0.0,
+                "total_dependents": 0
+            }
+        }
+
+        return {
+            "success": True,
+            "data": statistics,
+            "message": "Payment statistics functionality will be implemented later"
+        }
+
+    except Exception as e:
+        logger.exception(f"Error fetching payment statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching payment statistics: {str(e)}")

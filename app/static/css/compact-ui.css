@@ -1,29 +1,24 @@
 /* app/static/css/compact-ui.css */
-/* Compact UI styles for improved visual design */
+/* Compact UI components using centralized variables */
 
-:root {
-    --compact-btn-height: 2rem;
-    --compact-input-height: 2rem;
-    --compact-border-radius: 0.375rem;
-    --compact-font-size: 0.8125rem;
-}
-
-/* Base button styling */
+/* Compact Button System - Alternative to standard .btn */
 .compact-btn {
     height: var(--compact-btn-height);
-    padding: 0 0.75rem;
+    padding: 0 var(--space-3);
     font-size: var(--compact-font-size);
     border-radius: var(--compact-border-radius);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-weight: 500;
-    gap: 0.375rem;
-    transition: all 0.15s ease;
+    font-weight: var(--font-weight-medium);
+    gap: var(--space-2);
+    transition: all var(--transition-fast);
     white-space: nowrap;
+    cursor: pointer;
+    border: none;
 }
 
-/* Button variations */
+/* Compact button variations */
 .compact-btn.btn-primary {
     background-color: var(--primary-color);
     color: white;
@@ -32,44 +27,60 @@
 
 .compact-btn.btn-primary:hover {
     background-color: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
 .compact-btn.btn-secondary {
-    background-color: white;
+    background-color: var(--bg-surface);
     color: var(--text-primary);
-    border: 1px solid var(--border-light);
+    border: 1px solid var(--border-primary);
 }
 
 .compact-btn.btn-secondary:hover {
-    background-color: var(--light-bg);
+    background-color: var(--bg-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .compact-btn.btn-ghost {
     background-color: transparent;
     color: var(--text-primary);
     border: none;
-    padding: 0 0.5rem;
+    padding: 0 var(--space-2);
 }
 
 .compact-btn.btn-ghost:hover {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
-.dark-mode .compact-btn.btn-ghost:hover {
+.dark-mode .compact-btn.btn-ghost:hover,
+.dark .compact-btn.btn-ghost:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Form inputs */
+/* Dark mode compact button overrides */
+.dark-mode .compact-btn.btn-secondary,
+.dark .compact-btn.btn-secondary {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.dark-mode .compact-btn.btn-secondary:hover,
+.dark .compact-btn.btn-secondary:hover {
+    background-color: var(--dark-surface-strong);
+}
+
+/* Compact Form Elements */
 .compact-input,
 .compact-select {
     height: var(--compact-input-height);
-    padding: 0 0.75rem;
+    padding: 0 var(--space-3);
     font-size: var(--compact-font-size);
     border-radius: var(--compact-border-radius);
-    border: 1px solid var(--border-light);
-    background-color: white;
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-surface);
     color: var(--text-primary);
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
 }
 
 .compact-input:focus,
@@ -79,14 +90,44 @@
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
-/* Filter specific elements */
+.dark-mode .compact-input,
+.dark-mode .compact-select,
+.dark .compact-input,
+.dark .compact-select {
+    background-color: var(--dark-surface-strong);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+/* Compact select dropdown arrow */
+.compact-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-2) center;
+    background-size: 1rem;
+    padding-right: 2rem;
+}
+
+.dark-mode .compact-select,
+.dark .compact-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Filter Components */
 .filter-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    gap: var(--space-2);
+    padding: var(--space-2);
     background-color: rgba(59, 130, 246, 0.05);
     border-radius: var(--compact-border-radius);
+    margin-bottom: var(--space-2);
+}
+
+.dark-mode .filter-row,
+.dark .filter-row {
+    background-color: rgba(59, 130, 246, 0.1);
 }
 
 .filter-field,
@@ -105,212 +146,191 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    color: #ef4444;
-    background-color: rgba(239, 68, 68, 0.1);
-    transition: all 0.15s ease;
+    border-radius: var(--radius-full);
+    color: var(--danger);
+    background-color: var(--danger-bg);
+    transition: all var(--transition-fast);
+    border: none;
+    cursor: pointer;
 }
 
 .compact-filter-remove-btn:hover {
-    background-color: rgba(239, 68, 68, 0.2);
+    background-color: var(--danger-dark);
+    color: white;
 }
 
-/* Compact dropdown */
+.dark-mode .compact-filter-remove-btn,
+.dark .compact-filter-remove-btn {
+    background-color: var(--danger-dark-bg);
+}
+
+/* Compact Dropdown System */
 .compact-dropdown {
     min-width: 200px;
-    padding: 0.5rem;
+    padding: var(--space-2);
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-context);
 }
 
 .compact-dropdown .dropdown-title {
     font-size: var(--compact-font-size);
-    padding: 0.375rem 0.5rem;
-    margin-bottom: 0.25rem;
-    border-bottom: 1px solid var(--border-light);
+    font-weight: var(--font-weight-semibold);
+    padding: var(--space-2) var(--space-2);
+    margin-bottom: var(--space-1);
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--text-primary);
 }
 
 .compact-dropdown .dropdown-item {
     font-size: var(--compact-font-size);
-    padding: 0.375rem 0.5rem;
+    padding: var(--space-2) var(--space-2);
     margin-bottom: 0.125rem;
     border-radius: var(--compact-border-radius);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-primary);
+}
+
+.compact-dropdown .dropdown-item:hover {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
 }
 
 .compact-dropdown .dropdown-divider {
-    margin: 0.25rem 0;
+    margin: var(--space-1) 0;
+    height: 1px;
+    background-color: var(--border-primary);
 }
 
 .compact-item i {
     font-size: 0.75rem;
     width: 1rem;
     text-align: center;
+    color: var(--text-secondary);
 }
 
-/* Active filters */
+.compact-dropdown .dropdown-item:hover .compact-item i {
+    color: var(--primary-color);
+}
+
+/* Dark mode dropdown overrides */
+.dark-mode .compact-dropdown,
+.dark .compact-dropdown {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-lg);
+}
+
+.dark-mode .compact-dropdown .dropdown-title,
+.dark .compact-dropdown .dropdown-title {
+    color: var(--dark-text-primary);
+    border-bottom-color: var(--dark-border);
+}
+
+.dark-mode .compact-dropdown .dropdown-item,
+.dark .compact-dropdown .dropdown-item {
+    color: var(--dark-text-primary);
+}
+
+.dark-mode .compact-dropdown .dropdown-item:hover,
+.dark .compact-dropdown .dropdown-item:hover {
+    background-color: var(--dark-surface-strong);
+    color: var(--primary-color);
+}
+
+/* Active Filters Display */
 #active-filters-container {
     border-radius: var(--compact-border-radius);
     background-color: rgba(59, 130, 246, 0.05);
+    padding: var(--space-2) var(--space-3);
 }
 
-/* Compact checkbox items */
+.dark-mode #active-filters-container,
+.dark #active-filters-container {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Compact Checkbox Items */
 .compact-checkbox-item {
     margin: 0.125rem 0;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--compact-border-radius);
+    display: flex;
+    align-items: center;
+    transition: background-color var(--transition-fast);
+}
+
+.compact-checkbox-item:hover {
+    background-color: var(--bg-primary);
+}
+
+.dark-mode .compact-checkbox-item:hover,
+.dark .compact-checkbox-item:hover {
+    background-color: var(--dark-surface-strong);
 }
 
 .compact-checkbox-item .column-toggle {
     width: 1rem;
     height: 1rem;
+    margin-right: var(--space-2);
 }
 
-/* Dark mode adaptations */
-.dark-mode .compact-btn.btn-secondary {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #f3f4f6;
-}
-
-.dark-mode .compact-btn.btn-secondary:hover {
-    background-color: #374151;
-}
-
-.dark-mode .compact-input,
-.dark-mode .compact-select {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #f3f4f6;
-}
-
-.dark-mode .filter-row {
-    background-color: rgba(59, 130, 246, 0.1);
-}
-
-.dark-mode #active-filters-container {
-    background-color: rgba(59, 130, 246, 0.1);
-}
-
-/* Compact header */
+/* Compact Header */
 #compact-header {
     height: 40px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
 }
 
-/* Responsive adjustments */
+.dark-mode #compact-header,
+.dark #compact-header {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+/* Responsive Compact UI */
 @media (max-width: 640px) {
+    .compact-btn {
+        padding: 0 var(--space-2);
+        min-width: 2rem;
+    }
+
     .compact-btn span {
         display: none;
     }
 
-    .compact-btn {
-        padding: 0 0.5rem;
+    /* Keep some critical button texts visible */
+    #edit-mode-btn span,
+    #apply-filters span,
+    #clear-filters span {
+        display: inline-block;
     }
 
     .filter-row {
         flex-wrap: wrap;
+        gap: var(--space-2);
     }
 
     .filter-field,
     .filter-operator,
     .filter-value-container {
         flex: 1 1 100%;
+        min-width: 0;
     }
 
     .compact-filter-remove-btn {
         position: absolute;
-        right: 0.5rem;
-        top: 0.5rem;
+        right: var(--space-2);
+        top: var(--space-2);
     }
-}
-
-/* AG Grid adjustments for compact UI */
-.ag-theme-alpine {
-    --ag-header-height: 32px;
-    --ag-row-height: 32px;
-    --ag-font-size: 12px;
-    --ag-font-family: 'Inter', sans-serif;
-}
-
-/* Toolbar layout */
-.toolbar {
-    flex-wrap: wrap;
-}
-
-@media (max-width: 768px) {
-    .toolbar {
-        gap: 0.5rem;
-    }
-
-    .toolbar > div {
-        width: 100%;
-    }
-
-    .search-bar {
-        margin-bottom: 0.5rem;
-        max-width: none;
-    }
-}
-
-/* Dropdown position adjustments */
-.dropdown {
-    position: relative;
-}
-
-.dropdown-menu {
-    right: 0;
-    left: auto;
-}
-
-#links-dropdown-menu {
-    width: 240px;
-}
-
-/* Fixed position tooltips */
-.tooltip {
-    position: fixed;
-}
-
-/* Remove the original fixed button since we moved it */
-#expand-collapse-controls {
-    display: none;
-}
-
-/* Ensure dropdown menus don't get cut off */
-.dropdown-menu {
-    max-height: 85vh;
-    overflow-y: auto;
-}
-
-/* Make buttons even more compact if needed */
-@media (max-width: 640px) {
-    .compact-btn {
-        padding: 0 0.5rem;
-    }
-
-    .compact-btn span {
-        display: none;
-    }
-
-    /* But keep some critical button texts */
-    #edit-mode-btn span {
-        display: inline-block;
-    }
-}
-
-/* Improve dropdown layering */
-.dropdown-menu {
-    z-index: 30;
-}
-
-#user-dropdown-menu {
-    z-index: 40;
-}
-
-.search-bar .compact-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.search-bar .compact-btn {
-    height: 100%;
-    min-width: 32px;
 }
 
 @media (max-width: 480px) {
@@ -323,217 +343,62 @@
     }
 }
 
-/* Optimize dropdown positioning for mobile */
-@media (max-width: 640px) {
-    .dropdown-menu {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        margin: 0;
-        width: 100%;
-        max-height: 80vh;
-        border-radius: 1rem 1rem 0 0;
-        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 50;
-    }
-
-    .filter-row {
-        margin-bottom: 0.75rem;
-    }
-
-    .compact-filter-remove-btn {
-        align-self: flex-end;
-    }
-}
-
-/* Larger screen optimizations */
-@media (min-width: 1280px) {
-    #table-container {
-        min-height: 600px;
-    }
-
-    .container {
-        max-width: 1400px;
-    }
-}
-
-/* Make buttons more compact on mobile but keep them usable */
-@media (max-width: 640px) {
-    .compact-btn {
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-        min-width: 2rem;
-    }
-}
-
-/* Dropdown functionality styles */
-.dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 1000;
-    display: none;
-    min-width: 12rem;
-    padding: 0.5rem 0;
-    margin: 0.125rem 0 0;
-    font-size: 0.875rem;
-    color: #212529;
-    text-align: left;
-    background-color: #fff;
-    background-clip: padding-box;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 0.375rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
-}
-
-.dropdown-menu.show {
-    display: block;
-}
-
-.dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.375rem 1rem;
-    clear: both;
-    font-weight: 400;
-    color: #212529;
-    text-decoration: none;
-    white-space: nowrap;
-    background-color: transparent;
-    border: 0;
-    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
-    cursor: pointer;
-}
-
-.dropdown-item:hover,
-.dropdown-item:focus {
-    color: #1e2125;
-    background-color: #e9ecef;
-}
-
-.dropdown-divider {
-    height: 0;
-    margin: 0.5rem 0;
-    overflow: hidden;
-    border-top: 1px solid rgba(0, 0, 0, 0.15);
-}
-
-/* Dark mode dropdown styles */
-.dark-mode .dropdown-menu {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #f3f4f6;
-}
-
-.dark-mode .dropdown-item {
-    color: #f3f4f6;
-}
-
-.dark-mode .dropdown-item:hover,
-.dark-mode .dropdown-item:focus {
-    background-color: #374151;
-    color: #ffffff;
-}
-
-.dark-mode .dropdown-divider {
-    border-top-color: #374151;
-}
-
-/* User dropdown specific positioning */
-#user-dropdown-menu {
-    right: 0;
-    left: auto;
-    min-width: 10rem;
-}
-
-/* Ensure dropdown is above other elements */
-.dropdown-menu {
-    z-index: 1050;
-}
-
-/* Fix for mobile dropdown positioning */
-@media (max-width: 640px) {
-    .dropdown-menu {
-        position: fixed;
-        left: 1rem;
-        right: 1rem;
-        top: auto;
-        width: auto;
-        min-width: auto;
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-
-    #user-dropdown-menu {
-        right: 1rem;
-        left: auto;
-        width: auto;
-        min-width: 12rem;
-    }
-}
-
-/* Edit mode button styles */
+/* Special compact button states */
 .edit-mode-inactive {
-    background-color: #22c55e !important; /* Green-500 */
-    border-color: #22c55e !important;
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
     color: white !important;
 }
 
 .edit-mode-inactive:hover {
-    background-color: #16a34a !important; /* Green-600 */
-    border-color: #16a34a !important;
+    background-color: var(--success-dark) !important;
+    border-color: var(--success-dark) !important;
 }
 
 .edit-mode-active {
-    background-color: #ef4444 !important; /* Red-500 */
-    border-color: #ef4444 !important;
+    background-color: var(--danger) !important;
+    border-color: var(--danger) !important;
     color: white !important;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3) !important;
+    animation: pulse-edit-button 2s infinite !important;
 }
 
 .edit-mode-active:hover {
-    background-color: #dc2626 !important; /* Red-600 */
-    border-color: #dc2626 !important;
+    background-color: var(--danger-dark) !important;
+    border-color: var(--danger-dark) !important;
 }
 
-/* Editable cell highlighting */
-.editable-cell {
-    background-color: #dbeafe !important;
+@keyframes pulse-edit-button {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Compact UI integration with AG Grid */
+.ag-theme-alpine .editable-cell {
+    background-color: var(--primary-100) !important;
     cursor: pointer !important;
 }
 
-.dark-mode .editable-cell {
+.dark-mode .ag-theme-alpine .editable-cell,
+.dark .ag-theme-alpine .editable-cell {
     background-color: #93c5fd !important;
     color: #000000 !important;
+    border: 1px solid #60a5fa !important;
 }
 
-/* Edit history panel improvements */
-#edit-history-panel {
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+.ag-theme-alpine .editable-cell:hover {
+    background-color: var(--primary-200) !important;
 }
 
-.dark-mode #edit-history-panel {
-    border-color: #374151;
-}
-
-/* Change item styling */
-.change-item {
-    transition: background-color 0.15s ease;
-}
-
-.change-item:hover {
-    background-color: #f8fafc;
-}
-
-.dark-mode .change-item:hover {
-    background-color: #1f2937;
+.dark-mode .ag-theme-alpine .editable-cell:hover,
+.dark .ag-theme-alpine .editable-cell:hover {
+    background-color: #60a5fa !important;
+    color: #000000 !important;
 }

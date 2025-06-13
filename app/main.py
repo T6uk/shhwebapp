@@ -1,38 +1,29 @@
 # app/main.py
-import json
 
-from fastapi import FastAPI, Request, Depends, Response, Cookie, HTTPException, status
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-import os
 import json
-from typing import Optional
 import logging
-from jose import jwt, JWTError
-from typing import Optional
-from datetime import datetime
-from fastapi import WebSocket, WebSocketDisconnect, Depends, Query
-from app.core.websocket import connect_client, disconnect_client, broadcast_message
 import time
 
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi import WebSocket, WebSocketDisconnect, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from app.api.v1.endpoints import koondaja
+from app.api.v1.endpoints import table
+from app.api.v1.endpoints.auth import router as auth_router
+from app.core.cache import init_redis_pool
+from app.core.config import settings
+from app.core.db import init_db
+from app.core.security import (
+    extract_token_from_request, verify_token
+)
+from app.core.websocket import connect_client, disconnect_client
 # Import cache manager
 from app.utils.cache_utils import cache_manager
-
-from app.core.config import settings
-from app.core.db import get_db, init_db
-from app.core.user_db import init_user_db
-from app.core.security import (
-    ALGORITHM, get_password_hash, extract_token_from_request, verify_token
-)
-from app.core.cache import init_redis_pool
-from app.api.v1.endpoints import table
-from app.api.v1.endpoints import koondaja
-from app.api.v1.endpoints.auth import router as auth_router
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -332,7 +323,6 @@ async def startup_event():
 async def init_user_db_async():
     """Async wrapper for the sync user_db initialization"""
     import asyncio
-    from functools import partial
     from app.core.user_db import init_user_db
 
     # Run in a thread pool since it's a synchronous function
@@ -347,7 +337,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         workers=4,
         loop="uvloop",
         http="httptools",

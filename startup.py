@@ -237,7 +237,7 @@ def start_server():
         sys.executable, "-m", "uvicorn",
         "app.main:app",
         "--host", "127.0.0.1",
-        "--port", "8000",
+        "--port", "8001",
         "--workers", "4",  # Use appropriate number of workers
         "--http", "httptools",
         "--log-level", "warning",
@@ -251,7 +251,7 @@ def start_server():
 
 def main():
     """Main function to start the application"""
-    port = 8000
+    port = 8001
     url = f"http://localhost:{port}"
 
     # Check if server is already running

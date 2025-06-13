@@ -5,7 +5,7 @@ $desktopPath = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = Join-Path $desktopPath "Suur Andmetabel.lnk"
 $appPath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 $iconPath = "$PSScriptRoot\app\static\icons\icon-512x512.ico"  # You'll need to convert your PNG to ICO
-$targetUrl = "http://localhost:8000/"
+$targetUrl = "http://localhost:8001/"
 
 # Create a shortcut object
 $WshShell = New-Object -ComObject WScript.Shell

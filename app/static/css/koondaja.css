@@ -1,31 +1,355 @@
-/* Koondaja specific styles */
-#koondaja-modal .ag-theme-alpine {
-    --ag-background-color: #ffffff;
-    --ag-header-background-color: #f3f4f6;
-    --ag-header-foreground-color: #374151;
-    --ag-borders: solid 1px #e5e7eb;
-    --ag-row-border-color: #e5e7eb;
+/* app/static/css/koondaja.css */
+/* Koondaja module specific styles using centralized variables */
+
+/* =================================
+   KOONDAJA MODAL BASE STYLES
+   ================================= */
+
+#koondaja-modal {
+    z-index: var(--z-modal);
 }
 
-.dark #koondaja-modal .ag-theme-alpine {
-    --ag-background-color: #1f2937;
-    --ag-header-background-color: #111827;
-    --ag-header-foreground-color: #f3f4f6;
-    --ag-borders: solid 1px #374151;
-    --ag-row-border-color: #374151;
+#koondaja-modal .ag-theme-alpine {
+    --ag-background-color: var(--bg-surface);
+    --ag-header-background-color: var(--bg-primary);
+    --ag-header-foreground-color: var(--text-primary);
+    --ag-borders: solid 1px var(--border-primary);
+    --ag-row-border-color: var(--border-primary);
+    --ag-foreground-color: var(--text-primary);
+}
+
+.dark #koondaja-modal .ag-theme-alpine,
+.dark-mode #koondaja-modal .ag-theme-alpine {
+    --ag-background-color: var(--dark-surface);
+    --ag-header-background-color: var(--dark-bg);
+    --ag-header-foreground-color: var(--dark-text-primary);
+    --ag-borders: solid 1px var(--dark-border);
+    --ag-row-border-color: var(--dark-border);
+    --ag-foreground-color: var(--dark-text-primary);
 }
 
 #koondaja-modal .ag-row-hover {
-    background-color: #f9fafb;
+    background-color: var(--bg-primary);
 }
 
-.dark #koondaja-modal .ag-row-hover {
-    background-color: #374151;
+.dark #koondaja-modal .ag-row-hover,
+.dark-mode #koondaja-modal .ag-row-hover {
+    background-color: var(--dark-surface-strong);
 }
 
-/* Database column selector styles */
+/* =================================
+   KOONDAJA BUTTON STATES
+   ================================= */
+
+#koondaja-btn.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+}
+
+#koondaja-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#koondaja-btn:not(:disabled):hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+/* =================================
+   ROW HIGHLIGHTING SYSTEM
+   ================================= */
+
+/* Rows without toimiku number - Light blue */
+.koondaja-no-toimiku-row {
+    background-color: var(--primary-50) !important;
+}
+
+.koondaja-no-toimiku-row:hover {
+    background-color: var(--primary-100) !important;
+}
+
+/* New rows - Light green */
+.koondaja-new-row {
+    background-color: var(--success-bg) !important;
+    border-left: 3px solid var(--success) !important;
+    position: relative;
+}
+
+.koondaja-new-row:hover {
+    background-color: #dcfce7 !important;
+}
+
+/* Combined: new row without toimiku - Light yellow */
+.koondaja-new-row.koondaja-no-toimiku-row {
+    background-color: var(--warning-bg) !important;
+    border-left: 3px solid var(--warning) !important;
+}
+
+.koondaja-new-row.koondaja-no-toimiku-row:hover {
+    background-color: #fde68a !important;
+}
+
+/* Invalid rows - Light red */
+.koondaja-invalid-row {
+    background-color: var(--danger-bg) !important;
+}
+
+.koondaja-invalid-row:hover {
+    background-color: #fecaca !important;
+}
+
+/* Mismatch rows - Light yellow */
+.koondaja-mismatch-row {
+    background-color: var(--warning-bg) !important;
+}
+
+.koondaja-mismatch-row:hover {
+    background-color: #fde68a !important;
+}
+
+/* Updated row highlighting */
+.koondaja-row-updated {
+    background-color: var(--success-bg) !important;
+    transition: background-color 1.5s ease-out;
+}
+
+/* Name-based toimiku highlighting */
+.koondaja-name-based-toimiku {
+    background-color: var(--warning-bg) !important;
+}
+
+/* Dark mode row highlighting */
+.dark .koondaja-no-toimiku-row,
+.dark-mode .koondaja-no-toimiku-row {
+    background-color: #1e3a8a !important;
+}
+
+.dark .koondaja-no-toimiku-row:hover,
+.dark-mode .koondaja-no-toimiku-row:hover {
+    background-color: #1e40af !important;
+}
+
+.dark .koondaja-new-row,
+.dark-mode .koondaja-new-row {
+    background-color: var(--success-dark-bg) !important;
+    border-left: 3px solid var(--success) !important;
+}
+
+.dark .koondaja-new-row:hover,
+.dark-mode .koondaja-new-row:hover {
+    background-color: #166534 !important;
+}
+
+.dark .koondaja-new-row.koondaja-no-toimiku-row,
+.dark-mode .koondaja-new-row.koondaja-no-toimiku-row {
+    background-color: var(--warning-dark-bg) !important;
+    border-left: 3px solid var(--warning) !important;
+}
+
+.dark .koondaja-new-row.koondaja-no-toimiku-row:hover,
+.dark-mode .koondaja-new-row.koondaja-no-toimiku-row:hover {
+    background-color: #92400e !important;
+}
+
+.dark .koondaja-invalid-row,
+.dark-mode .koondaja-invalid-row {
+    background-color: var(--danger-dark-bg) !important;
+}
+
+.dark .koondaja-invalid-row:hover,
+.dark-mode .koondaja-invalid-row:hover {
+    background-color: #991b1b !important;
+}
+
+.dark .koondaja-mismatch-row,
+.dark-mode .koondaja-mismatch-row {
+    background-color: var(--warning-dark-bg) !important;
+}
+
+.dark .koondaja-mismatch-row:hover,
+.dark-mode .koondaja-mismatch-row:hover {
+    background-color: #92400e !important;
+}
+
+.dark .koondaja-row-updated,
+.dark-mode .koondaja-row-updated {
+    background-color: var(--success-dark-bg) !important;
+}
+
+/* =================================
+   CELL HIGHLIGHTING
+   ================================= */
+
+.koondaja-invalid-toimiku {
+    background-color: var(--danger) !important;
+    color: white !important;
+    font-weight: var(--font-weight-semibold);
+}
+
+.ag-cell.toimiku-nr-valid {
+    background-color: var(--success-bg) !important;
+    border-left: 3px solid var(--success) !important;
+    font-weight: var(--font-weight-medium);
+}
+
+.ag-cell.toimiku-nr-invalid {
+    background-color: var(--danger-bg) !important;
+    border-left: 3px solid var(--danger) !important;
+    font-weight: var(--font-weight-medium);
+}
+
+.name-based-toimiku {
+    font-weight: var(--font-weight-medium);
+}
+
+.name-based-toimiku small {
+    color: var(--warning-dark);
+    font-weight: var(--font-weight-normal);
+}
+
+/* =================================
+   ANIMATIONS AND EFFECTS
+   ================================= */
+
+/* Flash animation for new rows */
+.koondaja-new-row-flash {
+    background-color: var(--success-bg) !important;
+    border-left: 4px solid var(--success) !important;
+    animation: newRowPulse 1.5s ease-in-out;
+}
+
+@keyframes newRowPulse {
+    0% {
+        background-color: #bbf7d0 !important;
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: var(--success-bg) !important;
+        transform: scale(1.01);
+    }
+    100% {
+        background-color: var(--success-bg) !important;
+        transform: scale(1);
+    }
+}
+
+.dark .koondaja-new-row-flash,
+.dark-mode .koondaja-new-row-flash {
+    animation: newRowPulseDark 1.5s ease-in-out;
+}
+
+@keyframes newRowPulseDark {
+    0% {
+        background-color: var(--success) !important;
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: var(--success-dark-bg) !important;
+        transform: scale(1.01);
+    }
+    100% {
+        background-color: var(--success-dark-bg) !important;
+        transform: scale(1);
+    }
+}
+
+/* New row indicator badge */
+.koondaja-new-row::after {
+    content: "UUS";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: var(--success);
+    color: white;
+    font-size: 9px;
+    font-weight: var(--font-weight-bold);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    z-index: 10;
+    pointer-events: none;
+}
+
+.dark .koondaja-new-row::after,
+.dark-mode .koondaja-new-row::after {
+    background-color: var(--success-dark);
+}
+
+/* =================================
+   TOOLBAR AND BUTTONS
+   ================================= */
+
+#koondaja-toolbar {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-surface) 100%);
+    border: 1px solid var(--border-primary);
+}
+
+.dark #koondaja-toolbar,
+.dark-mode #koondaja-toolbar {
+    background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-bg) 100%);
+    border-color: var(--dark-border);
+}
+
+#koondaja-toolbar button {
+    transition: all var(--transition-normal);
+}
+
+#koondaja-toolbar button:disabled {
+    transform: scale(0.95);
+    opacity: 0.5;
+}
+
+#koondaja-toolbar button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Button state indicators */
+#add-row-btn:not(:disabled) {
+    border-color: var(--success);
+    color: var(--success-dark);
+}
+
+#validate-new-rows-btn:not(:disabled) {
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+#remove-new-rows-btn:not(:disabled) {
+    border-color: var(--danger);
+    color: var(--danger-dark);
+}
+
+#toimikuleidja-btn:not(:disabled) {
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+#tagastused-btn:not(:disabled) {
+    border-color: var(--warning);
+    color: var(--warning-dark);
+}
+
+#laekumised-btn:not(:disabled) {
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+/* Column width toggle button */
+#toggle-column-width-btn.active {
+    background-color: var(--primary-50) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-dark) !important;
+}
+
+/* =================================
+   DATABASE COLUMN SELECTOR
+   ================================= */
+
 #db-column-selector-modal {
-    z-index: 60; /* Higher than koondaja modal */
+    z-index: calc(var(--z-modal) + 10);
 }
 
 #db-columns-list {
@@ -33,76 +357,16 @@
     overflow-y: auto;
 }
 
-/* Koondaja button highlight */
-#koondaja-btn.active {
-    background-color: #3b82f6;
-    color: white;
-}
-
-/* Row highlighting for invalid toimiku numbers */
-.koondaja-no-toimiku-row {
-    background-color: #fee2e2 !important;
-}
-
-.koondaja-no-toimiku-row:hover {
-    background-color: #fecaca !important;
-}
-
-.dark .koondaja-no-toimiku-row {
-    background-color: #7f1d1d !important;
-}
-
-.dark .koondaja-no-toimiku-row:hover {
-    background-color: #991b1b !important;
-}
-
-/* Cell highlight for invalid toimiku nr */
-.koondaja-invalid-toimiku {
-    background-color: #dc2626 !important;
-    color: white !important;
-    font-weight: 600;
-}
-
-.koondaja-invalid-row {
-    background-color: #fef2f2 !important;
-}
-
-.koondaja-invalid-row:hover {
-    background-color: #fee2e2 !important;
-}
-
-/* Custom cell styling for better visual feedback */
-.ag-cell.toimiku-nr-valid {
-    background-color: #dcfce7 !important;
-    border-left: 3px solid #16a34a !important;
-    font-weight: 500;
-}
-
-.ag-cell.toimiku-nr-invalid {
-    background-color: #fee2e2 !important;
-    border-left: 3px solid #dc2626 !important;
-    font-weight: 500;
-}
-
-/* Column width toggle button states */
-#toggle-column-width-btn.active {
-    background-color: #eef2ff !important;
-    border-color: #c7d2fe !important;
-    color: #3730a3 !important;
-}
-
-/* Database column selector styling */
 .selected-column-checkbox:checked + label {
-    color: #166534;
-    font-weight: 500;
+    color: var(--success-dark);
+    font-weight: var(--font-weight-medium);
 }
 
 .available-column-checkbox:checked + label {
-    color: #1d4ed8;
-    font-weight: 500;
+    color: var(--primary-dark);
+    font-weight: var(--font-weight-medium);
 }
 
-/* Column selector sections */
 #selected-columns-list {
     max-height: 200px;
     overflow-y: auto;
@@ -113,344 +377,12 @@
     overflow-y: auto;
 }
 
-/* Smooth transitions for button states */
-button[id$="-columns-btn"] {
-    transition: all 0.2s ease-in-out;
-}
+/* =================================
+   TOIMIKULEIDJA MODAL
+   ================================= */
 
-button[id$="-columns-btn"]:disabled {
-    transform: scale(0.95);
-}
-
-/* Tooltip for validation status */
-.ag-cell[col-id="toimiku_nr_loplik"] {
-    position: relative;
-}
-
-.validation-tooltip {
-    position: absolute;
-    top: -25px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.ag-cell[col-id="toimiku_nr_loplik"]:hover .validation-tooltip {
-    opacity: 1;
-}
-
-/* Additional styling for new Koondaja columns */
-.koondaja-mismatch-row {
-    background-color: #fef3c7 !important;
-}
-
-.koondaja-mismatch-row:hover {
-    background-color: #fde68a !important;
-}
-
-/* Dark mode support for mismatch rows */
-.dark .koondaja-mismatch-row {
-    background-color: #78350f !important;
-}
-
-.dark .koondaja-mismatch-row:hover {
-    background-color: #92400e !important;
-}
-
-/* Ensure all columns are visible in the grid */
-#koondaja-ag-grid {
-    min-height: 600px;
-}
-
-/* Styling for negative values */
-.text-red-600 {
-    color: #dc2626 !important;
-}
-
-/* Column header wrapping for long titles */
-.ag-header-cell-label {
-    white-space: normal !important;
-    line-height: 1.2 !important;
-}
-
-.ag-header-cell {
-    height: auto !important;
-    min-height: 40px !important;
-}
-
-/* Invalid row count styling */
-#koondaja-invalid-count {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.5rem;
-    background-color: #fee2e2;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-}
-
-.dark #koondaja-invalid-count {
-    background-color: #7f1d1d;
-    color: #fca5a5;
-}
-
-/* Koondaja simplified validation styling */
-
-/* Light blue background for rows without toimiku_nr_loplik */
-.koondaja-no-toimiku-row {
-    background-color: #eff6ff !important;
-}
-
-.koondaja-no-toimiku-row:hover {
-    background-color: #dbeafe !important;
-}
-
-/* Validation summary styling */
-#koondaja-validation-summary {
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    border: 1px solid #e5e7eb;
-    background-color: #f9fafb;
-}
-
-/* Grid container improvements */
-#koondaja-ag-grid {
-    font-size: 0.875rem;
-}
-
-/* Header styling improvements */
-.ag-header-cell-label {
-    font-weight: 600;
-    color: #374151;
-}
-
-/* Focus and selection improvements */
-.ag-cell-focus {
-    border: 2px solid #3b82f6 !important;
-}
-
-.ag-row-selected {
-    background-color: #eff6ff !important;
-}
-
-/* Responsive improvements */
-@media (max-width: 768px) {
-    #koondaja-ag-grid {
-        font-size: 0.75rem;
-    }
-}
-
-/* Add these styles to your existing CSS file */
-
-/* Existing styles for rows without toimiku */
-.koondaja-no-toimiku-row {
-    background-color: #dbeafe !important; /* Light blue */
-}
-
-/* New styles for newly added rows */
-.koondaja-new-row {
-    background-color: #f0fdf4 !important; /* Light green */
-    border-left: 3px solid #22c55e !important;
-}
-
-/* Combined styles - new row without toimiku */
-.koondaja-new-row.koondaja-no-toimiku-row {
-    background-color: #fef3c7 !important; /* Light yellow */
-    border-left: 3px solid #f59e0b !important;
-}
-
-/* Context menu styling improvements */
-.ag-menu {
-    border-radius: 6px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-}
-
-.ag-menu-option {
-    padding: 8px 12px !important;
-    font-size: 13px !important;
-}
-
-.ag-menu-option:hover {
-    background-color: #f3f4f6 !important;
-}
-
-/* Flash animation for new rows */
-@keyframes flash-new-row {
-    0% {
-        background-color: #bbf7d0;
-    }
-    50% {
-        background-color: #86efac;
-    }
-    100% {
-        background-color: #f0fdf4;
-    }
-}
-
-.ag-row-flash .koondaja-new-row {
-    animation: flash-new-row 1s ease-in-out;
-}
-
-/* Toolbar button styling */
-#add-row-btn {
-    margin-left: 8px;
-}
-
-#add-row-btn:hover {
-    background-color: #f9fafb;
-    border-color: #d1d5db;
-}
-
-/* Name-based toimiku highlighting */
-.koondaja-name-based-toimiku {
-    background-color: #fef3c7 !important; /* Light yellow for name-based matches */
-}
-
-.name-based-toimiku {
-    font-weight: 500;
-}
-
-.name-based-toimiku small {
-    color: #92400e;
-    font-weight: normal;
-}
-
-/* Enhanced styling for new rows */
-.koondaja-new-row {
-    background-color: #f0fdf4 !important; /* Light green background */
-    border-left: 3px solid #22c55e !important; /* Green left border */
-    position: relative;
-}
-
-.koondaja-new-row:hover {
-    background-color: #dcfce7 !important; /* Slightly darker green on hover */
-}
-
-/* Dark mode support for new rows */
-.dark .koondaja-new-row {
-    background-color: #14532d !important;
-    border-left: 3px solid #16a34a !important;
-}
-
-.dark .koondaja-new-row:hover {
-    background-color: #166534 !important;
-}
-
-/* Combined styles - new row without toimiku */
-.koondaja-new-row.koondaja-no-toimiku-row {
-    background-color: #fef3c7 !important; /* Light yellow for new rows without toimiku */
-    border-left: 3px solid #f59e0b !important; /* Orange border */
-}
-
-.koondaja-new-row.koondaja-no-toimiku-row:hover {
-    background-color: #fde68a !important;
-}
-
-.dark .koondaja-new-row.koondaja-no-toimiku-row {
-    background-color: #78350f !important;
-    border-left: 3px solid #f59e0b !important;
-}
-
-.dark .koondaja-new-row.koondaja-no-toimiku-row:hover {
-    background-color: #92400e !important;
-}
-
-/* Flash animation for newly added rows */
-@keyframes flash-new-row {
-    0% {
-        background-color: #bbf7d0 !important;
-        transform: scale(1.02);
-    }
-    50% {
-        background-color: #86efac !important;
-        transform: scale(1.01);
-    }
-    100% {
-        background-color: #f0fdf4 !important;
-        transform: scale(1);
-    }
-}
-
-.koondaja-new-row-flash {
-    animation: flash-new-row 1.5s ease-in-out;
-}
-
-/* New row indicator badge */
-.koondaja-new-row::after {
-    content: "UUS";
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background-color: #22c55e;
-    color: white;
-    font-size: 9px;
-    font-weight: bold;
-    padding: 1px 4px;
-    border-radius: 2px;
-    z-index: 10;
-    pointer-events: none;
-}
-
-.dark .koondaja-new-row::after {
-    background-color: #16a34a;
-}
-
-/* Toolbar button styling improvements */
-#koondaja-toolbar .flex.gap-1 button {
-    transition: all 0.2s ease-in-out;
-}
-
-#koondaja-toolbar .flex.gap-1 button:disabled {
-    transform: scale(0.95);
-    opacity: 0.5;
-}
-
-#koondaja-toolbar .flex.gap-1 button:not(:disabled):hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Button state indicators */
-#add-row-btn:not(:disabled) {
-    border-color: #22c55e;
-    color: #15803d;
-}
-
-#validate-new-rows-btn:not(:disabled) {
-    border-color: #3b82f6;
-    color: #1d4ed8;
-}
-
-#remove-new-rows-btn:not(:disabled) {
-    border-color: #ef4444;
-    color: #dc2626;
-}
-
-/* Compact button improvements for smaller screens */
-@media (max-width: 1024px) {
-    #koondaja-toolbar .flex.gap-1 button span {
-        display: none;
-    }
-
-    #koondaja-toolbar .flex.gap-1 button {
-        min-width: 40px;
-        justify-content: center;
-    }
-}
-
-/* ADD THESE STYLES to your koondaja.css file (paste-4.txt) */
-
-/* Toimikuleidja modal specific styles */
 #toimikuleidja-modal {
-    z-index: 60; /* Higher than koondaja modal */
+    z-index: calc(var(--z-modal) + 20);
 }
 
 #toimikuleidja-table-container {
@@ -458,29 +390,30 @@ button[id$="-columns-btn"]:disabled {
     overflow-y: auto;
 }
 
-/* Hover effects for table rows */
 #toimikuleidja-table-body tr:hover {
-    background-color: #f9fafb;
+    background-color: var(--bg-primary);
 }
 
-.dark #toimikuleidja-table-body tr:hover {
-    background-color: #374151;
+.dark #toimikuleidja-table-body tr:hover,
+.dark-mode #toimikuleidja-table-body tr:hover {
+    background-color: var(--dark-surface-strong);
 }
 
-/* Button styling in table */
 .toimiku-select-btn {
-    padding: 0.25rem 0.5rem;
+    padding: var(--space-1) var(--space-2);
     font-size: 0.75rem;
-    border-radius: 0.25rem;
-    background-color: #3b82f6;
+    border-radius: var(--radius-sm);
+    background-color: var(--primary-color);
     color: white;
     border: none;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all var(--transition-normal);
 }
 
 .toimiku-select-btn:hover {
-    background-color: #2563eb;
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .toimiku-select-btn:focus {
@@ -488,366 +421,69 @@ button[id$="-columns-btn"]:disabled {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
-/* Search field focus styling */
-#toimikuleidja-otsing:focus,
-#toimikuleidja-selgitus:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    outline: none;
+.toimikuleidja-row-selected {
+    background-color: var(--primary-100) !important;
+    border-left: 3px solid var(--primary-color) !important;
 }
 
-/* Result count styling */
-#toimikuleidja-result-count {
-    font-weight: 500;
-}
-
-/* Toimikuleidja button states */
-#toimikuleidja-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#toimikuleidja-btn:not(:disabled):hover {
-    background-color: #f3f4f6;
-    border-color: #d1d5db;
-}
-
-/* Loading animation */
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.animate-spin {
-    animation: spin 1s linear infinite;
-}
-
-/* Compact table styling for better mobile support */
-@media (max-width: 768px) {
-    #toimikuleidja-modal .modal-content {
-        width: 98vw;
-        max-width: 98vw;
-        margin: 1vh;
-    }
-
-    #toimikuleidja-table-container table {
-        font-size: 0.75rem;
-    }
-
-    #toimikuleidja-table-container th,
-    #toimikuleidja-table-container td {
-        padding: 0.5rem 0.25rem;
-    }
-
-    /* Stack search fields on mobile */
-    #toimikuleidja-modal .grid.grid-cols-1.md\\:grid-cols-2 {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Sticky header improvement */
-#toimikuleidja-table-container thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.dark #toimikuleidja-table-container thead th {
-    background-color: #1f2937;
-    border-bottom: 2px solid #374151;
-}
-
-/* Table row selection highlighting */
-#toimikuleidja-table-body tr {
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-#toimikuleidja-table-body tr:hover {
-    background-color: #f0f9ff !important;
-}
-
-.dark #toimikuleidja-table-body tr:hover {
+.dark .toimikuleidja-row-selected,
+.dark-mode .toimikuleidja-row-selected {
     background-color: #1e3a8a !important;
 }
 
-/* Currency formatting in table */
-.currency-cell {
-    font-family: 'Courier New', monospace;
-    text-align: right;
-}
-
-/* Search form styling */
-#toimikuleidja-modal .grid.gap-4 {
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-}
-
-.dark #toimikuleidja-modal .grid.gap-4 {
-    border-color: #374151;
-}
-
-/* Enhanced button hover effects */
-#toimikuleidja-search-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-#close-toimikuleidja-btn:hover,
-#close-toimikuleidja-modal:hover {
-    transform: scale(1.05);
-}
-
-/* Success state for selected row */
-.toimiku-selected {
-    background-color: #dcfce7 !important;
-    border-left: 3px solid #16a34a !important;
-}
-
-.dark .toimiku-selected {
-    background-color: #14532d !important;
-}
-
-/* Table header improvements */
-#toimikuleidja-table-container thead {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-}
-
-.dark #toimikuleidja-table-container thead {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-}
-
-/* Enhanced search button styling */
-#toimikuleidja-search-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-#toimikuleidja-search-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    transition: width 0.3s, height 0.3s;
-}
-
-#toimikuleidja-search-btn:active::after {
-    width: 300px;
-    height: 300px;
-}
-
-/* Input field improvements */
-#toimikuleidja-otsing,
-#toimikuleidja-selgitus {
-    transition: all 0.2s ease;
-}
-
+/* Search field enhancements */
 #toimikuleidja-otsing:focus,
 #toimikuleidja-selgitus:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
     transform: scale(1.02);
 }
 
-/* Modal animation */
-#toimikuleidja-modal:not(.hidden) {
-    animation: fadeInModal 0.3s ease-out;
-}
+/* =================================
+   TAGASTUSED MODAL
+   ================================= */
 
-@keyframes fadeInModal {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Scrollbar styling for table */
-#toimikuleidja-table-container::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-#toimikuleidja-table-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-#toimikuleidja-table-container::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-#toimikuleidja-table-container::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
-}
-
-.koondaja-row-updated {
-    background-color: #dcfce7 !important; /* Light green background */
-    transition: background-color 1.5s ease-out;
-}
-
-.dark .koondaja-row-updated {
-    background-color: #14532d !important; /* Dark green for dark mode */
-}
-
-/* Improved button states */
-.toimikuleidja-btn-ready {
-    background-color: #dbeafe !important;
-    border-color: #3b82f6 !important;
-    color: #1d4ed8 !important;
-}
-
-.toimikuleidja-btn-ready:hover {
-    background-color: #bfdbfe !important;
-}
-
-/* Row selection highlight in Toimikuleidja */
-.toimikuleidja-row-selected {
-    background-color: #dbeafe !important;
-    border-left: 3px solid #3b82f6 !important;
-}
-
-.dark .toimikuleidja-row-selected {
-    background-color: #1e3a8a !important;
-}
-
-/* Button styling for select buttons */
-.toimiku-select-btn {
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-}
-
-.toimiku-select-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-}
-
-.koondaja-new-row-flash {
-    background-color: #dcfce7 !important;
-    border-left: 4px solid #16a34a !important;
-    animation: newRowPulse 1.5s ease-in-out;
-}
-
-.dark .koondaja-new-row-flash {
-    background-color: #14532d !important;
-    border-left: 4px solid #22c55e !important;
-}
-
-@keyframes newRowPulse {
-    0% {
-        background-color: #bbf7d0;
-        transform: scale(1.02);
-    }
-    50% {
-        background-color: #dcfce7;
-        transform: scale(1.01);
-    }
-    100% {
-        background-color: #dcfce7;
-        transform: scale(1);
-    }
-}
-
-.dark .koondaja-new-row-flash {
-    animation: newRowPulseDark 1.5s ease-in-out;
-}
-
-@keyframes newRowPulseDark {
-    0% {
-        background-color: #22c55e;
-        transform: scale(1.02);
-    }
-    50% {
-        background-color: #14532d;
-        transform: scale(1.01);
-    }
-    100% {
-        background-color: #14532d;
-        transform: scale(1);
-    }
-}
-
-/* Ensure new rows have proper spacing */
-.ag-row[row-index] {
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.dark .ag-row[row-index] {
-    border-bottom: 1px solid #374151;
-}
-
-
-/* Tagastused Modal Styles */
 #tagastused-modal {
-    z-index: 50; /* Same level as koondaja modal */
+    z-index: var(--z-modal);
 }
 
 #tagastused-modal .ag-theme-alpine {
-    --ag-background-color: #ffffff;
-    --ag-header-background-color: #f3f4f6;
-    --ag-header-foreground-color: #374151;
-    --ag-borders: solid 1px #e5e7eb;
-    --ag-row-border-color: #e5e7eb;
+    --ag-background-color: var(--bg-surface);
+    --ag-header-background-color: var(--bg-primary);
+    --ag-header-foreground-color: var(--text-primary);
+    --ag-borders: solid 1px var(--border-primary);
+    --ag-row-border-color: var(--border-primary);
 }
 
-.dark #tagastused-modal .ag-theme-alpine {
-    --ag-background-color: #1f2937;
-    --ag-header-background-color: #111827;
-    --ag-header-foreground-color: #f3f4f6;
-    --ag-borders: solid 1px #374151;
-    --ag-row-border-color: #374151;
+.dark #tagastused-modal .ag-theme-alpine,
+.dark-mode #tagastused-modal .ag-theme-alpine {
+    --ag-background-color: var(--dark-surface);
+    --ag-header-background-color: var(--dark-bg);
+    --ag-header-foreground-color: var(--dark-text-primary);
+    --ag-borders: solid 1px var(--dark-border);
+    --ag-row-border-color: var(--dark-border);
 }
 
 #tagastused-modal .ag-row-hover {
-    background-color: #f9fafb;
+    background-color: var(--bg-primary);
 }
 
-.dark #tagastused-modal .ag-row-hover {
-    background-color: #374151;
-}
-
-/* Tagastused button styling */
-#tagastused-btn:not(:disabled) {
-    border-color: #f59e0b;
-    color: #d97706;
-}
-
-#tagastused-btn:not(:disabled):hover {
-    background-color: #fef3c7;
-    border-color: #f59e0b;
+.dark #tagastused-modal .ag-row-hover,
+.dark-mode #tagastused-modal .ag-row-hover {
+    background-color: var(--dark-surface-strong);
 }
 
 /* Summary section styling */
 #tagastused-modal .bg-gray-50 {
-    border-top: 2px solid #e5e7eb;
+    background-color: var(--bg-primary);
+    border-top: 2px solid var(--border-primary);
 }
 
-.dark #tagastused-modal .bg-gray-50 {
-    border-top: 2px solid #374151;
-}
-
-/* Summary grid styling */
-#tagastused-modal .grid .flex {
-    border-bottom: 1px dotted #d1d5db;
-    padding: 0.25rem 0;
-}
-
-#tagastused-modal .grid .flex:last-child {
-    border-bottom: none;
-}
-
-.dark #tagastused-modal .grid .flex {
-    border-bottom: 1px dotted #6b7280;
+.dark #tagastused-modal .bg-gray-50,
+.dark-mode #tagastused-modal .bg-gray-50 {
+    background-color: var(--dark-surface);
+    border-top: 2px solid var(--dark-border);
 }
 
 /* Currency formatting in summary */
@@ -862,223 +498,314 @@ button[id$="-columns-btn"]:disabled {
 #summary-tagastamised-baasi,
 #summary-laekus-kokku,
 #summary-baasi-ei-kanta {
-    font-weight: 600;
-    color: #1f2937;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    background-color: var(--warning-bg);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--warning);
 }
 
 .dark #summary-tagastamised,
 .dark #summary-tagastamised-baasi,
 .dark #summary-laekus-kokku,
-.dark #summary-baasi-ei-kanta {
-    color: #f9fafb;
+.dark #summary-baasi-ei-kanta,
+.dark-mode #summary-tagastamised,
+.dark-mode #summary-tagastamised-baasi,
+.dark-mode #summary-laekus-kokku,
+.dark-mode #summary-baasi-ei-kanta {
+    background-color: var(--warning-dark-bg);
+    border-color: var(--warning);
+    color: #fbbf24;
 }
 
-/* Positive values in green */
-.text-green-600 {
-    color: #16a34a !important;
+/* =================================
+   LAEKUMISED MODAL
+   ================================= */
+
+#laekumised-modal {
+    z-index: calc(var(--z-modal) + 50);
 }
 
-.dark .text-green-600 {
-    color: #22c55e !important;
+/* Person Information Card */
+.laekumised-person-card {
+    background: linear-gradient(135deg, var(--info-bg) 0%, #e0f2fe 100%);
+    border: 1px solid var(--info);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
-/* Responsive adjustments for summary */
-@media (max-width: 768px) {
-    #tagastused-modal .grid.grid-cols-1.md\\:grid-cols-2 {
-        grid-template-columns: 1fr;
-    }
-
-    #tagastused-modal .flex.justify-between {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    #tagastused-modal [id^="summary-"] {
-        margin-top: 0.25rem;
-        text-align: left;
-    }
+.laekumised-person-card .field-label {
+    font-weight: var(--font-weight-semibold);
+    color: var(--info-dark);
+    min-width: 120px;
+    flex-shrink: 0;
 }
 
-/* Empty state styling */
-#tagastused-empty-state {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    border-radius: 8px;
-    border: 2px dashed #d1d5db;
+.laekumised-person-card .field-value {
+    color: var(--text-primary);
+    flex-grow: 1;
+    font-family: var(--font-family-base);
 }
 
-.dark #tagastused-empty-state {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-    border-color: #374151;
+/* Financial breakdown section */
+.financial-breakdown-section {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
-/* Toolbar improvements */
-#tagastused-toolbar {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+.financial-breakdown-section h4 {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-primary);
+    padding-bottom: var(--space-2);
 }
 
-.dark #tagastused-toolbar {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+.financial-item .value.total {
+    color: var(--success-dark);
+    font-weight: var(--font-weight-semibold);
 }
 
-/* Button hover effects */
-#tagastused-toolbar button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.financial-item .value.laekumine {
+    color: var(--primary-color);
 }
 
-/* Grid cell styling for better readability */
-#tagastused-ag-grid .ag-cell {
-    border-right: 1px solid #f3f4f6;
+/* Payment amount section */
+.laekumised-amount-section {
+    background: linear-gradient(135deg, var(--success-bg) 0%, #dcfce7 100%);
+    border: 1px solid var(--success);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    text-align: center;
 }
 
-.dark #tagastused-ag-grid .ag-cell {
-    border-right: 1px solid #374151;
+.laekumised-amount-section h4 {
+    color: var(--success-dark);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
 }
 
-/* Header styling */
-#tagastused-ag-grid .ag-header-cell {
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-    border-bottom: 2px solid #d1d5db;
+.laekumised-amount-section .amount-display {
+    font-size: 1.875rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--success-dark);
+    font-family: var(--font-family-base);
 }
 
-.dark #tagastused-ag-grid .ag-header-cell {
-    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-    border-bottom: 2px solid #374151;
+/* Protection calculation section */
+.laekumised-protection-section {
+    background: linear-gradient(135deg, var(--warning-bg) 0%, #fef3c7 100%);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
-/* Row selection */
-#tagastused-ag-grid .ag-row-selected {
-    background-color: #fef3c7 !important;
+.laekumised-protection-section .remaining-amount {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--warning-dark);
+    font-family: var(--font-family-base);
 }
 
-.dark #tagastused-ag-grid .ag-row-selected {
-    background-color: #78350f !important;
+/* Distribution method section */
+.distribution-method-section {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
-/* Focus styling */
-#tagastused-ag-grid .ag-cell-focus {
-    border: 2px solid #f59e0b !important;
-    outline: none;
+.distribution-method-section h4 {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-3);
 }
 
-/* Loading animation for refresh button */
-#refresh-tagastused-btn.loading {
-    pointer-events: none;
+.distribution-option {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-normal);
+    border: 1px solid var(--border-primary);
+    margin-bottom: var(--space-2);
 }
 
-#refresh-tagastused-btn.loading i {
-    animation: spin 1s linear infinite;
+.distribution-option:hover {
+    background-color: var(--bg-primary);
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.distribution-option input[type="radio"] {
+    margin-right: var(--space-2);
+    color: var(--primary-color);
 }
 
-/* Summary section header */
-#tagastused-modal h4 {
-    border-bottom: 2px solid #f59e0b;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
+.distribution-option label {
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+    cursor: pointer;
 }
 
-/* Divider lines in summary */
-#tagastused-modal hr {
-    margin: 0.5rem 0;
-}
+/* =================================
+   GRID IMPROVEMENTS
+   ================================= */
 
-/* Modal animation */
-#tagastused-modal:not(.hidden) {
-    animation: slideInFromBottom 0.3s ease-out;
-}
-
-@keyframes slideInFromBottom {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Container height management */
+#koondaja-ag-grid,
 #tagastused-ag-grid {
     min-height: 300px;
+    font-size: var(--font-size-base);
 }
 
-/* Column header wrapping */
-#tagastused-ag-grid .ag-header-cell-label {
+.ag-header-cell-label {
     white-space: normal !important;
     line-height: 1.2 !important;
-    padding: 0.25rem 0;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
 }
 
-#tagastused-ag-grid .ag-header-cell {
+.ag-header-cell {
     height: auto !important;
     min-height: 40px !important;
 }
 
-/* Improved number alignment */
-#tagastused-ag-grid .ag-cell[col-id="tagastamised"] {
-    text-align: right;
+.ag-cell-focus {
+    border: 2px solid var(--primary-color) !important;
+}
+
+.ag-row-selected {
+    background-color: var(--primary-50) !important;
+}
+
+/* =================================
+   VALIDATION AND STATUS
+   ================================= */
+
+#koondaja-invalid-count {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    background-color: var(--danger-bg);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    line-height: 1.25;
+    color: var(--danger-dark);
+    border: 1px solid var(--danger);
+}
+
+.dark #koondaja-invalid-count,
+.dark-mode #koondaja-invalid-count {
+    background-color: var(--danger-dark-bg);
+    color: #fca5a5;
+}
+
+#koondaja-validation-summary {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-primary);
+}
+
+/* =================================
+   RESPONSIVE DESIGN
+   ================================= */
+
+@media (max-width: 768px) {
+    #koondaja-ag-grid,
+    #tagastused-ag-grid {
+        font-size: 0.75rem;
+    }
+
+    .distribution-options {
+        grid-template-columns: 1fr;
+    }
+
+    .financial-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+    }
+
+    .additional-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1024px) {
+    #koondaja-toolbar button span {
+        display: none;
+    }
+
+    #koondaja-toolbar button {
+        min-width: 40px;
+        justify-content: center;
+    }
+}
+
+/* =================================
+   UTILITY CLASSES
+   ================================= */
+
+.text-red-600 {
+    color: var(--danger) !important;
+}
+
+.text-green-600 {
+    color: var(--success) !important;
+}
+
+.dark .text-green-600,
+.dark-mode .text-green-600 {
+    color: var(--success-dark) !important;
+}
+
+.currency-cell {
     font-family: 'Courier New', monospace;
+    text-align: right;
 }
 
-/* Status column styling */
-#tagastused-ag-grid .ag-cell[col-id="staatus_baasis"] {
-    font-weight: 500;
+/* Loading states */
+.loading .fas {
+    animation: spin 1s linear infinite;
 }
 
-/* Toimiku nr column styling */
-#tagastused-ag-grid .ag-cell[col-id="toimiku_nr"] {
-    font-weight: 600;
-    color: #1f2937;
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-.dark #tagastused-ag-grid .ag-cell[col-id="toimiku_nr"] {
-    color: #f9fafb;
+/* Scrollbar improvements for tables */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
-/* Summary value highlighting */
-#tagastused-modal [id$="-kokku"],
-#tagastused-modal [id$="-baasi"],
-#tagastused-modal [id$="-kanta"] {
-    background-color: #fef3c7;
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.25rem;
-    border: 1px solid #f59e0b;
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
 }
 
-.dark #tagastused-modal [id$="-kokku"],
-.dark #tagastused-modal [id$="-baasi"],
-.dark #tagastused-modal [id$="-kanta"] {
-    background-color: #78350f;
-    border-color: #f59e0b;
-    color: #fbbf24;
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-sm);
 }
 
-/* Scrollbar styling for the grid */
-#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }
 
-#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+/* Ensure proper spacing for AG Grid rows */
+.ag-row[row-index] {
+    border-bottom: 1px solid var(--border-primary);
 }
 
-#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-
-#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
+.dark .ag-row[row-index],
+.dark-mode .ag-row[row-index] {
+    border-bottom: 1px solid var(--dark-border);
 }
