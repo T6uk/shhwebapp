@@ -114,14 +114,6 @@
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
-
-    /* AG Grid Theme Variables */
-    --ag-font-family: var(--font-family-base);
-    --ag-font-size: 14px;
-    --ag-header-height: 48px;
-    --ag-row-height: 32px;
-    --ag-header-font-weight: var(--font-weight-semibold);
-    --ag-cell-horizontal-padding: 1rem;
 }
 
 /* Dynamic Color Context Variables */

@@ -1,5 +1,24 @@
-// app/static/js/modules/grid.js
-// AG Grid specific functionality
+// Manual trigger for auto-sizing (equivalent to double-clicking all resize handles)
+    function autoSizeAllColumns() {
+        if (!state.gridApi) {
+            console.warn("Grid API not available for auto-sizing");
+            return;
+        }
+
+        try {
+            // Get all column IDs
+            const allColumns = state.gridApi.getAllColumns();
+            const columnIds = allColumns.map(column => column.getColId());
+
+            // Auto-size all columns (same as double-clicking resize handle)
+            state.gridApi.autoSizeColumns(columnIds, false);
+
+            console.log("All columns auto-sized to optimal width");
+        } catch (error) {
+            console.error("Error in manual auto-sizing:", error);
+        }
+    }// app/static/js/modules/grid.js
+// AG Grid specific functionality with enhanced header support
 
 (function () {
     // Local references to global state
@@ -62,16 +81,95 @@
         }
     }
 
-    // Initialize AG Grid
+    // Auto-size headers using AG Grid's native auto-sizing (same as double-click resize)
+    function autoSizeHeaders() {
+        if (!state.gridApi) return;
+
+        try {
+            // Get all columns
+            const allColumns = state.gridApi.getAllColumns();
+
+            if (!allColumns || allColumns.length === 0) return;
+
+            // Use AG Grid's native auto-sizing for each column
+            // This is exactly what happens when you double-click the resize handle
+            const columnIds = allColumns.map(column => column.getColId());
+
+            // Auto-size all columns based on header and content
+            state.gridApi.autoSizeColumns(columnIds, false); // false = don't skip header
+
+            console.log("Headers auto-sized using AG Grid's native auto-sizing");
+
+        } catch (error) {
+            console.error("Error auto-sizing headers:", error);
+        }
+    }
+
+    // Enhanced header height calculation for 2-row support
+    function calculateOptimalHeaderHeight() {
+        if (!state.columnDefs || state.columnDefs.length === 0) return 40;
+
+        // Create a temporary canvas to measure text width accurately
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = '14px Inter, system-ui, -apple-system, sans-serif';
+
+        let needsTwoLines = false;
+
+        // Check each column header for potential line wrapping
+        state.columnDefs.forEach(colDef => {
+            if (colDef.headerName) {
+                const headerText = colDef.headerName;
+                const textWidth = context.measureText(headerText).width;
+
+                // If text is wider than single line threshold, it will wrap
+                if (textWidth > 100) { // Conservative threshold for wrapping
+                    needsTwoLines = true;
+                }
+            }
+        });
+
+        // Return compact height based on whether wrapping is needed
+        return needsTwoLines ? 50 : 36; // Much more compact heights
+    }
+
+    // Update grid options to include header auto-sizing
+    function enhanceGridOptionsForHeaders(gridOptions) {
+        // Calculate optimal header height
+        const headerHeight = calculateOptimalHeaderHeight();
+
+        // Add header-specific configurations
+        gridOptions.headerHeight = headerHeight;
+        gridOptions.autoSizeStrategy = {
+            type: 'fitCellContents',
+            colIds: state.columnDefs ? state.columnDefs.map(col => col.field) : []
+        };
+
+        // Enhanced column definitions with header configurations
+        if (gridOptions.defaultColDef) {
+            gridOptions.defaultColDef.headerHeight = headerHeight;
+            gridOptions.defaultColDef.autoHeaderHeight = true;
+            gridOptions.defaultColDef.wrapHeaderText = true;
+            gridOptions.defaultColDef.headerClass = 'centered-header';
+        }
+
+        return gridOptions;
+    }
+
+    // Initialize AG Grid with enhanced header support
     function initGrid() {
         // Create grid options
         const gridOptions = {
             defaultColDef: {
-                flex: 1,
-                minWidth: 100,
+                // Remove flex to allow natural auto-sizing like double-click resize
+                minWidth: 100, // Compact minimum width for precise sizing
                 resizable: true,
                 sortable: true,
                 filter: true,
+                // Enhanced header configuration
+                autoHeaderHeight: true,
+                wrapHeaderText: true,
+                headerClass: 'centered-header',
                 // Add cell renderer to highlight blank values
                 cellRenderer: function (params) {
                     if (params.value === null || params.value === '' ||
@@ -131,6 +229,11 @@
                 // Use row index as ID - adjust if you have a better unique identifier
                 return params.data.id || params.node.rowIndex;
             },
+            // Enhanced header configuration
+            headerHeight: calculateOptimalHeaderHeight(),
+            autoSizeStrategy: {
+                type: 'fitCellContents'
+            },
             // Add tooltip component for better UX
             tooltipShowDelay: 300,
             tooltipInteraction: true,
@@ -161,6 +264,9 @@
             stopEditingWhenCellsLoseFocus: true
         };
 
+        // Enhance grid options for better header display
+        enhanceGridOptionsForHeaders(gridOptions);
+
         // Create the grid
         new agGrid.Grid(document.getElementById('data-table'), gridOptions);
     }
@@ -177,7 +283,7 @@
         return null;
     }
 
-    // Handle grid ready event
+    // Enhanced grid ready handler with header optimizations
     function onGridReady(params) {
         state.gridApi = params.api;
 
@@ -295,14 +401,17 @@
         // Set the datasource
         state.gridApi.setDatasource(dataSource);
 
+        // Enhanced grid ready handler with native auto-sizing
         state.gridApi.addEventListener('filterChanged', function () {
             setTimeout(updateActiveFiltersDisplay, 100);
         });
 
-        // Fit columns to available width
-        setTimeout(function () {
-            state.gridApi.sizeColumnsToFit();
-        }, 100);
+        // Apply native auto-sizing when data is available
+        setTimeout(() => {
+            if (state.gridApi.getDisplayedRowCount() > 0) {
+                autoSizeHeaders();
+            }
+        }, 300);
 
         // Update theme if dark mode is active
         if (state.isDarkMode) {
@@ -379,15 +488,14 @@
         }
     }
 
-    // Handle first data rendered
+    // Handle first data rendered with AG Grid's native auto-sizing
     function onFirstDataRendered(params) {
-        // Auto-size columns for better initial view
-        state.gridApi.autoSizeColumns();
+        // Use AG Grid's native auto-sizing after data is rendered
+        setTimeout(() => {
+            autoSizeHeaders();
+        }, 200); // Small delay to ensure data is fully rendered
 
-        // Size columns to fit the viewport after auto-sizing
-        setTimeout(function () {
-            state.gridApi.sizeColumnsToFit();
-        }, 200);
+        console.log("Grid rendered with AG Grid's native auto-sizing");
     }
 
     // Handle filter changes
@@ -604,7 +712,7 @@
         return selectedData;
     };
 
-    // Expose functions to the global bridge
+    // Expose enhanced functions to the global bridge
     funcs.getFilterParams = getFilterParams;
     funcs.initGrid = initGrid;
     funcs.generateQuickLinks = generateQuickLinks;
@@ -614,4 +722,10 @@
     funcs.updateStatus = updateStatus;
     funcs.scrollToColumn = scrollToColumn;
     funcs.updateActiveFiltersDisplay = updateActiveFiltersDisplay;
+
+    // Header auto-sizing functions
+    funcs.autoSizeHeaders = autoSizeHeaders;
+    funcs.autoSizeAllColumns = autoSizeAllColumns; // Manual trigger
+    funcs.calculateOptimalHeaderHeight = calculateOptimalHeaderHeight;
+    funcs.enhanceGridOptionsForHeaders = enhanceGridOptionsForHeaders;
 })();

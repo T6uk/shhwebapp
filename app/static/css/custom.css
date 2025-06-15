@@ -1,4 +1,5 @@
 /* app/static/css/custom.css */
+/* toolbari jaoks vajalik */
 /* App-specific enhancements and custom styling */
 
 /* Enhanced component interactions */
@@ -271,19 +272,6 @@
     border-color: var(--primary-color);
 }
 
-/* Enhanced AG Grid styling */
-.ag-theme-alpine {
-    --ag-row-hover-color: rgba(59, 130, 246, 0.1);
-    --ag-selected-row-background-color: rgba(59, 130, 246, 0.15);
-    transition: all var(--transition-normal);
-}
-
-.dark-mode .ag-theme-alpine,
-.dark .ag-theme-alpine {
-    --ag-row-hover-color: rgba(59, 130, 246, 0.2);
-    --ag-selected-row-background-color: rgba(59, 130, 246, 0.25);
-}
-
 /* Toggle UI button enhancements */
 #toggle-ui-btn {
     background-color: rgba(255, 255, 255, 0.9);
@@ -496,7 +484,6 @@ body,
 .btn,
 input,
 select,
-.ag-theme-alpine,
 .toast-notification,
 .loading-overlay,
 .modal-content,

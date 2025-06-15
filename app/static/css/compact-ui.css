@@ -1,4 +1,5 @@
 /* app/static/css/compact-ui.css */
+/* nupud ja varki */
 /* Compact UI components using centralized variables */
 
 /* Compact Button System - Alternative to standard .btn */
@@ -378,27 +379,4 @@
     100% {
         box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
     }
-}
-
-/* Compact UI integration with AG Grid */
-.ag-theme-alpine .editable-cell {
-    background-color: var(--primary-100) !important;
-    cursor: pointer !important;
-}
-
-.dark-mode .ag-theme-alpine .editable-cell,
-.dark .ag-theme-alpine .editable-cell {
-    background-color: #93c5fd !important;
-    color: #000000 !important;
-    border: 1px solid #60a5fa !important;
-}
-
-.ag-theme-alpine .editable-cell:hover {
-    background-color: var(--primary-200) !important;
-}
-
-.dark-mode .ag-theme-alpine .editable-cell:hover,
-.dark .ag-theme-alpine .editable-cell:hover {
-    background-color: #60a5fa !important;
-    color: #000000 !important;
 }

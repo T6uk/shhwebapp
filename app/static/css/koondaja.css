@@ -9,34 +9,6 @@
     z-index: var(--z-modal);
 }
 
-#koondaja-modal .ag-theme-alpine {
-    --ag-background-color: var(--bg-surface);
-    --ag-header-background-color: var(--bg-primary);
-    --ag-header-foreground-color: var(--text-primary);
-    --ag-borders: solid 1px var(--border-primary);
-    --ag-row-border-color: var(--border-primary);
-    --ag-foreground-color: var(--text-primary);
-}
-
-.dark #koondaja-modal .ag-theme-alpine,
-.dark-mode #koondaja-modal .ag-theme-alpine {
-    --ag-background-color: var(--dark-surface);
-    --ag-header-background-color: var(--dark-bg);
-    --ag-header-foreground-color: var(--dark-text-primary);
-    --ag-borders: solid 1px var(--dark-border);
-    --ag-row-border-color: var(--dark-border);
-    --ag-foreground-color: var(--dark-text-primary);
-}
-
-#koondaja-modal .ag-row-hover {
-    background-color: var(--bg-primary);
-}
-
-.dark #koondaja-modal .ag-row-hover,
-.dark-mode #koondaja-modal .ag-row-hover {
-    background-color: var(--dark-surface-strong);
-}
-
 /* =================================
    KOONDAJA BUTTON STATES
    ================================= */
@@ -189,13 +161,13 @@
     font-weight: var(--font-weight-semibold);
 }
 
-.ag-cell.toimiku-nr-valid {
+.toimiku-nr-valid {
     background-color: var(--success-bg) !important;
     border-left: 3px solid var(--success) !important;
     font-weight: var(--font-weight-medium);
 }
 
-.ag-cell.toimiku-nr-invalid {
+.toimiku-nr-invalid {
     background-color: var(--danger-bg) !important;
     border-left: 3px solid var(--danger) !important;
     font-weight: var(--font-weight-medium);
@@ -448,32 +420,6 @@
     z-index: var(--z-modal);
 }
 
-#tagastused-modal .ag-theme-alpine {
-    --ag-background-color: var(--bg-surface);
-    --ag-header-background-color: var(--bg-primary);
-    --ag-header-foreground-color: var(--text-primary);
-    --ag-borders: solid 1px var(--border-primary);
-    --ag-row-border-color: var(--border-primary);
-}
-
-.dark #tagastused-modal .ag-theme-alpine,
-.dark-mode #tagastused-modal .ag-theme-alpine {
-    --ag-background-color: var(--dark-surface);
-    --ag-header-background-color: var(--dark-bg);
-    --ag-header-foreground-color: var(--dark-text-primary);
-    --ag-borders: solid 1px var(--dark-border);
-    --ag-row-border-color: var(--dark-border);
-}
-
-#tagastused-modal .ag-row-hover {
-    background-color: var(--bg-primary);
-}
-
-.dark #tagastused-modal .ag-row-hover,
-.dark-mode #tagastused-modal .ag-row-hover {
-    background-color: var(--dark-surface-strong);
-}
-
 /* Summary section styling */
 #tagastused-modal .bg-gray-50 {
     background-color: var(--bg-primary);
@@ -655,36 +601,6 @@
 }
 
 /* =================================
-   GRID IMPROVEMENTS
-   ================================= */
-
-#koondaja-ag-grid,
-#tagastused-ag-grid {
-    min-height: 300px;
-    font-size: var(--font-size-base);
-}
-
-.ag-header-cell-label {
-    white-space: normal !important;
-    line-height: 1.2 !important;
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-primary);
-}
-
-.ag-header-cell {
-    height: auto !important;
-    min-height: 40px !important;
-}
-
-.ag-cell-focus {
-    border: 2px solid var(--primary-color) !important;
-}
-
-.ag-row-selected {
-    background-color: var(--primary-50) !important;
-}
-
-/* =================================
    VALIDATION AND STATUS
    ================================= */
 
@@ -718,11 +634,6 @@
    ================================= */
 
 @media (max-width: 768px) {
-    #koondaja-ag-grid,
-    #tagastused-ag-grid {
-        font-size: 0.75rem;
-    }
-
     .distribution-options {
         grid-template-columns: 1fr;
     }
@@ -798,14 +709,4 @@
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
-}
-
-/* Ensure proper spacing for AG Grid rows */
-.ag-row[row-index] {
-    border-bottom: 1px solid var(--border-primary);
-}
-
-.dark .ag-row[row-index],
-.dark-mode .ag-row[row-index] {
-    border-bottom: 1px solid var(--dark-border);
 }
