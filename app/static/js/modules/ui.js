@@ -1,12 +1,12 @@
 // app/static/js/modules/ui.js
-// UI interactions and utilities
+// UI interactions and utilities with enhanced dropdown and table fixes
 
 (function () {
     // Local references to global state
     const state = window.appState;
     const funcs = window.appFunctions;
 
-    // Set up dropdown toggles
+    // Enhanced dropdown setup function with dynamic positioning
     function setupDropdowns() {
         const dropdowns = [
             {toggle: "#tools-dropdown-toggle", menu: "#tools-dropdown-menu"},
@@ -19,17 +19,56 @@
 
         // Remove any existing event handlers to prevent conflicts
         dropdowns.forEach(dropdown => {
-            $(dropdown.toggle).off('click.dropdown');
-            $(dropdown.menu).off('click.dropdown');
+            $(dropdown.toggle).off('click.dropdown mouseenter.dropdown mouseleave.dropdown');
+            $(dropdown.menu).off('click.dropdown mouseenter.dropdown mouseleave.dropdown');
         });
 
-        // Set up each dropdown with toggle behavior
+        // Enhanced dropdown positioning function
+        function positionDropdown($toggle, $menu) {
+            const toggleRect = $toggle[0].getBoundingClientRect();
+            const menuWidth = $menu.outerWidth();
+            const menuHeight = $menu.outerHeight();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Calculate optimal position
+            let left = toggleRect.right - menuWidth;
+            let top = toggleRect.bottom + 8;
+
+            // Adjust if menu would go off-screen horizontally
+            if (left < 16) {
+                left = toggleRect.left;
+            }
+            if (left + menuWidth > viewportWidth - 16) {
+                left = viewportWidth - menuWidth - 16;
+            }
+
+            // Adjust if menu would go off-screen vertically
+            if (top + menuHeight > viewportHeight - 16) {
+                top = toggleRect.top - menuHeight - 8;
+            }
+
+            // Apply positioning
+            $menu.css({
+                position: 'fixed',
+                left: left + 'px',
+                top: top + 'px',
+                right: 'auto',
+                bottom: 'auto',
+                zIndex: 9999
+            });
+        }
+
+        // Set up each dropdown with enhanced behavior
         dropdowns.forEach(dropdown => {
-            $(dropdown.toggle).on('click.dropdown', function (e) {
+            const $toggle = $(dropdown.toggle);
+            const $menu = $(dropdown.menu);
+
+            // Click handler for toggle
+            $toggle.on('click.dropdown', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
 
-                const $menu = $(dropdown.menu);
                 const isCurrentlyOpen = $menu.hasClass("show");
 
                 // Hide all other dropdowns first
@@ -43,13 +82,38 @@
                 if (isCurrentlyOpen) {
                     $menu.removeClass("show");
                 } else {
+                    // Position dropdown dynamically before showing
+                    positionDropdown($toggle, $menu);
+                    $menu.addClass("show");
+                }
+            });
+
+            // Mouse enter handler for enhanced hover behavior
+            $toggle.on('mouseenter.dropdown', function() {
+                // Only show on hover if another dropdown is already open
+                const anyDropdownOpen = dropdowns.some(d => $(d.menu).hasClass("show"));
+                if (anyDropdownOpen && !$menu.hasClass("show")) {
+                    // Hide other dropdowns
+                    dropdowns.forEach(other => {
+                        if (other.menu !== dropdown.menu) {
+                            $(other.menu).removeClass("show");
+                        }
+                    });
+
+                    // Position and show this dropdown
+                    positionDropdown($toggle, $menu);
                     $menu.addClass("show");
                 }
             });
 
             // Prevent dropdown from closing when clicking inside
-            $(dropdown.menu).on('click.dropdown', function (e) {
+            $menu.on('click.dropdown', function (e) {
                 e.stopPropagation();
+            });
+
+            // Keep dropdown open when hovering over menu
+            $menu.on('mouseenter.dropdown', function() {
+                $menu.addClass("show");
             });
         });
 
@@ -67,19 +131,43 @@
                 $(".dropdown-menu").removeClass("show");
             }
         });
+
+        // Reposition dropdowns on window resize
+        $(window).off('resize.dropdown').on('resize.dropdown', function() {
+            dropdowns.forEach(dropdown => {
+                const $menu = $(dropdown.menu);
+                if ($menu.hasClass("show")) {
+                    const $toggle = $(dropdown.toggle);
+                    positionDropdown($toggle, $menu);
+                }
+            });
+        });
+
+        // Reposition dropdowns on scroll
+        $(window).off('scroll.dropdown').on('scroll.dropdown', function() {
+            dropdowns.forEach(dropdown => {
+                const $menu = $(dropdown.menu);
+                if ($menu.hasClass("show")) {
+                    const $toggle = $(dropdown.toggle);
+                    positionDropdown($toggle, $menu);
+                }
+            });
+        });
     }
 
-    // Function to resize the table container
+    // Enhanced resizeTableContainer function with column width preservation
     function resizeTableContainer() {
         const windowHeight = $(window).height();
         const headerHeight = $("#compact-header").outerHeight(true) || 0;
-        const toolbarHeight = $("#toolbar-container").is(":visible") ? $("#toolbar-container").outerHeight(true) : 0;
-        const filterPanelHeight = $("#filter-panel").hasClass("show") ? $("#filter-panel").outerHeight(true) : 0;
+        const toolbarHeight = $("#toolbar-container").is(":visible") ?
+            $("#toolbar-container").outerHeight(true) : 0;
+        const filterPanelHeight = $("#filter-panel").hasClass("show") ?
+            $("#filter-panel").outerHeight(true) : 0;
 
         // Add some breathing room on smaller screens
         const padding = window.innerWidth < 640 ? 16 : 24;
 
-        // Make sure we have a minimum height on larger screens
+        // Calculate table height without causing layout shifts
         let tableHeight = windowHeight - headerHeight - toolbarHeight - filterPanelHeight - padding;
 
         // Ensure minimum height on mobile
@@ -90,7 +178,17 @@
             tableHeight = Math.min(tableHeight, window.innerHeight * 0.7);
         }
 
-        $("#table-container").css("height", tableHeight + "px");
+        // Store current column state before resize
+        let currentColumnState = null;
+        if (state.gridApi && state.gridApi.getColumnState) {
+            currentColumnState = state.gridApi.getColumnState();
+        }
+
+        // Apply height change smoothly
+        $("#table-container").css({
+            "height": tableHeight + "px",
+            "transition": "height 0.3s ease"
+        });
 
         if ($("#edit-history-panel").is(":visible")) {
             // Adjust based on screen size
@@ -98,12 +196,94 @@
             $("#table-container").css("height", (tableHeight - historyPanelOffset) + "px");
         }
 
-        // If grid API exists, resize columns to fit
+        // If grid API exists, handle resize without changing column widths
         if (state.gridApi) {
-            setTimeout(() => {
-                state.gridApi.sizeColumnsToFit();
-            }, 50);
+            // Use debounced resize to prevent multiple rapid calls
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(() => {
+                try {
+                    // Notify grid of size change without auto-sizing columns
+                    state.gridApi.setDomLayout('normal');
+
+                    // Only restore column state if it was stored
+                    if (currentColumnState && currentColumnState.length > 0) {
+                        state.gridApi.applyColumnState({
+                            state: currentColumnState,
+                            applyOrder: true
+                        });
+                    }
+
+                    // Force grid to recalculate only its height, not column widths
+                    state.gridApi.resetRowHeights();
+
+                } catch (error) {
+                    console.warn("Error during grid resize:", error);
+                }
+            }, 100);
         }
+    }
+
+    // Enhanced filter toggle function to prevent table width changes
+    function setupFilterToggle() {
+        const $filterToggle = $("#filter-toggle");
+        const $filterPanel = $("#filter-panel");
+
+        $filterToggle.off('click.filter').on('click.filter', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const isCurrentlyShown = $filterPanel.hasClass("show");
+
+            // Store current grid column widths before toggle
+            let columnWidths = {};
+            if (state.gridApi && state.gridApi.getColumnState) {
+                const columnState = state.gridApi.getColumnState();
+                columnState.forEach(col => {
+                    if (col.width) {
+                        columnWidths[col.colId] = col.width;
+                    }
+                });
+            }
+
+            if (isCurrentlyShown) {
+                // Hide filter panel
+                $filterPanel.removeClass("show");
+                $filterToggle.removeClass("active");
+            } else {
+                // Show filter panel
+                $filterPanel.addClass("show");
+                $filterToggle.addClass("active");
+
+                // If showing, update filter field dropdowns with column options
+                if (funcs.updateFilterFields) {
+                    funcs.updateFilterFields();
+                }
+
+                // Load saved filters
+                if (funcs.loadSavedFiltersList) {
+                    funcs.loadSavedFiltersList();
+                }
+            }
+
+            // Resize table container after animation completes
+            setTimeout(() => {
+                resizeTableContainer();
+
+                // Restore column widths after resize
+                if (state.gridApi && Object.keys(columnWidths).length > 0) {
+                    const currentState = state.gridApi.getColumnState();
+                    const restoredState = currentState.map(col => ({
+                        ...col,
+                        width: columnWidths[col.colId] || col.width
+                    }));
+
+                    state.gridApi.applyColumnState({
+                        state: restoredState,
+                        applyOrder: true
+                    });
+                }
+            }, 350); // Wait for CSS animation to complete
+        });
     }
 
     // Show toast notification
@@ -243,10 +423,161 @@
         });
     }
 
+    // Enhanced responsive table resize setup
+    function setupResponsiveTableResize() {
+        // Debounced resize handler
+        let resizeTimer;
+
+        function debouncedResize() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                resizeTableContainer();
+            }, 150);
+        }
+
+        // Window resize handler
+        $(window).off('resize.table').on('resize.table', debouncedResize);
+
+        // Orientation change handler for mobile
+        $(window).off('orientationchange.table').on('orientationchange.table', function() {
+            setTimeout(debouncedResize, 500); // Wait for orientation change to complete
+        });
+
+        // Initial resize
+        setTimeout(resizeTableContainer, 100);
+    }
+
+    // Enhanced keyboard navigation
+    function setupKeyboardNavigation() {
+        // Global keyboard shortcuts
+        $(document).off('keydown.navigation').on('keydown.navigation', function(e) {
+            // Close dropdowns on Escape
+            if (e.key === 'Escape') {
+                $('.dropdown-menu').removeClass('show');
+            }
+
+            // Toggle filter panel with Ctrl+F or Cmd+F
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
+                e.preventDefault();
+                $('#filter-toggle').trigger('click');
+            }
+
+            // Focus search with Ctrl+K or Cmd+K
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                $('#global-search-input').focus();
+            }
+        });
+    }
+
+    // Grid-specific enhancements
+    function setupGridEnhancements() {
+        // Wait for grid to be ready
+        if (state.gridApi) {
+            // Prevent unwanted column auto-sizing
+            state.gridApi.addEventListener('gridReady', function() {
+                console.log("Grid ready - applying column stability fixes");
+
+                // Store initial column state
+                window.initialColumnState = state.gridApi.getColumnState();
+            });
+
+            // Handle filter changes without affecting column widths
+            state.gridApi.addEventListener('filterChanged', function() {
+                // Preserve column widths during filter operations
+                if (window.initialColumnState) {
+                    const currentState = state.gridApi.getColumnState();
+                    const preservedState = currentState.map((col, index) => ({
+                        ...col,
+                        width: window.initialColumnState[index]?.width || col.width
+                    }));
+
+                    // Apply preserved state after a short delay
+                    setTimeout(() => {
+                        state.gridApi.applyColumnState({
+                            state: preservedState,
+                            applyOrder: true
+                        });
+                    }, 50);
+                }
+            });
+        }
+    }
+
+    // Enhanced error handling and debugging
+    function setupErrorHandling() {
+        // Global error handler for UI operations
+        window.addEventListener('error', function(e) {
+            if (e.filename && e.filename.includes('ui.js')) {
+                console.error('UI module error:', e.error);
+                // Attempt to reinitialize dropdowns if they fail
+                setTimeout(setupDropdowns, 1000);
+            }
+        });
+
+        // Handle dropdown positioning errors
+        $(document).on('error', '.dropdown-menu', function(e) {
+            console.warn('Dropdown positioning error, attempting fix...');
+            const $menu = $(this);
+            $menu.css({
+                position: 'fixed',
+                zIndex: 9999,
+                top: '60px',
+                right: '20px'
+            });
+        });
+    }
+
+    // Mutation observer for dynamic content changes
+    function setupDynamicContentObserver() {
+        if ('MutationObserver' in window) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    // Reinitialize dropdowns if new dropdown elements are added
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        for (let node of mutation.addedNodes) {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                if (node.querySelector('.dropdown') || node.classList?.contains('dropdown')) {
+                                    console.log('New dropdown detected, reinitializing...');
+                                    setTimeout(setupDropdowns, 100);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+    }
+
+    // Enhanced initialization function
+    function initializeUIEnhancements() {
+        console.log("Initializing UI enhancements...");
+
+        // Setup enhanced dropdowns
+        setupDropdowns();
+
+        // Setup filter toggle with width preservation
+        setupFilterToggle();
+
+        // Setup responsive table resizing
+        setupResponsiveTableResize();
+
+        // Setup keyboard navigation
+        setupKeyboardNavigation();
+
+        console.log("UI enhancements initialized successfully");
+    }
+
     // Set up event handlers
     function setupEventHandlers() {
         // Search with debounce
-        const debouncedSearch = funcs.debounce(funcs.performSearch, 300);
+        const debouncedSearch = funcs.debounce ? funcs.debounce(funcs.performSearch, 300) : funcs.performSearch;
 
         $("#search-button").click(funcs.performSearch);
         $("#search-input").on('input', debouncedSearch);
@@ -282,43 +613,28 @@
 
         // Export functionality
         $("#export-excel").click(function () {
-            funcs.exportToExcel();
+            if (funcs.exportToExcel) funcs.exportToExcel();
             $("#tools-dropdown-menu").removeClass("show");
         });
 
         $("#export-pdf").click(function () {
-            funcs.exportToPDF();
+            if (funcs.exportToPDF) funcs.exportToPDF();
             $("#tools-dropdown-menu").removeClass("show");
-        });
-
-        $("#filter-toggle").click(function () {
-            $("#filter-panel").toggleClass("show");
-
-            // If showing, update filter field dropdowns with column options
-            if ($("#filter-panel").hasClass("show")) {
-                funcs.updateFilterFields();
-
-                // Load saved filters
-                funcs.loadSavedFiltersList();
-            }
-
-            // Adjust table container height after toggling filter panel
-            setTimeout(funcs.resizeTableContainer, 100);
         });
 
         // Handle add filter row button
         $("#add-filter-row").click(function () {
-            funcs.addEnhancedFilterRow();
+            if (funcs.addEnhancedFilterRow) funcs.addEnhancedFilterRow();
         });
 
         // Handle apply filters button
         $("#apply-filters").click(function () {
-            funcs.applyEnhancedFilters();
+            if (funcs.applyEnhancedFilters) funcs.applyEnhancedFilters();
         });
 
         // Handle clear filters button
         $("#clear-filters").click(function () {
-            funcs.clearFilters();
+            if (funcs.clearFilters) funcs.clearFilters();
         });
 
         // Handle save filter button
@@ -372,7 +688,7 @@
             state.isDarkMode = !state.isDarkMode;
 
             // Apply theme change
-            funcs.updateTheme();
+            if (funcs.updateTheme) funcs.updateTheme();
 
             // Close dropdown
             $("#settings-dropdown-menu").removeClass("show");
@@ -405,23 +721,23 @@
         });
 
         $("#apply-column-changes").click(function () {
-            funcs.applyColumnVisibility();
+            if (funcs.applyColumnVisibility) funcs.applyColumnVisibility();
             $("#column-modal").addClass("hidden");
         });
 
         $("#toggle-ui-btn").click(function () {
-            funcs.toggleUIElements();
+            if (funcs.toggleUIElements) funcs.toggleUIElements();
         });
 
         $("#refresh-button").click(function () {
-            funcs.refreshData();
+            if (funcs.refreshData) funcs.refreshData();
         });
 
         // Keyboard shortcut (Alt+H) to toggle UI
         $(document).keydown(function (e) {
             // Alt + H to toggle UI
             if (e.altKey && e.keyCode === 72) {
-                funcs.toggleUIElements();
+                if (funcs.toggleUIElements) funcs.toggleUIElements();
                 e.preventDefault();
             }
 
@@ -440,7 +756,7 @@
 
             // F5 or Ctrl + R to refresh data
             if (e.keyCode === 116 || (e.ctrlKey && e.keyCode === 82)) {
-                funcs.refreshData();
+                if (funcs.refreshData) funcs.refreshData();
                 e.preventDefault();
             }
         });
@@ -529,7 +845,7 @@
                 showToast("Filter salvestatud", `Filter "${name}" edukalt salvestatud`, "success");
 
                 // Refresh filters list
-                funcs.loadSavedFiltersList();
+                if (funcs.loadSavedFiltersList) funcs.loadSavedFiltersList();
             })
             .catch(error => {
                 console.error("Error saving filter:", error);
@@ -584,11 +900,35 @@
         updateToastStyles();
     }
 
+    // Export functions for global access
+    window.uiEnhancements = {
+        init: initializeUIEnhancements,
+        setupDropdowns: setupDropdowns,
+        setupFilterToggle: setupFilterToggle,
+        resizeTableContainer: resizeTableContainer
+    };
+
     // Expose functions to the global bridge
     funcs.showToast = showToast;
     funcs.resizeTableContainer = resizeTableContainer;
     funcs.setupDropdowns = setupDropdowns;
     funcs.setupEventHandlers = setupEventHandlers;
     funcs.updateDynamicElements = updateDynamicElements;
+
+    // Initialize when DOM is ready
+    $(document).ready(function() {
+        initializeUIEnhancements();
+        setupGridEnhancements();
+        setupErrorHandling();
+        setupDynamicContentObserver();
+        setupEventHandlers();
+
+        console.log("All UI enhancements loaded and initialized");
+    });
+
+    // Re-initialize on Turbo/AJAX page loads if using Rails/similar
+    $(document).on('turbo:load page:load', function() {
+        initializeUIEnhancements();
+    });
 
 })();

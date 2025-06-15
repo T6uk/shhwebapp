@@ -38,7 +38,7 @@ body.dark {
     color: var(--dark-text-primary);
 }
 
-/* Table Container */
+/* Table Container with Z-Index Fixes */
 #data-table {
     height: 100%;
     width: 100%;
@@ -56,6 +56,15 @@ body.dark {
     margin-top: var(--space-4);
     border: 1px solid var(--border-primary);
     transition: box-shadow var(--transition-slow);
+    z-index: 1; /* Lower than dropdowns */
+    isolation: isolate; /* Create new stacking context */
+    /* Add transform3d to force hardware acceleration */
+    transform: translate3d(0, 0, 0);
+    /* Prevent sub-pixel rendering issues */
+    backface-visibility: hidden;
+    perspective: 1000px;
+    /* Smooth height transitions */
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #table-container:hover {
@@ -65,6 +74,34 @@ body.dark {
 .dark-mode #table-container:hover,
 .dark #table-container:hover {
     box-shadow: var(--shadow-dark-lg);
+}
+
+/* AG-Grid specific z-index overrides */
+.ag-root-wrapper {
+    z-index: 1 !important;
+    /* Force new stacking context to prevent z-index issues */
+    isolation: isolate;
+    /* Prevent layout shifts during animations */
+    contain: layout style;
+}
+
+.ag-header {
+    z-index: 2 !important;
+}
+
+.ag-floating-top {
+    z-index: 2 !important;
+}
+
+.ag-floating-bottom {
+    z-index: 2 !important;
+}
+
+/* Ensure all AG-Grid overlays stay below dropdowns */
+.ag-overlay,
+.ag-menu,
+.ag-popup {
+    z-index: 10 !important; /* Below our dropdowns */
 }
 
 /* Modern card styling */
@@ -292,7 +329,7 @@ body.dark {
     height: 1.75rem;
 }
 
-/* Filter Panel Styles - CRITICAL FOR TOGGLE FUNCTIONALITY */
+/* ENHANCED FILTER PANEL STYLES WITH ANIMATION FIXES */
 .filter-panel {
     background-color: var(--bg-surface);
     border-radius: var(--radius-xl);
@@ -301,44 +338,99 @@ body.dark {
     margin-top: var(--space-3);
     margin-bottom: var(--space-3);
     box-shadow: var(--shadow-context);
-    display: none; /* Hidden by default */
-    transition: all var(--transition-slow);
+
+    /* Enhanced animation and positioning */
+    display: none;
     position: relative;
-    z-index: 10;
+    z-index: calc(var(--z-dropdown) - 1); /* Below dropdowns, above table */
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+
+    /* Prevent layout shift */
+    will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .filter-panel.show {
     display: block;
-    animation: fadeIn var(--transition-slow) ease;
+    opacity: 1;
+    transform: translateY(0);
+    animation: filterPanelSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Filter Toggle Button Styling */
+/* Smooth show/hide animation */
+@keyframes filterPanelSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateY(-5px) scale(0.99);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 1000px;
+        padding-top: var(--space-6);
+        padding-bottom: var(--space-6);
+        margin-top: var(--space-3);
+        margin-bottom: var(--space-3);
+    }
+}
+
+/* Filter Toggle Button Enhanced Styling */
 #filter-toggle {
     position: relative;
     transition: all var(--transition-normal);
-}
-
-#filter-toggle.active,
-#filter-toggle:active {
-    background-color: var(--primary-color) !important;
-    color: white !important;
-    border-color: var(--primary-color) !important;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-weight: var(--font-weight-medium);
+    outline: none;
+    cursor: pointer;
 }
 
 #filter-toggle:hover {
     background-color: var(--primary-light);
     color: var(--primary-dark);
     border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
+#filter-toggle.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: var(--shadow-lg);
+}
+
+#filter-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Dark mode filter toggle */
 .dark-mode #filter-toggle:hover,
 .dark #filter-toggle:hover {
     background-color: var(--dark-surface-strong);
     color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
 .filter-group {
     margin-bottom: var(--space-6);
+    position: relative;
 }
 
 .filter-group-title {
@@ -346,6 +438,23 @@ body.dark {
     font-size: var(--font-size-base);
     margin-bottom: var(--space-4);
     color: var(--text-primary);
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+    padding: var(--space-3);
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-primary);
+    transition: all var(--transition-normal);
+}
+
+.filter-row:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
 }
 
 .filter-select {
@@ -433,7 +542,19 @@ body.dark {
 .dark .filter-panel {
     background-color: var(--dark-surface);
     border-color: var(--dark-border);
-    box-shadow: var(--shadow-dark-lg);
+    box-shadow: var(--shadow-dark-context);
+}
+
+.dark-mode .filter-row,
+.dark .filter-row {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .filter-row:hover,
+.dark .filter-row:hover {
+    background-color: var(--dark-surface-strong);
+    border-color: var(--primary-color);
 }
 
 .dark-mode .filter-group-title,

@@ -74,7 +74,7 @@
     background-color: rgba(59, 130, 246, 0.2);
 }
 
-/* Advanced dropdown styling */
+/* ENHANCED DROPDOWN STYLING WITH Z-INDEX FIXES */
 .dropdown {
     position: relative;
     display: inline-block;
@@ -84,7 +84,7 @@
     position: absolute;
     top: calc(100% + var(--space-2));
     right: 0;
-    z-index: var(--z-dropdown);
+    z-index: calc(var(--z-dropdown) + 50) !important; /* Ensure it's above table */
     min-width: 250px;
     max-width: calc(100vw - 2rem);
     background-color: var(--bg-surface);
@@ -98,6 +98,8 @@
     opacity: 0;
     transform: scale(0.95);
     pointer-events: none;
+    /* Ensure dropdown is always on top */
+    isolation: isolate;
 }
 
 .dropdown-menu.show {
@@ -106,6 +108,25 @@
     transform: scale(1);
     pointer-events: auto;
     animation: dropdownFadeIn 0.25s ease forwards;
+    /* Force new stacking context */
+    will-change: transform, opacity;
+}
+
+/* Fix for specific toolbar dropdowns */
+#tools-dropdown-menu,
+#widgets-dropdown-menu,
+#settings-dropdown-menu,
+#links-dropdown-menu,
+#filters-dropdown-menu,
+#user-dropdown-menu {
+    z-index: 9999 !important; /* Maximum priority over table */
+    position: fixed !important; /* Use fixed positioning for reliability */
+}
+
+/* Adjust positioning for fixed dropdowns */
+.dropdown-toggle:focus + .dropdown-menu,
+.dropdown-toggle.active + .dropdown-menu {
+    z-index: 9999 !important;
 }
 
 @keyframes dropdownFadeIn {
