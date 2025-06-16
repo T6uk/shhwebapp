@@ -96,7 +96,7 @@
     --shadow-dark-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
     --shadow-dark-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
 
-    /* Z-Index Scale - FIXED: Added missing z-index values */
+    /* Z-Index Scale */
     --z-base: 1;
     --z-table: 5;
     --z-dropdown: 50;
@@ -155,9 +155,4 @@
     --border-dark: var(--border-strong);
     --dark-card-bg: var(--dark-surface);
     --dark-card-border: var(--dark-border);
-    --dark-text-primary: var(--dark-text-primary);
-    --dark-text-secondary: var(--dark-text-secondary);
-    --dark-border: var(--dark-border);
-    --dark-hover: var(--dark-surface-strong);
-    --dark-input-bg: var(--dark-surface-strong);
 }

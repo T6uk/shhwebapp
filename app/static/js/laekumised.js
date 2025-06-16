@@ -1,5 +1,5 @@
 /**
- * Laekumised Module
+ * Laekumised Module - FIXED VERSION
  * Handles payment processing modal for Koondaja data
  * File: /static/js/laekumised.js
  * Dependencies: koondaja-shared.js
@@ -81,7 +81,7 @@
         },
 
         /**
-         * Open the Laekumised modal - ENHANCED
+         * Open the Laekumised modal - FIXED VERSION
          */
         async openModal() {
             console.log('Opening Laekumised modal...');
@@ -90,7 +90,7 @@
             console.log('Koondaja data:', koondajaData);
 
             if (!koondajaData || koondajaData.length === 0) {
-                Utils.showNotification('Andmeid pole laetud - lae esmalt koondaja andmed', 'warning');
+                this.showNotification('Andmeid pole laetud - lae esmalt koondaja andmed', 'warning');
                 return;
             }
 
@@ -123,7 +123,7 @@
 
                 console.log('Sample rows debug info:', debugInfo);
 
-                Utils.showNotification(
+                this.showNotification(
                     `Ei leitud ridu kehtivate toimiku numbritega. Laetud ${koondajaData.length} rida, kuid ükski ei oma kehtivat toimiku numbrit.`,
                     'warning'
                 );
@@ -137,8 +137,17 @@
             $('#laekumised-modal').removeClass('hidden');
             $('body').addClass('overflow-hidden');
 
-            // Load data for the first person
-            await this.loadPersonData();
+            // FIXED: Ensure loading state is properly managed
+            this.showLoading();
+
+            try {
+                // Load data for the first person
+                await this.loadPersonData();
+            } catch (error) {
+                console.error('Error loading initial person data:', error);
+                this.hideLoading();
+                this.showNotification('Viga andmete laadimisel', 'error');
+            }
         },
 
         /**
@@ -148,6 +157,7 @@
             $('#laekumised-modal').addClass('hidden');
             $('body').removeClass('overflow-hidden');
             LaekumisedState.isProcessing = false;
+            this.hideLoading();
         },
 
         /**
@@ -156,20 +166,46 @@
         async nextPerson() {
             if (LaekumisedState.currentIndex < LaekumisedState.validRows.length - 1) {
                 LaekumisedState.currentIndex++;
-                await this.loadPersonData();
+                this.showLoading();
+                try {
+                    await this.loadPersonData();
+                } catch (error) {
+                    console.error('Error loading next person data:', error);
+                    this.hideLoading();
+                    this.showNotification('Viga järgmise isiku andmete laadimisel', 'error');
+                }
             } else {
                 // All persons processed
-                Utils.showNotification('Kõik isikud töödeldud', 'success');
+                this.showNotification('Kõik isikud töödeldud', 'success');
                 this.closeModal();
             }
         },
 
         /**
-         * Load person data for current index - ENHANCED
+         * FIXED: Show loading state
+         */
+        showLoading() {
+            console.log('Showing loading state...');
+            $('#laekumised-loading').removeClass('hidden');
+            $('#laekumised-content').addClass('opacity-50');
+        },
+
+        /**
+         * FIXED: Hide loading state
+         */
+        hideLoading() {
+            console.log('Hiding loading state...');
+            $('#laekumised-loading').addClass('hidden');
+            $('#laekumised-content').removeClass('opacity-50');
+        },
+
+        /**
+         * Load person data for current index - FIXED VERSION
          */
         async loadPersonData() {
             if (LaekumisedState.currentIndex >= LaekumisedState.validRows.length) {
                 console.error('Current index exceeds valid rows length');
+                this.hideLoading();
                 return;
             }
 
@@ -186,10 +222,6 @@
             // Update counter in header
             $('#laekumised-person-counter').text(`${currentPosition} / ${totalCount}`);
 
-            // Show loading
-            $('#laekumised-loading').removeClass('hidden');
-            $('#laekumised-content').addClass('opacity-50');
-
             try {
                 // Get additional database info
                 const dbData = await DataManager.fetchPersonData(currentRow.toimiku_nr_loplik);
@@ -201,15 +233,18 @@
                 // Reset form to defaults
                 this.resetForm();
 
+                // FIXED: Always hide loading after successful data load
+                this.hideLoading();
+
             } catch (error) {
                 console.error('Error loading person data:', error);
-                Utils.showNotification(`Viga isiku andmete laadimisel: ${error.message || error}`, 'error');
+                this.showNotification(`Viga isiku andmete laadimisel: ${error.message || error}`, 'error');
 
                 // Show basic data even if database lookup fails
                 this.updatePersonDisplay(currentRow, {});
-            } finally {
-                $('#laekumised-loading').addClass('hidden');
-                $('#laekumised-content').removeClass('opacity-50');
+
+                // FIXED: Hide loading even on error
+                this.hideLoading();
             }
         },
 
@@ -226,7 +261,6 @@
             $('#laekumised-sissenoudja').text(sissenoudjaName);
 
             $('#laekumised-asja-liik').text(dbData.asjas_sonades || '');
-            $('#laekumised-noude-sisu').text(dbData.noude_sisu || koondajaRow.noude_sisu || '');
             $('#laekumised-staatus').text(dbData.staatus || koondajaRow.staatus_baasis || '');
             $('#laekumised-markused').text(dbData.markused || koondajaRow.toimiku_markused || '');
 
@@ -288,7 +322,6 @@
 
             // Update Tasu ja täitekulu section
             $('#tasu-algne').text(this.formatEstonianCurrency(tasuAlgne));
-            $('#tasu-alustamistasu').text(this.formatEstonianCurrency(tmAlustTasu));
             $('#tasu-laekumine').text(`${this.formatEstonianCurrency(tasuLaekumine)} (${tasuPercent}%)`);
             $('#tasu-jaak').text(this.formatEstonianCurrency(tasuJaak));
 
@@ -301,7 +334,6 @@
             $('#avalduse-laekumise-kpv').text(this.formatEstonianDate(dbData.avalduse_laekumise_kpv));
             $('#menetluse-alg-kpv').text(this.formatEstonianDate(dbData.menetluse_alg_kpv));
             $('#vanem-laps-18').text(this.formatEstonianDate(dbData.vanem_laps_18_kpv));
-            $('#vabatahtlik-taitmise-aeg').text(this.formatEstonianDate(dbData.vabatahtlikku_taimise_lopp_kpv));
             $('#pool-tasust').text(this.formatEstonianCurrency(dbData.pool_tasust));
             $('#kpv-laekunud-summa').text(this.formatEstonianCurrency(laekumisedKokku));
         },
@@ -363,7 +395,7 @@
             LaekumisedState.ulalpeetavad = 0;
 
             this.updateRemainingAmount();
-            Utils.showNotification('Tagasi algse summa juurde', 'info');
+            this.showNotification('Tagasi algse summa juurde', 'info');
         },
 
         /**
@@ -427,6 +459,27 @@
             } catch (error) {
                 return dateStr;
             }
+        },
+
+        /**
+         * FIXED: Show notification helper
+         */
+        showNotification(message, type = 'info') {
+            // Use global showToast if available
+            if (typeof window.showToast === 'function') {
+                window.showToast(type === 'warning' ? 'Hoiatus' : type === 'error' ? 'Viga' : 'Info', message, type);
+                return;
+            }
+
+            // Use Utils if available
+            if (Utils && Utils.showNotification) {
+                Utils.showNotification(message, type);
+                return;
+            }
+
+            // Fallback
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            alert(message);
         }
     };
 
@@ -445,8 +498,11 @@
 
             // Check cache first
             if (LaekumisedState.databaseCache[toimikuNr]) {
+                console.log('Using cached data for toimiku:', toimikuNr);
                 return LaekumisedState.databaseCache[toimikuNr];
             }
+
+            console.log('Fetching database data for toimiku:', toimikuNr);
 
             try {
                 const response = await $.ajax({
@@ -455,8 +511,11 @@
                     contentType: 'application/json',
                     data: JSON.stringify({
                         toimiku_nr: toimikuNr
-                    })
+                    }),
+                    timeout: 10000 // 10 second timeout
                 });
+
+                console.log('Database response received:', response);
 
                 if (response.success && response.data) {
                     // Cache the result
@@ -464,10 +523,13 @@
                     return response.data;
                 }
 
+                console.warn('No data in response for toimiku:', toimikuNr);
                 return {};
 
             } catch (error) {
-                console.error('Error fetching person data:', error);
+                console.error('Error fetching person data for toimiku', toimikuNr, ':', error);
+
+                // Return empty object instead of throwing
                 return {};
             }
         }
@@ -519,6 +581,8 @@
 
             // Initial button state update
             ButtonManager.updateButtonState();
+
+            console.log('Laekumised module initialized');
         }
     };
 

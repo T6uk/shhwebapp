@@ -1,0 +1,590 @@
+/* app/static/css/loading.css */
+/* Loading states, spinners, and progress indicators */
+
+/* Main loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-slow);
+}
+
+.dark-mode .loading-overlay,
+.dark .loading-overlay {
+    background-color: rgba(15, 23, 42, 0.9);
+}
+
+/* Loading card/container */
+.loading-card {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--border-primary);
+    min-width: 200px;
+    text-align: center;
+}
+
+.dark-mode .loading-card,
+.dark .loading-card {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-xl);
+}
+
+.loading-card .loading-title {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+}
+
+.dark-mode .loading-card .loading-title,
+.dark .loading-card .loading-title {
+    color: var(--dark-text-primary);
+}
+
+.loading-card .loading-subtitle {
+    font-size: var(--compact-font-size);
+    color: var(--text-secondary);
+    margin-top: var(--space-2);
+}
+
+.dark-mode .loading-card .loading-subtitle,
+.dark .loading-card .loading-subtitle {
+    color: var(--dark-text-secondary);
+}
+
+/* Base spinner styles */
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-full);
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    animation: spin 0.8s linear infinite;
+    margin-bottom: var(--space-3);
+}
+
+.dark-mode .spinner,
+.dark .spinner {
+    border-color: var(--dark-border);
+    border-top-color: var(--primary-color);
+}
+
+/* Small spinner variant */
+.spinner-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 2px;
+    margin: 0;
+}
+
+/* Medium spinner variant */
+.spinner-md {
+    width: 2rem;
+    height: 2rem;
+    border-width: 2px;
+    margin: 0;
+}
+
+/* Large spinner variant */
+.spinner-lg {
+    width: 4rem;
+    height: 4rem;
+    border-width: 4px;
+}
+
+/* Extra large spinner variant */
+.spinner-xl {
+    width: 5rem;
+    height: 5rem;
+    border-width: 4px;
+}
+
+/* Spinner color variants */
+.spinner-primary {
+    border-top-color: var(--primary-color);
+}
+
+.spinner-success {
+    border-top-color: var(--success);
+}
+
+.spinner-warning {
+    border-top-color: var(--warning);
+}
+
+.spinner-danger {
+    border-top-color: var(--danger);
+}
+
+.spinner-info {
+    border-top-color: var(--info);
+}
+
+/* Pulse spinner variant */
+.spinner-pulse {
+    background-color: var(--primary-color);
+    border: none;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.spinner-pulse.spinner-success {
+    background-color: var(--success);
+}
+
+.spinner-pulse.spinner-warning {
+    background-color: var(--warning);
+}
+
+.spinner-pulse.spinner-danger {
+    background-color: var(--danger);
+}
+
+.spinner-pulse.spinner-info {
+    background-color: var(--info);
+}
+
+/* Dots spinner */
+.spinner-dots {
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+}
+
+.spinner-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: var(--radius-full);
+    background-color: var(--primary-color);
+    animation: bounce 1.4s ease-in-out infinite both;
+}
+
+.spinner-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.spinner-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.spinner-dot:nth-child(3) {
+    animation-delay: 0;
+}
+
+/* Mini loading indicator */
+#mini-loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mini-spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+.dark-mode .mini-spinner,
+.dark .mini-spinner {
+    border-color: var(--dark-border);
+    border-top-color: var(--primary-color);
+}
+
+/* Progress bars */
+.progress-bar {
+    width: 100%;
+    height: 0.5rem;
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-top: var(--space-4);
+}
+
+.dark-mode .progress-bar,
+.dark .progress-bar {
+    background-color: var(--dark-surface-strong);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+    transform-origin: left;
+}
+
+.progress-bar-fill.success {
+    background-color: var(--success);
+}
+
+.progress-bar-fill.warning {
+    background-color: var(--warning);
+}
+
+.progress-bar-fill.danger {
+    background-color: var(--danger);
+}
+
+.progress-bar-fill.info {
+    background-color: var(--info);
+}
+
+/* Indeterminate progress bar */
+.progress-bar-indeterminate .progress-bar-fill {
+    width: 30% !important;
+    animation: progress-indeterminate 2s linear infinite;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--primary-color),
+        transparent
+    );
+}
+
+/* Skeleton loaders */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--bg-primary) 25%,
+        var(--border-primary) 50%,
+        var(--bg-primary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+    border-radius: var(--radius-md);
+}
+
+.dark-mode .skeleton,
+.dark .skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--dark-surface) 25%,
+        var(--dark-border) 50%,
+        var(--dark-surface) 75%
+    );
+    background-size: 200% 100%;
+}
+
+.skeleton-text {
+    height: 1rem;
+    margin-bottom: var(--space-2);
+}
+
+.skeleton-text:last-child {
+    margin-bottom: 0;
+    width: 70%;
+}
+
+.skeleton-title {
+    height: 1.5rem;
+    width: 40%;
+    margin-bottom: var(--space-3);
+}
+
+.skeleton-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-full);
+}
+
+.skeleton-button {
+    height: 2.5rem;
+    width: 6rem;
+}
+
+.skeleton-card {
+    height: 8rem;
+    width: 100%;
+}
+
+/* Loading states for components */
+.loading .fas,
+.loading .far,
+.loading .fab {
+    animation: spin 1s linear infinite;
+}
+
+.loading-button {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.loading-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: var(--radius-full);
+    animation: spin 0.8s linear infinite;
+    color: inherit;
+}
+
+/* Table loading overlay */
+.table-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.dark-mode .table-loading-overlay,
+.dark .table-loading-overlay {
+    background-color: rgba(15, 23, 42, 0.8);
+}
+
+/* Modal loading states */
+.modal-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    gap: var(--space-3);
+}
+
+.modal-loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+.dark-mode .modal-loading-spinner,
+.dark .modal-loading-spinner {
+    border-color: var(--dark-border);
+    border-top-color: var(--primary-color);
+}
+
+.modal-loading-text {
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+}
+
+.dark-mode .modal-loading-text,
+.dark .modal-loading-text {
+    color: var(--dark-text-secondary);
+}
+
+/* Koondaja specific loading modal */
+#koondaja-loading-modal {
+    z-index: calc(var(--z-modal) + 100);
+}
+
+.koondaja-loading-content {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-6);
+    max-width: 28rem;
+    width: 90vw;
+}
+
+.dark-mode .koondaja-loading-content,
+.dark .koondaja-loading-content {
+    background-color: var(--dark-surface);
+    box-shadow: var(--shadow-dark-xl);
+}
+
+.koondaja-loading-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.dark-mode .koondaja-loading-title,
+.dark .koondaja-loading-title {
+    color: var(--dark-text-primary);
+}
+
+.koondaja-loading-status {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+}
+
+.dark-mode .koondaja-loading-status,
+.dark .koondaja-loading-status {
+    color: var(--dark-text-secondary);
+}
+
+.koondaja-loading-details {
+    font-size: var(--compact-font-size);
+    color: var(--text-muted);
+    margin-top: var(--space-2);
+}
+
+.dark-mode .koondaja-loading-details,
+.dark .koondaja-loading-details {
+    color: var(--dark-text-muted);
+}
+
+/* Animations */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes progress-indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(300%);
+    }
+}
+
+/* Badge notifications with loading states */
+.badge-container {
+    position: relative;
+}
+
+.loading-badge {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: pulse 2s infinite;
+}
+
+.loading-badge.success {
+    background-color: var(--success);
+}
+
+.loading-badge.warning {
+    background-color: var(--warning);
+}
+
+.loading-badge.danger {
+    background-color: var(--danger);
+}
+
+.loading-badge.info {
+    background-color: var(--info);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .loading-card {
+        padding: var(--space-6);
+        min-width: 150px;
+    }
+
+    .spinner {
+        width: 2rem;
+        height: 2rem;
+        border-width: 2px;
+    }
+
+    .spinner-lg {
+        width: 3rem;
+        height: 3rem;
+        border-width: 3px;
+    }
+
+    .spinner-xl {
+        width: 4rem;
+        height: 4rem;
+        border-width: 3px;
+    }
+
+    .koondaja-loading-content {
+        padding: var(--space-4);
+        max-width: 20rem;
+    }
+
+    .modal-loading {
+        padding: var(--space-6);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .spinner,
+    .mini-spinner,
+    .modal-loading-spinner,
+    .loading .fas {
+        animation: none;
+    }
+
+    .skeleton {
+        animation: none;
+        background: var(--bg-primary);
+    }
+
+    .dark-mode .skeleton,
+    .dark .skeleton {
+        background: var(--dark-surface);
+    }
+
+    .progress-bar-indeterminate .progress-bar-fill {
+        animation: none;
+        background: var(--primary-color);
+    }
+}

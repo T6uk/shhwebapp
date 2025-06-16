@@ -1,0 +1,820 @@
+/* app/static/css/animations.css */
+/* Animation utilities, keyframes, and transition effects - FIXED VERSION */
+
+/* === KEYFRAME ANIMATIONS === */
+
+/* Basic animations */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scale animations */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes scaleOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+/* FIXED: Rotation animations with proper transform origin */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spinSlow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* FIXED: Pulse animations */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes heartbeat {
+    0%, 100% {
+        transform: scale(1);
+    }
+    10%, 30% {
+        transform: scale(0.9);
+    }
+    20%, 40%, 60%, 80% {
+        transform: scale(1.1);
+    }
+    50%, 70% {
+        transform: scale(1.05);
+    }
+}
+
+/* Bounce animations */
+@keyframes bounce {
+    0%, 20%, 53%, 80%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+        transform: translate3d(0, -30px, 0);
+    }
+    70% {
+        transform: translate3d(0, -15px, 0);
+    }
+    90% {
+        transform: translate3d(0, -4px, 0);
+    }
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Shake animation */
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-10px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(10px);
+    }
+}
+
+/* Wobble animation */
+@keyframes wobble {
+    0% {
+        transform: translateX(0%);
+    }
+    15% {
+        transform: translateX(-25%) rotate(-5deg);
+    }
+    30% {
+        transform: translateX(20%) rotate(3deg);
+    }
+    45% {
+        transform: translateX(-15%) rotate(-3deg);
+    }
+    60% {
+        transform: translateX(10%) rotate(2deg);
+    }
+    75% {
+        transform: translateX(-5%) rotate(-1deg);
+    }
+    100% {
+        transform: translateX(0%);
+    }
+}
+
+/* Component-specific animations */
+
+/* Dropdown animations */
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Modal animations */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Filter panel animation */
+@keyframes filterPanelSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateY(-5px) scale(0.99);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 1000px;
+        padding-top: var(--space-6);
+        padding-bottom: var(--space-6);
+        margin-top: var(--space-3);
+        margin-bottom: var(--space-3);
+    }
+}
+
+/* Notification animations */
+@keyframes notificationSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes notificationSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+        max-height: 200px;
+        margin-bottom: var(--space-2);
+        padding: var(--space-4);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-100%);
+        max-height: 0;
+        margin-bottom: 0;
+        padding: 0 var(--space-4);
+    }
+}
+
+/* Button press animation */
+@keyframes buttonPress {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* FIXED: Loading dot animations with proper delays */
+@keyframes loadingDot1 {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes loadingDot2 {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes loadingDot3 {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Progress bar animation */
+@keyframes progressIndeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(300%);
+    }
+}
+
+/* Shimmer animation for skeleton loaders */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* FIXED: Koondaja specific animations */
+@keyframes newRowPulse {
+    0% {
+        background-color: #bbf7d0 !important;
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: var(--success-bg) !important;
+        transform: scale(1.01);
+    }
+    100% {
+        background-color: var(--success-bg) !important;
+        transform: scale(1);
+    }
+}
+
+@keyframes newRowPulseDark {
+    0% {
+        background-color: var(--success) !important;
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: var(--success-dark-bg) !important;
+        transform: scale(1.01);
+    }
+    100% {
+        background-color: var(--success-dark-bg) !important;
+        transform: scale(1);
+    }
+}
+
+/* FIXED: Edit mode pulse animation */
+@keyframes pulse-edit-button {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* FIXED: Loading spinner for refresh button */
+@keyframes refreshSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* === UTILITY ANIMATION CLASSES === */
+
+/* Fade animations */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+/* Slide animations */
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-slide-out {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-slide-in-up {
+    animation: slideInUp 0.3s ease-out forwards;
+}
+
+.animate-slide-in-down {
+    animation: slideInDown 0.3s ease-out forwards;
+}
+
+/* Scale animations */
+.animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-scale-out {
+    animation: scaleOut 0.3s ease-out forwards;
+}
+
+/* FIXED: Spin animations with proper properties */
+.animate-spin {
+    animation: spin 1s linear infinite;
+    transform-origin: center;
+}
+
+.animate-spin-slow {
+    animation: spinSlow 2s linear infinite;
+    transform-origin: center;
+}
+
+/* FIXED: Refresh button specific spin */
+.animate-refresh-spin {
+    animation: refreshSpin 1s linear infinite;
+    transform-origin: center;
+}
+
+/* Pulse animations */
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-heartbeat {
+    animation: heartbeat 1.3s ease-in-out infinite;
+}
+
+/* Bounce animations */
+.animate-bounce {
+    animation: bounce 1s infinite;
+}
+
+.animate-bounce-in {
+    animation: bounceIn 0.6s ease-out forwards;
+}
+
+/* Shake animation */
+.animate-shake {
+    animation: shake 0.6s ease-in-out;
+}
+
+/* Wobble animation */
+.animate-wobble {
+    animation: wobble 1s ease-in-out;
+}
+
+/* === HOVER ANIMATIONS === */
+
+.hover-lift {
+    transition: transform var(--transition-normal);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+.hover-scale {
+    transition: transform var(--transition-normal);
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+.hover-rotate {
+    transition: transform var(--transition-normal);
+}
+
+.hover-rotate:hover {
+    transform: rotate(5deg);
+}
+
+.hover-glow {
+    transition: box-shadow var(--transition-normal);
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+/* === TIMING VARIATIONS === */
+
+.animate-fast {
+    animation-duration: 0.15s !important;
+}
+
+.animate-slow {
+    animation-duration: 0.6s !important;
+}
+
+.animate-slower {
+    animation-duration: 1s !important;
+}
+
+/* === DELAY UTILITIES === */
+
+.animate-delay-75 {
+    animation-delay: 75ms !important;
+}
+
+.animate-delay-100 {
+    animation-delay: 100ms !important;
+}
+
+.animate-delay-150 {
+    animation-delay: 150ms !important;
+}
+
+.animate-delay-200 {
+    animation-delay: 200ms !important;
+}
+
+.animate-delay-300 {
+    animation-delay: 300ms !important;
+}
+
+.animate-delay-500 {
+    animation-delay: 500ms !important;
+}
+
+.animate-delay-700 {
+    animation-delay: 700ms !important;
+}
+
+.animate-delay-1000 {
+    animation-delay: 1000ms !important;
+}
+
+/* === DIRECTION UTILITIES === */
+
+.animate-reverse {
+    animation-direction: reverse !important;
+}
+
+.animate-alternate {
+    animation-direction: alternate !important;
+}
+
+.animate-alternate-reverse {
+    animation-direction: alternate-reverse !important;
+}
+
+/* === FILL MODE UTILITIES === */
+
+.animate-fill-none {
+    animation-fill-mode: none !important;
+}
+
+.animate-fill-forwards {
+    animation-fill-mode: forwards !important;
+}
+
+.animate-fill-backwards {
+    animation-fill-mode: backwards !important;
+}
+
+.animate-fill-both {
+    animation-fill-mode: both !important;
+}
+
+/* === PLAY STATE UTILITIES === */
+
+.animate-paused {
+    animation-play-state: paused !important;
+}
+
+.animate-running {
+    animation-play-state: running !important;
+}
+
+/* === ITERATION UTILITIES === */
+
+.animate-once {
+    animation-iteration-count: 1 !important;
+}
+
+.animate-twice {
+    animation-iteration-count: 2 !important;
+}
+
+.animate-infinite {
+    animation-iteration-count: infinite !important;
+}
+
+/* === COMPONENT-SPECIFIC ANIMATION CLASSES === */
+
+/* Toolbar enhanced animations */
+.toolbar-enhanced .toolbar-actions {
+    animation: slideInRight 0.3s ease-out;
+}
+
+/* FIXED: Loading button animation */
+.loading-button {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.loading-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: var(--radius-full);
+    animation: spin 0.8s linear infinite;
+    color: inherit;
+}
+
+/* FIXED: Mini loading indicator */
+.mini-loading-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mini-loading-indicator .animate-spin {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+}
+
+/* FIXED: New row flash animation */
+.koondaja-new-row-flash {
+    background-color: var(--success-bg) !important;
+    border-left: 4px solid var(--success) !important;
+    animation: newRowPulse 1.5s ease-in-out;
+}
+
+.dark .koondaja-new-row-flash,
+.dark-mode .koondaja-new-row-flash {
+    animation: newRowPulseDark 1.5s ease-in-out;
+}
+
+/* FIXED: Edit mode button animation */
+.edit-mode-active {
+    animation: pulse-edit-button 2s infinite !important;
+}
+
+/* FIXED: Enhanced dark mode transition - ensure proper inheritance */
+body,
+.card,
+.dropdown-menu,
+.btn,
+.compact-btn,
+input,
+select,
+.toast-notification,
+.loading-overlay,
+.modal-content,
+.status-chip,
+.quick-link {
+    transition: background-color var(--transition-slow),
+                color var(--transition-slow),
+                border-color var(--transition-slow),
+                box-shadow var(--transition-slow);
+}
+
+/* FIXED: Laekumised modal loading animation */
+.laekumised-loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+/* === REDUCED MOTION SUPPORT === */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .animate-spin,
+    .animate-spin-slow,
+    .animate-refresh-spin,
+    .animate-pulse,
+    .animate-bounce,
+    .loading .fas,
+    .spinner,
+    .laekumised-loading-spinner {
+        animation: none !important;
+    }
+
+    .hover-lift:hover,
+    .hover-scale:hover,
+    .hover-rotate:hover {
+        transform: none !important;
+    }
+}
+
+/* === ACCESSIBILITY ENHANCEMENTS === */
+
+@media (prefers-reduced-motion: no-preference) {
+    .respect-motion-preference {
+        animation-play-state: running;
+    }
+}
+
+/* Focus-visible animations */
+.focus-ring {
+    transition: box-shadow var(--transition-fast);
+}
+
+.focus-ring:focus-visible {
+    animation: pulse 1s ease-in-out 2;
+}
+
+/* === PERFORMANCE OPTIMIZATIONS === */
+
+/* Force hardware acceleration for animations */
+.gpu-accelerated {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform, opacity;
+}
+
+/* Optimize repaints */
+.optimize-animations {
+    contain: layout style paint;
+    will-change: auto;
+}
+
+/* FIXED: Ensure proper stacking for animated elements */
+.animate-spin,
+.animate-refresh-spin,
+.loading-button::after {
+    z-index: 1;
+    position: relative;
+}

@@ -47,25 +47,46 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- 1. Base Variables - MUST BE FIRST -->
+    <!-- ==================================================== -->
+    <!-- REFACTORED CSS ARCHITECTURE - LOAD ORDER IS CRITICAL -->
+    <!-- ==================================================== -->
+
+    <!-- 1. FOUNDATION: Variables and base styles (MUST BE FIRST) -->
     <link rel="stylesheet" href="{{ versioned_static('css/base-variables.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/base.css') }}">
 
-    <!-- 2. Main Styles - Core component definitions -->
-    <link rel="stylesheet" href="{{ versioned_static('css/styles.css') }}">
+    <!-- 2. UTILITIES: Helper classes for quick styling -->
+    <link rel="stylesheet" href="{{ versioned_static('css/utilities.css') }}">
 
-    <!-- 3. Compact UI - Alternative component system -->
-    <link rel="stylesheet" href="{{ versioned_static('css/compact-ui.css') }}">
+    <!-- 3. CORE COMPONENTS: Basic UI building blocks -->
+    <link rel="stylesheet" href="{{ versioned_static('css/buttons.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/forms.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/animations.css') }}">
 
+    <!-- 4. LAYOUT COMPONENTS: Page structure and navigation -->
+    <link rel="stylesheet" href="{{ versioned_static('css/header.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/toolbar.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/filters.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/table.css') }}">
+
+    <!-- 5. INTERACTIVE COMPONENTS: Dropdowns, modals, notifications -->
     <link rel="stylesheet" href="{{ versioned_static('css/dropdown.css') }}">
-    <link rel="stylesheet" href="{{ versioned_static('css/dropdown-emergency-fix.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/modals.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/notifications.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/loading.css') }}">
 
-    <!-- 4. Custom App Styles - App-specific enhancements -->
-    <link rel="stylesheet" href="{{ versioned_static('css/custom.css') }}">
-
-    <!-- 5. Module-specific styles (load last to allow overrides) -->
+    <!-- 6. FEATURE MODULES: Specific functionality modules -->
     <link rel="stylesheet" href="{{ versioned_static('css/koondaja.css') }}">
     <link rel="stylesheet" href="{{ versioned_static('css/laekumised.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/toimikuleidja.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/tagastused.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/virtuaaltoimik.css') }}">
+    <link rel="stylesheet" href="{{ versioned_static('css/document-templates.css') }}">
 
+    <!-- 7. RESPONSIVE: Media queries and responsive adjustments (MUST BE LAST) -->
+    <link rel="stylesheet" href="{{ versioned_static('css/responsive.css') }}">
+
+    <!-- Dark mode initialization script -->
     <script>
         // Check for dark mode preference and apply immediately to prevent flash
         (function () {
@@ -1576,9 +1597,8 @@
     </div>
 </div>
 
-<!-- Dropdown System - Load before other modules -->
-<script src="{{ versioned_static('js/dropdown.js') }}"></script>
 <!-- Application Scripts - Load in dependency order -->
+<script src="{{ versioned_static('js/dropdown.js') }}"></script>
 <script src="{{ versioned_static('js/global-bridge.js') }}"></script>
 <script src="{{ versioned_static('js/app.js') }}"></script>
 <script src="{{ versioned_static('js/modules/core.js') }}"></script>

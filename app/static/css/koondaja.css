@@ -1,5 +1,5 @@
 /* app/static/css/koondaja.css */
-/* Koondaja module specific styles using centralized variables */
+/* Koondaja modal and functionality specific styles */
 
 /* =================================
    KOONDAJA MODAL BASE STYLES
@@ -183,52 +183,9 @@
 }
 
 /* =================================
-   ANIMATIONS AND EFFECTS
+   NEW ROW INDICATOR BADGE
    ================================= */
 
-/* Flash animation for new rows */
-.koondaja-new-row-flash {
-    background-color: var(--success-bg) !important;
-    border-left: 4px solid var(--success) !important;
-    animation: newRowPulse 1.5s ease-in-out;
-}
-
-@keyframes newRowPulse {
-    0% {
-        background-color: #bbf7d0 !important;
-        transform: scale(1.02);
-    }
-    50% {
-        background-color: var(--success-bg) !important;
-        transform: scale(1.01);
-    }
-    100% {
-        background-color: var(--success-bg) !important;
-        transform: scale(1);
-    }
-}
-
-.dark .koondaja-new-row-flash,
-.dark-mode .koondaja-new-row-flash {
-    animation: newRowPulseDark 1.5s ease-in-out;
-}
-
-@keyframes newRowPulseDark {
-    0% {
-        background-color: var(--success) !important;
-        transform: scale(1.02);
-    }
-    50% {
-        background-color: var(--success-dark-bg) !important;
-        transform: scale(1.01);
-    }
-    100% {
-        background-color: var(--success-dark-bg) !important;
-        transform: scale(1);
-    }
-}
-
-/* New row indicator badge */
 .koondaja-new-row::after {
     content: "UUS";
     position: absolute;
@@ -316,6 +273,60 @@
     color: var(--primary-dark) !important;
 }
 
+/* Row counter display */
+#koondaja-row-count {
+    font-family: var(--font-family-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+}
+
+.dark #koondaja-row-count,
+.dark-mode #koondaja-row-count {
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   EMPTY STATE
+   ================================= */
+
+#koondaja-empty-state {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--border-primary);
+    color: var(--text-muted);
+    transition: all var(--transition-normal);
+}
+
+#koondaja-empty-state:hover {
+    border-color: var(--primary-color);
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.dark #koondaja-empty-state,
+.dark-mode #koondaja-empty-state {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text-muted);
+}
+
+.dark #koondaja-empty-state:hover,
+.dark-mode #koondaja-empty-state:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--primary-light);
+}
+
+#koondaja-empty-state i {
+    opacity: 0.6;
+    margin-bottom: var(--space-4);
+}
+
+#koondaja-empty-state p {
+    font-weight: var(--font-weight-medium);
+    margin: 0;
+}
+
 /* =================================
    DATABASE COLUMN SELECTOR
    ================================= */
@@ -327,6 +338,50 @@
 #db-columns-list {
     max-height: 400px;
     overflow-y: auto;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+}
+
+.dark #db-columns-list,
+.dark-mode #db-columns-list {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+.db-column-item {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+    margin-bottom: var(--space-1);
+}
+
+.db-column-item:hover {
+    background-color: var(--bg-primary);
+}
+
+.dark .db-column-item:hover,
+.dark-mode .db-column-item:hover {
+    background-color: var(--dark-surface-strong);
+}
+
+.db-column-item input[type="checkbox"] {
+    margin-right: var(--space-2);
+}
+
+.db-column-item label {
+    font-size: var(--compact-font-size);
+    color: var(--text-primary);
+    cursor: pointer;
+    flex: 1;
+}
+
+.dark .db-column-item label,
+.dark-mode .db-column-item label {
+    color: var(--dark-text-primary);
 }
 
 .selected-column-checkbox:checked + label {
@@ -339,265 +394,10 @@
     font-weight: var(--font-weight-medium);
 }
 
-#selected-columns-list {
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-#available-columns-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-/* =================================
-   TOIMIKULEIDJA MODAL
-   ================================= */
-
-#toimikuleidja-modal {
-    z-index: calc(var(--z-modal) + 20);
-}
-
-#toimikuleidja-table-container {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-#toimikuleidja-table-body tr:hover {
-    background-color: var(--bg-primary);
-}
-
-.dark #toimikuleidja-table-body tr:hover,
-.dark-mode #toimikuleidja-table-body tr:hover {
-    background-color: var(--dark-surface-strong);
-}
-
-.toimiku-select-btn {
-    padding: var(--space-1) var(--space-2);
-    font-size: 0.75rem;
-    border-radius: var(--radius-sm);
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: all var(--transition-normal);
-}
-
-.toimiku-select-btn:hover {
-    background-color: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-}
-
-.toimiku-select-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-}
-
-.toimikuleidja-row-selected {
-    background-color: var(--primary-100) !important;
-    border-left: 3px solid var(--primary-color) !important;
-}
-
-.dark .toimikuleidja-row-selected,
-.dark-mode .toimikuleidja-row-selected {
-    background-color: #1e3a8a !important;
-}
-
-/* Search field enhancements */
-#toimikuleidja-otsing:focus,
-#toimikuleidja-selgitus:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    outline: none;
-    transform: scale(1.02);
-}
-
-/* =================================
-   TAGASTUSED MODAL
-   ================================= */
-
-#tagastused-modal {
-    z-index: var(--z-modal);
-}
-
-/* Summary section styling */
-#tagastused-modal .bg-gray-50 {
-    background-color: var(--bg-primary);
-    border-top: 2px solid var(--border-primary);
-}
-
-.dark #tagastused-modal .bg-gray-50,
-.dark-mode #tagastused-modal .bg-gray-50 {
-    background-color: var(--dark-surface);
-    border-top: 2px solid var(--dark-border);
-}
-
-/* Currency formatting in summary */
-#tagastused-modal [id^="summary-"] {
-    font-family: 'Courier New', monospace;
-    text-align: right;
-    min-width: 80px;
-}
-
-/* Highlight main totals */
-#summary-tagastamised,
-#summary-tagastamised-baasi,
-#summary-laekus-kokku,
-#summary-baasi-ei-kanta {
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-primary);
-    background-color: var(--warning-bg);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--warning);
-}
-
-.dark #summary-tagastamised,
-.dark #summary-tagastamised-baasi,
-.dark #summary-laekus-kokku,
-.dark #summary-baasi-ei-kanta,
-.dark-mode #summary-tagastamised,
-.dark-mode #summary-tagastamised-baasi,
-.dark-mode #summary-laekus-kokku,
-.dark-mode #summary-baasi-ei-kanta {
-    background-color: var(--warning-dark-bg);
-    border-color: var(--warning);
-    color: #fbbf24;
-}
-
-/* =================================
-   LAEKUMISED MODAL
-   ================================= */
-
-#laekumised-modal {
-    z-index: calc(var(--z-modal) + 50);
-}
-
-/* Person Information Card */
-.laekumised-person-card {
-    background: linear-gradient(135deg, var(--info-bg) 0%, #e0f2fe 100%);
-    border: 1px solid var(--info);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-}
-
-.laekumised-person-card .field-label {
-    font-weight: var(--font-weight-semibold);
-    color: var(--info-dark);
-    min-width: 120px;
-    flex-shrink: 0;
-}
-
-.laekumised-person-card .field-value {
-    color: var(--text-primary);
-    flex-grow: 1;
-    font-family: var(--font-family-base);
-}
-
-/* Financial breakdown section */
-.financial-breakdown-section {
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-}
-
-.financial-breakdown-section h4 {
-    color: var(--text-primary);
-    font-weight: var(--font-weight-semibold);
+/* Column search */
+#db-column-search {
     margin-bottom: var(--space-3);
-    border-bottom: 1px solid var(--border-primary);
-    padding-bottom: var(--space-2);
-}
-
-.financial-item .value.total {
-    color: var(--success-dark);
-    font-weight: var(--font-weight-semibold);
-}
-
-.financial-item .value.laekumine {
-    color: var(--primary-color);
-}
-
-/* Payment amount section */
-.laekumised-amount-section {
-    background: linear-gradient(135deg, var(--success-bg) 0%, #dcfce7 100%);
-    border: 1px solid var(--success);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-    text-align: center;
-}
-
-.laekumised-amount-section h4 {
-    color: var(--success-dark);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--space-2);
-}
-
-.laekumised-amount-section .amount-display {
-    font-size: 1.875rem;
-    font-weight: var(--font-weight-bold);
-    color: var(--success-dark);
-    font-family: var(--font-family-base);
-}
-
-/* Protection calculation section */
-.laekumised-protection-section {
-    background: linear-gradient(135deg, var(--warning-bg) 0%, #fef3c7 100%);
-    border: 1px solid var(--warning);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-}
-
-.laekumised-protection-section .remaining-amount {
-    font-size: 1.25rem;
-    font-weight: var(--font-weight-bold);
-    color: var(--warning-dark);
-    font-family: var(--font-family-base);
-}
-
-/* Distribution method section */
-.distribution-method-section {
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-}
-
-.distribution-method-section h4 {
-    color: var(--text-primary);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--space-3);
-}
-
-.distribution-option {
-    display: flex;
-    align-items: center;
-    padding: var(--space-2);
-    border-radius: var(--radius-sm);
-    transition: background-color var(--transition-normal);
-    border: 1px solid var(--border-primary);
-    margin-bottom: var(--space-2);
-}
-
-.distribution-option:hover {
-    background-color: var(--bg-primary);
-}
-
-.distribution-option input[type="radio"] {
-    margin-right: var(--space-2);
-    color: var(--primary-color);
-}
-
-.distribution-option label {
-    font-size: var(--font-size-base);
-    color: var(--text-primary);
-    cursor: pointer;
+    width: 100%;
 }
 
 /* =================================
@@ -627,26 +427,30 @@
     border-radius: var(--radius-md);
     border: 1px solid var(--border-primary);
     background-color: var(--bg-primary);
+    font-size: var(--compact-font-size);
+    color: var(--text-secondary);
+}
+
+.dark #koondaja-validation-summary,
+.dark-mode #koondaja-validation-summary {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   CURRENCY FORMATTING
+   ================================= */
+
+.currency-cell {
+    font-family: 'Courier New', monospace;
+    text-align: right;
+    font-weight: var(--font-weight-medium);
 }
 
 /* =================================
    RESPONSIVE DESIGN
    ================================= */
-
-@media (max-width: 768px) {
-    .distribution-options {
-        grid-template-columns: 1fr;
-    }
-
-    .financial-grid {
-        grid-template-columns: 1fr;
-        gap: var(--space-2);
-    }
-
-    .additional-info-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 @media (max-width: 1024px) {
     #koondaja-toolbar button span {
@@ -656,6 +460,56 @@
     #koondaja-toolbar button {
         min-width: 40px;
         justify-content: center;
+    }
+
+    /* Keep essential button text visible */
+    #load-koondaja-data-btn span,
+    #add-row-btn span,
+    #toimikuleidja-btn span,
+    #tagastused-btn span,
+    #laekumised-btn span {
+        display: inline-block;
+    }
+}
+
+@media (max-width: 768px) {
+    #koondaja-toolbar {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-1);
+    }
+
+    .db-column-item {
+        padding: var(--space-3);
+    }
+
+    #koondaja-empty-state {
+        padding: var(--space-6);
+    }
+
+    #koondaja-empty-state i {
+        font-size: 3rem;
+    }
+}
+
+@media (max-width: 640px) {
+    #koondaja-toolbar {
+        padding: var(--space-2);
+    }
+
+    #koondaja-toolbar button {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--compact-font-size);
+    }
+
+    .koondaja-new-row::after {
+        font-size: 8px;
+        padding: 1px 3px;
+    }
+
+    #db-columns-list {
+        max-height: 300px;
+        padding: var(--space-2);
     }
 }
 
@@ -676,37 +530,37 @@
     color: var(--success-dark) !important;
 }
 
-.currency-cell {
-    font-family: 'Courier New', monospace;
-    text-align: right;
+/* Scrollbar improvements for koondaja tables */
+#koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-/* Loading states */
-.loading .fas {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* Scrollbar improvements for tables */
-.overflow-y-auto::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
+#koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-track {
     background: var(--bg-primary);
     border-radius: var(--radius-sm);
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb {
+#koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb {
     background: var(--border-strong);
     border-radius: var(--radius-sm);
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+#koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+}
+
+.dark #koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-track,
+.dark-mode #koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-track {
+    background: var(--dark-surface);
+}
+
+.dark #koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb,
+.dark-mode #koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb {
+    background: var(--dark-border);
+}
+
+.dark #koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover,
+.dark-mode #koondaja-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-text-secondary);
 }

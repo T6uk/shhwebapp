@@ -1,0 +1,760 @@
+/* app/static/css/virtuaaltoimik.css */
+/* Virtuaaltoimik (Virtual file) modal and file management specific styles */
+
+/* =================================
+   VIRTUAALTOIMIK MODAL BASE
+   ================================= */
+
+#virtuaaltoimik-modal {
+    z-index: calc(var(--z-modal) + 1);
+}
+
+.virtuaaltoimik-modal-content {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    border: 1px solid var(--border-primary);
+    overflow: hidden;
+}
+
+.dark .virtuaaltoimik-modal-content,
+.dark-mode .virtuaaltoimik-modal-content {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-xl);
+}
+
+/* =================================
+   HEADER SECTION
+   ================================= */
+
+.virtuaaltoimik-header {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-surface) 100%);
+    border-bottom: 1px solid var(--border-primary);
+    padding: var(--space-3) var(--space-6);
+}
+
+.dark .virtuaaltoimik-header,
+.dark-mode .virtuaaltoimik-header {
+    background: linear-gradient(135deg, var(--dark-surface-strong) 0%, var(--dark-surface) 100%);
+    border-bottom-color: var(--dark-border);
+}
+
+.virtuaaltoimik-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+}
+
+.dark .virtuaaltoimik-title,
+.dark-mode .virtuaaltoimik-title {
+    color: var(--dark-text-primary);
+}
+
+.virtuaaltoimik-title-icon {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    font-size: 1rem;
+}
+
+#close-virtuaaltoimik-modal {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+#close-virtuaaltoimik-modal:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+}
+
+.dark #close-virtuaaltoimik-modal,
+.dark-mode #close-virtuaaltoimik-modal {
+    color: var(--dark-text-muted);
+}
+
+.dark #close-virtuaaltoimik-modal:hover,
+.dark-mode #close-virtuaaltoimik-modal:hover {
+    color: var(--dark-text-primary);
+    background-color: var(--dark-surface-strong);
+}
+
+/* =================================
+   FILES TABLE CONTAINER
+   ================================= */
+
+#files-table-container {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+    min-height: 400px;
+}
+
+.dark #files-table-container,
+.dark-mode #files-table-container {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+.files-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--bg-surface);
+}
+
+.dark .files-table,
+.dark-mode .files-table {
+    background-color: var(--dark-surface);
+}
+
+.files-table th,
+.files-table td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    border-bottom: 1px solid var(--border-primary);
+    font-size: var(--compact-font-size);
+    vertical-align: middle;
+}
+
+.dark .files-table th,
+.dark .files-table td,
+.dark-mode .files-table th,
+.dark-mode .files-table td {
+    border-bottom-color: var(--dark-border);
+}
+
+.files-table th {
+    background-color: var(--bg-primary);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.dark .files-table th,
+.dark-mode .files-table th {
+    background-color: var(--dark-surface-strong);
+    color: var(--dark-text-secondary);
+}
+
+.files-table td {
+    color: var(--text-primary);
+    transition: background-color var(--transition-fast);
+}
+
+.dark .files-table td,
+.dark-mode .files-table td {
+    color: var(--dark-text-primary);
+}
+
+.files-table tbody tr {
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.files-table tbody tr:hover {
+    background-color: var(--bg-primary);
+    transform: translateX(2px);
+}
+
+.dark .files-table tbody tr:hover,
+.dark-mode .files-table tbody tr:hover {
+    background-color: var(--dark-surface-strong);
+}
+
+/* File type icons and styling */
+.file-type-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-semibold);
+    margin-right: var(--space-2);
+}
+
+.file-type-icon.document {
+    background-color: var(--info-bg);
+    color: var(--info-dark);
+}
+
+.file-type-icon.image {
+    background-color: var(--success-bg);
+    color: var(--success-dark);
+}
+
+.file-type-icon.archive {
+    background-color: var(--warning-bg);
+    color: var(--warning-dark);
+}
+
+.file-type-icon.unknown {
+    background-color: var(--bg-primary);
+    color: var(--text-muted);
+}
+
+.dark .file-type-icon.document,
+.dark-mode .file-type-icon.document {
+    background-color: var(--info-dark-bg);
+    color: var(--info-light);
+}
+
+.dark .file-type-icon.image,
+.dark-mode .file-type-icon.image {
+    background-color: var(--success-dark-bg);
+    color: var(--success-light);
+}
+
+.dark .file-type-icon.archive,
+.dark-mode .file-type-icon.archive {
+    background-color: var(--warning-dark-bg);
+    color: var(--warning-light);
+}
+
+.dark .file-type-icon.unknown,
+.dark-mode .file-type-icon.unknown {
+    background-color: var(--dark-surface);
+    color: var(--dark-text-muted);
+}
+
+/* File name styling */
+.file-name {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+}
+
+.dark .file-name,
+.dark-mode .file-name {
+    color: var(--dark-text-primary);
+}
+
+.file-extension {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-left: var(--space-1);
+}
+
+.dark .file-extension,
+.dark-mode .file-extension {
+    color: var(--dark-text-muted);
+}
+
+/* File size formatting */
+.file-size {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.dark .file-size,
+.dark-mode .file-size {
+    color: var(--dark-text-secondary);
+}
+
+/* File date formatting */
+.file-date {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.dark .file-date,
+.dark-mode .file-date {
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   FILE ACTION BUTTONS
+   ================================= */
+
+.file-actions {
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+}
+
+.file-action-btn {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-action-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.dark .file-action-btn,
+.dark-mode .file-action-btn {
+    background-color: var(--dark-surface-strong);
+    border-color: var(--dark-border);
+    color: var(--dark-text-secondary);
+}
+
+.dark .file-action-btn:hover,
+.dark-mode .file-action-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Specific action button types */
+.file-action-btn.open {
+    color: var(--primary-color);
+}
+
+.file-action-btn.download {
+    color: var(--success);
+}
+
+.file-action-btn.delete {
+    color: var(--danger);
+}
+
+.file-action-btn.delete:hover {
+    background-color: var(--danger);
+    border-color: var(--danger);
+}
+
+/* =================================
+   EMPTY AND ERROR STATES
+   ================================= */
+
+#files-empty-state,
+#files-error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12);
+    text-align: center;
+    color: var(--text-muted);
+    background-color: var(--bg-primary);
+}
+
+.dark #files-empty-state,
+.dark #files-error-state,
+.dark-mode #files-empty-state,
+.dark-mode #files-error-state {
+    color: var(--dark-text-muted);
+    background-color: var(--dark-surface);
+}
+
+.files-state-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-4);
+    opacity: 0.6;
+}
+
+.files-empty-state .files-state-icon {
+    color: var(--text-muted);
+}
+
+.files-error-state .files-state-icon {
+    color: var(--danger);
+}
+
+.files-state-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+.dark .files-state-title,
+.dark-mode .files-state-title {
+    color: var(--dark-text-primary);
+}
+
+.files-state-description {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-4);
+}
+
+.dark .files-state-description,
+.dark-mode .files-state-description {
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   FOOTER SECTION
+   ================================= */
+
+.virtuaaltoimik-footer {
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-primary);
+    padding: var(--space-3) var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.dark .virtuaaltoimik-footer,
+.dark-mode .virtuaaltoimik-footer {
+    background-color: var(--dark-surface);
+    border-top-color: var(--dark-border);
+}
+
+.footer-section {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.footer-section.left {
+    flex: 1;
+}
+
+.footer-section.center {
+    flex: 2;
+    justify-content: center;
+}
+
+.footer-section.right {
+    flex: 1;
+    justify-content: flex-end;
+}
+
+/* Footer buttons */
+.virtuaaltoimik-footer .compact-btn {
+    transition: all var(--transition-normal);
+}
+
+.virtuaaltoimik-footer .compact-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+#folder-open-btn {
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+#create-document-btn {
+    border-color: var(--success);
+    color: var(--success-dark);
+}
+
+#archive-btn {
+    border-color: var(--warning);
+    color: var(--warning-dark);
+}
+
+#filter-files-btn {
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+#refresh-files-btn {
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+}
+
+#exit-virtuaaltoimik-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+#exit-virtuaaltoimik-btn:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+/* Search input in footer */
+#files-search-input {
+    max-width: 20rem;
+    position: relative;
+}
+
+.files-search-wrapper {
+    position: relative;
+    flex-grow: 1;
+    max-width: 20rem;
+}
+
+.files-search-icon {
+    position: absolute;
+    left: var(--space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+    font-size: 0.75rem;
+}
+
+#files-search-input {
+    padding-left: 2rem;
+}
+
+/* =================================
+   LOADING STATE
+   ================================= */
+
+.files-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    color: var(--text-secondary);
+    background-color: var(--bg-surface);
+}
+
+.dark .files-loading,
+.dark-mode .files-loading {
+    color: var(--dark-text-secondary);
+    background-color: var(--dark-surface);
+}
+
+.files-loading-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.files-loading-spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+.dark .files-loading-spinner,
+.dark-mode .files-loading-spinner {
+    border-color: var(--dark-border);
+}
+
+.files-loading-text {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+/* =================================
+   RESPONSIVE DESIGN
+   ================================= */
+
+@media (max-width: 1024px) {
+    .virtuaaltoimik-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-section {
+        justify-content: center;
+        flex: none;
+    }
+
+    .footer-section.left,
+    .footer-section.center,
+    .footer-section.right {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .virtuaaltoimik-header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .virtuaaltoimik-title {
+        font-size: 1rem;
+    }
+
+    .files-table th,
+    .files-table td {
+        padding: var(--space-2) var(--space-3);
+        font-size: 0.75rem;
+    }
+
+    .virtuaaltoimik-footer {
+        padding: var(--space-3) var(--space-4);
+        gap: var(--space-3);
+    }
+
+    .footer-section {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    #files-search-input {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .virtuaaltoimik-title {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-1);
+    }
+
+    .files-table th,
+    .files-table td {
+        padding: var(--space-2);
+        font-size: 0.75rem;
+    }
+
+    /* Stack table on very small screens */
+    .files-table thead {
+        display: none;
+    }
+
+    .files-table,
+    .files-table tbody,
+    .files-table tr,
+    .files-table td {
+        display: block;
+    }
+
+    .files-table tr {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-2);
+        padding: var(--space-3);
+    }
+
+    .dark .files-table tr,
+    .dark-mode .files-table tr {
+        background-color: var(--dark-surface);
+        border-color: var(--dark-border);
+    }
+
+    .files-table td {
+        border: none;
+        padding: var(--space-1) 0;
+        text-align: left !important;
+    }
+
+    .files-table td:before {
+        content: attr(data-label);
+        font-weight: var(--font-weight-semibold);
+        text-transform: uppercase;
+        font-size: 0.625rem;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: var(--space-1);
+    }
+
+    #files-empty-state,
+    #files-error-state {
+        padding: var(--space-8);
+    }
+
+    .files-state-icon {
+        font-size: 3rem;
+    }
+
+    .footer-section {
+        justify-content: center;
+    }
+
+    .footer-section .compact-btn {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+/* =================================
+   FILE SELECTION AND INTERACTION
+   ================================= */
+
+.file-row-selected {
+    background-color: var(--primary-100) !important;
+    border-left: 3px solid var(--primary-color) !important;
+}
+
+.dark .file-row-selected,
+.dark-mode .file-row-selected {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.file-row:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -1px;
+}
+
+/* File context menu styling */
+.file-context-menu {
+    position: absolute;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-2);
+    z-index: var(--z-maximum);
+    min-width: 8rem;
+}
+
+.dark .file-context-menu,
+.dark-mode .file-context-menu {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-xl);
+}
+
+.file-context-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--compact-font-size);
+    color: var(--text-primary);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+}
+
+.file-context-item:hover {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.dark .file-context-item,
+.dark-mode .file-context-item {
+    color: var(--dark-text-primary);
+}
+
+.dark .file-context-item:hover,
+.dark-mode .file-context-item:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: var(--primary-light);
+}

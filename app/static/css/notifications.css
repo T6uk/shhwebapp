@@ -1,0 +1,552 @@
+/* app/static/css/notifications.css */
+/* Toast notifications, alerts, and notification system */
+
+/* Notification container */
+#notification-container {
+    position: fixed;
+    bottom: var(--space-3);
+    left: var(--space-3);
+    z-index: var(--z-notification);
+    max-width: 400px;
+    pointer-events: none;
+}
+
+/* Base notification styles */
+.toast-notification {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-primary);
+    padding: var(--space-4);
+    margin-bottom: var(--space-2);
+    position: relative;
+    pointer-events: auto;
+    animation: slideIn var(--transition-slow) forwards;
+    transition: all var(--transition-slow);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.dark-mode .toast-notification,
+.dark .toast-notification {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-xl);
+}
+
+.toast-notification.hide {
+    animation: slideOut var(--transition-slow) forwards;
+}
+
+/* Notification icon */
+.toast-icon {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    margin-top: 0.125rem;
+}
+
+/* Notification content */
+.toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.toast-title {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-1);
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.dark-mode .toast-title,
+.dark .toast-title {
+    color: var(--dark-text-primary);
+}
+
+.toast-message {
+    font-size: var(--compact-font-size);
+    color: var(--text-secondary);
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.dark-mode .toast-message,
+.dark .toast-message {
+    color: var(--dark-text-secondary);
+}
+
+/* Close button */
+.toast-close {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+    line-height: 1;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-close:hover {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.dark-mode .toast-close,
+.dark .toast-close {
+    color: var(--dark-text-muted);
+}
+
+.dark-mode .toast-close:hover,
+.dark .toast-close:hover {
+    background-color: var(--dark-surface-strong);
+    color: var(--dark-text-primary);
+}
+
+/* Notification variants */
+.toast-notification.success {
+    background-color: var(--success-bg);
+    border-color: var(--success);
+    border-left: 4px solid var(--success);
+}
+
+.toast-notification.success .toast-icon {
+    background-color: var(--success);
+    color: white;
+}
+
+.toast-notification.success .toast-title {
+    color: var(--success-dark);
+}
+
+.toast-notification.error {
+    background-color: var(--danger-bg);
+    border-color: var(--danger);
+    border-left: 4px solid var(--danger);
+}
+
+.toast-notification.error .toast-icon {
+    background-color: var(--danger);
+    color: white;
+}
+
+.toast-notification.error .toast-title {
+    color: var(--danger-dark);
+}
+
+.toast-notification.warning {
+    background-color: var(--warning-bg);
+    border-color: var(--warning);
+    border-left: 4px solid var(--warning);
+}
+
+.toast-notification.warning .toast-icon {
+    background-color: var(--warning);
+    color: white;
+}
+
+.toast-notification.warning .toast-title {
+    color: var(--warning-dark);
+}
+
+.toast-notification.info {
+    background-color: var(--info-bg);
+    border-color: var(--info);
+    border-left: 4px solid var(--info);
+}
+
+.toast-notification.info .toast-icon {
+    background-color: var(--info);
+    color: white;
+}
+
+.toast-notification.info .toast-title {
+    color: var(--info-dark);
+}
+
+/* Dark mode notification variants */
+.dark-mode .toast-notification.success,
+.dark .toast-notification.success {
+    background-color: var(--success-dark-bg);
+    color: #a7f3d0;
+}
+
+.dark-mode .toast-notification.success .toast-title,
+.dark .toast-notification.success .toast-title {
+    color: #86efac;
+}
+
+.dark-mode .toast-notification.error,
+.dark .toast-notification.error {
+    background-color: var(--danger-dark-bg);
+    color: #fecaca;
+}
+
+.dark-mode .toast-notification.error .toast-title,
+.dark .toast-notification.error .toast-title {
+    color: #fca5a5;
+}
+
+.dark-mode .toast-notification.warning,
+.dark .toast-notification.warning {
+    background-color: var(--warning-dark-bg);
+    color: #fde68a;
+}
+
+.dark-mode .toast-notification.warning .toast-title,
+.dark .toast-notification.warning .toast-title {
+    color: #fcd34d;
+}
+
+.dark-mode .toast-notification.info,
+.dark .toast-notification.info {
+    background-color: var(--info-dark-bg);
+    color: #bfdbfe;
+}
+
+.dark-mode .toast-notification.info .toast-title,
+.dark .toast-notification.info .toast-title {
+    color: #93c5fd;
+}
+
+/* Progress indicator for auto-dismiss */
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background-color: var(--primary-color);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    transition: width linear;
+}
+
+.toast-notification.success .toast-progress {
+    background-color: var(--success);
+}
+
+.toast-notification.error .toast-progress {
+    background-color: var(--danger);
+}
+
+.toast-notification.warning .toast-progress {
+    background-color: var(--warning);
+}
+
+.toast-notification.info .toast-progress {
+    background-color: var(--info);
+}
+
+/* Action buttons in notifications */
+.toast-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.toast-action {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--compact-font-size);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.toast-action.primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.toast-action.primary:hover {
+    background-color: var(--primary-dark);
+}
+
+.toast-action.secondary {
+    background-color: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border-primary);
+}
+
+.toast-action.secondary:hover {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.dark-mode .toast-action.secondary,
+.dark .toast-action.secondary {
+    color: var(--dark-text-secondary);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .toast-action.secondary:hover,
+.dark .toast-action.secondary:hover {
+    background-color: var(--dark-surface-strong);
+    color: var(--dark-text-primary);
+}
+
+/* Banner notifications */
+.banner-notification {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    box-shadow: var(--shadow-sm);
+}
+
+.dark-mode .banner-notification,
+.dark .banner-notification {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-sm);
+}
+
+.banner-notification.warning {
+    background-color: var(--warning-bg);
+    border-color: var(--warning);
+    color: var(--warning-dark);
+}
+
+.banner-notification.info {
+    background-color: var(--info-bg);
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+.banner-notification.error {
+    background-color: var(--danger-bg);
+    border-color: var(--danger);
+    color: var(--danger-dark);
+}
+
+.banner-icon {
+    flex-shrink: 0;
+    font-size: 1.25rem;
+}
+
+.banner-content {
+    flex: 1;
+}
+
+.banner-title {
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-1);
+}
+
+.banner-message {
+    font-size: var(--compact-font-size);
+    opacity: 0.9;
+}
+
+/* Inline alerts */
+.alert {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-primary);
+    margin-bottom: var(--space-4);
+    font-size: var(--font-size-base);
+}
+
+.alert.success {
+    background-color: var(--success-bg);
+    border-color: var(--success);
+    color: var(--success-dark);
+}
+
+.alert.error {
+    background-color: var(--danger-bg);
+    border-color: var(--danger);
+    color: var(--danger-dark);
+}
+
+.alert.warning {
+    background-color: var(--warning-bg);
+    border-color: var(--warning);
+    color: var(--warning-dark);
+}
+
+.alert.info {
+    background-color: var(--info-bg);
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+/* Dark mode alerts */
+.dark-mode .alert.success,
+.dark .alert.success {
+    background-color: var(--success-dark-bg);
+    color: #86efac;
+}
+
+.dark-mode .alert.error,
+.dark .alert.error {
+    background-color: var(--danger-dark-bg);
+    color: #fca5a5;
+}
+
+.dark-mode .alert.warning,
+.dark .alert.warning {
+    background-color: var(--warning-dark-bg);
+    color: #fcd34d;
+}
+
+.dark-mode .alert.info,
+.dark .alert.info {
+    background-color: var(--info-dark-bg);
+    color: #93c5fd;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+        max-height: 200px;
+        margin-bottom: var(--space-2);
+        padding: var(--space-4);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-100%);
+        max-height: 0;
+        margin-bottom: 0;
+        padding: 0 var(--space-4);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    #notification-container {
+        left: var(--space-2);
+        right: var(--space-2);
+        bottom: var(--space-2);
+        max-width: none;
+    }
+
+    .toast-notification {
+        min-width: auto;
+        max-width: none;
+        padding: var(--space-3);
+    }
+
+    .toast-close {
+        top: var(--space-1);
+        right: var(--space-1);
+    }
+
+    .banner-notification {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+        padding: var(--space-3);
+    }
+
+    .toast-actions {
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+
+    .toast-action {
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+    .toast-notification {
+        border-width: 2px;
+    }
+
+    .toast-notification.success {
+        border-left-width: 6px;
+    }
+
+    .toast-notification.error {
+        border-left-width: 6px;
+    }
+
+    .toast-notification.warning {
+        border-left-width: 6px;
+    }
+
+    .toast-notification.info {
+        border-left-width: 6px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .toast-notification {
+        animation: fadeIn 0.3s ease;
+    }
+
+    .toast-notification.hide {
+        animation: fadeOut 0.3s ease;
+    }
+
+    .toast-progress {
+        transition: none;
+    }
+}

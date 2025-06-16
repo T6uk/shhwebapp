@@ -1,0 +1,294 @@
+/* app/static/css/forms.css */
+/* Form controls, inputs, selects, and form-related components */
+
+/* Standard Form Controls */
+.input-control {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: 0 var(--space-4);
+    transition: all var(--transition-normal);
+    font-size: var(--font-size-base);
+    width: 100%;
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    height: var(--input-height);
+}
+
+.input-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input-group {
+    display: flex;
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: var(--space-3);
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.input-icon ~ .input-control {
+    padding-left: 2.5rem;
+}
+
+/* Compact Form Elements */
+.compact-input,
+.compact-select {
+    height: var(--compact-input-height);
+    padding: 0 var(--space-3);
+    font-size: var(--compact-font-size);
+    border-radius: var(--compact-border-radius);
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.compact-input:focus,
+.compact-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .compact-input,
+.dark-mode .compact-select,
+.dark .compact-input,
+.dark .compact-select {
+    background-color: var(--dark-surface-strong);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+/* Enhanced focus styling */
+.dark-mode input:focus,
+.dark-mode select:focus,
+.dark input:focus,
+.dark select:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+}
+
+/* Compact select arrow */
+.compact-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-2) center;
+    background-size: 1rem;
+    padding-right: 2rem;
+}
+
+.dark-mode .compact-select,
+.dark .compact-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Filter-specific form controls */
+.filter-select {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: 0.625rem var(--space-4);
+    font-size: var(--font-size-base);
+    background-color: var(--bg-surface);
+    min-width: 10rem;
+    color: var(--text-primary);
+    height: var(--input-height);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+    transition: all var(--transition-normal);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-input {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: 0.625rem var(--space-4);
+    font-size: var(--font-size-base);
+    background-color: var(--bg-surface);
+    flex: 1;
+    color: var(--text-primary);
+    height: var(--input-height);
+    transition: all var(--transition-normal);
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Dark mode form controls */
+.dark-mode .input-control,
+.dark .input-control {
+    background-color: var(--dark-surface-strong);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.dark-mode .input-control:focus,
+.dark .input-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.dark-mode .filter-select,
+.dark-mode .filter-input,
+.dark .filter-select,
+.dark .filter-input {
+    background-color: var(--dark-surface-strong);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.dark-mode .filter-select,
+.dark .filter-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.dark-mode .filter-select:focus,
+.dark-mode .filter-input:focus,
+.dark .filter-select:focus,
+.dark .filter-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Search bar specific styles */
+.search-bar {
+    flex-grow: 1;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* Input group variants */
+.input-group-compact {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.input-group-compact .compact-input {
+    flex: 1;
+}
+
+/* Checkbox and radio styles */
+.compact-checkbox-item {
+    margin: 0.125rem 0;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--compact-border-radius);
+    display: flex;
+    align-items: center;
+    transition: background-color var(--transition-fast);
+}
+
+.compact-checkbox-item:hover {
+    background-color: var(--bg-primary);
+}
+
+.dark-mode .compact-checkbox-item:hover,
+.dark .compact-checkbox-item:hover {
+    background-color: var(--dark-surface-strong);
+}
+
+.compact-checkbox-item .column-toggle {
+    width: 1rem;
+    height: 1rem;
+    margin-right: var(--space-2);
+}
+
+/* Form validation states */
+.input-error {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.input-success {
+    border-color: var(--success) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+.input-warning {
+    border-color: var(--warning) !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
+}
+
+/* Form labels */
+.form-label {
+    display: block;
+    font-size: var(--compact-font-size);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+}
+
+.form-label.required::after {
+    content: " *";
+    color: var(--danger);
+}
+
+/* Dark mode form labels */
+.dark-mode .form-label,
+.dark .form-label {
+    color: var(--dark-text-primary);
+}
+
+/* Responsive form adjustments */
+@media (max-width: 768px) {
+    .search-bar {
+        max-width: none;
+        width: 100%;
+        margin-bottom: var(--space-2);
+    }
+
+    .input-group {
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+
+    .input-icon {
+        position: static;
+        transform: none;
+    }
+
+    .input-icon ~ .input-control {
+        padding-left: var(--space-4);
+    }
+}
+
+@media (max-width: 640px) {
+    .filter-row {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .filter-field,
+    .filter-operator,
+    .filter-value-container {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .compact-filter-remove-btn {
+        position: absolute;
+        right: var(--space-2);
+        top: var(--space-2);
+    }
+}

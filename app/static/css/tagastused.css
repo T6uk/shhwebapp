@@ -1,0 +1,606 @@
+/* app/static/css/tagastused.css */
+/* Tagastused (Returns/Refunds) modal and functionality specific styles */
+
+/* =================================
+   TAGASTUSED MODAL BASE
+   ================================= */
+
+#tagastused-modal {
+    z-index: var(--z-modal);
+}
+
+/* =================================
+   HEADER STYLING
+   ================================= */
+
+.tagastused-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-4) var(--space-6);
+}
+
+.tagastused-header-title {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-bold);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+}
+
+.tagastused-header-icon {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
+    font-size: 1.25rem;
+}
+
+/* =================================
+   TOOLBAR STYLING
+   ================================= */
+
+#tagastused-toolbar {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-surface) 100%);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
+    margin-bottom: var(--space-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.dark #tagastused-toolbar,
+.dark-mode #tagastused-toolbar {
+    background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-bg) 100%);
+    border-color: var(--dark-border);
+}
+
+.tagastused-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.tagastused-toolbar-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+#tagastused-row-count {
+    font-family: var(--font-family-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    font-size: var(--compact-font-size);
+}
+
+.dark #tagastused-row-count,
+.dark-mode #tagastused-row-count {
+    color: var(--dark-text-secondary);
+}
+
+/* Toolbar buttons */
+#refresh-tagastused-btn,
+#export-tagastused-btn {
+    transition: all var(--transition-normal);
+}
+
+#refresh-tagastused-btn:hover,
+#export-tagastused-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+#refresh-tagastused-btn {
+    border-color: var(--info);
+    color: var(--info-dark);
+}
+
+#export-tagastused-btn {
+    border-color: var(--success);
+    color: var(--success-dark);
+}
+
+/* =================================
+   GRID CONTAINER
+   ================================= */
+
+#tagastused-ag-grid {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.dark #tagastused-ag-grid,
+.dark-mode #tagastused-ag-grid {
+    background-color: var(--dark-surface);
+}
+
+/* =================================
+   EMPTY STATE
+   ================================= */
+
+#tagastused-empty-state {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--border-primary);
+    color: var(--text-muted);
+    padding: var(--space-8);
+    text-align: center;
+    transition: all var(--transition-normal);
+}
+
+#tagastused-empty-state:hover {
+    border-color: var(--warning);
+    background-color: var(--warning-bg);
+    color: var(--warning-dark);
+}
+
+.dark #tagastused-empty-state,
+.dark-mode #tagastused-empty-state {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text-muted);
+}
+
+.dark #tagastused-empty-state:hover,
+.dark-mode #tagastused-empty-state:hover {
+    border-color: var(--warning);
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--warning-light);
+}
+
+.tagastused-empty-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-4);
+    opacity: 0.6;
+    color: var(--warning);
+}
+
+.tagastused-empty-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+.dark .tagastused-empty-title,
+.dark-mode .tagastused-empty-title {
+    color: var(--dark-text-primary);
+}
+
+.tagastused-empty-description {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+.dark .tagastused-empty-description,
+.dark-mode .tagastused-empty-description {
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   SUMMARY SECTION
+   ================================= */
+
+.tagastused-summary-section {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-top: var(--space-2);
+    min-height: 200px;
+    border-top: 2px solid var(--warning);
+}
+
+.dark .tagastused-summary-section,
+.dark-mode .tagastused-summary-section {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+.tagastused-summary-title {
+    font-size: 1rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.dark .tagastused-summary-title,
+.dark-mode .tagastused-summary-title {
+    color: var(--dark-text-primary);
+}
+
+.tagastused-summary-icon {
+    background-color: var(--warning);
+    color: white;
+    border-radius: var(--radius-md);
+    padding: var(--space-1);
+    font-size: 0.875rem;
+}
+
+/* Summary grid layout */
+.tagastused-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+    font-size: var(--compact-font-size);
+}
+
+.tagastused-summary-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.tagastused-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .tagastused-summary-item,
+.dark-mode .tagastused-summary-item {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.tagastused-summary-item:last-child {
+    border-bottom: none;
+}
+
+.tagastused-summary-item.major {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.dark .tagastused-summary-item.major,
+.dark-mode .tagastused-summary-item.major {
+    color: var(--dark-text-primary);
+    border-bottom-color: var(--dark-border);
+}
+
+.tagastused-summary-item.indent {
+    padding-left: var(--space-4);
+    color: var(--text-secondary);
+}
+
+.dark .tagastused-summary-item.indent,
+.dark-mode .tagastused-summary-item.indent {
+    color: var(--dark-text-secondary);
+}
+
+.tagastused-summary-label {
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.dark .tagastused-summary-label,
+.dark-mode .tagastused-summary-label {
+    color: var(--dark-text-secondary);
+}
+
+.tagastused-summary-value {
+    font-family: 'Courier New', monospace;
+    font-weight: var(--font-weight-medium);
+    text-align: right;
+    min-width: 80px;
+    color: var(--text-primary);
+}
+
+.dark .tagastused-summary-value,
+.dark-mode .tagastused-summary-value {
+    color: var(--dark-text-primary);
+}
+
+/* Special highlighting for main totals */
+.tagastused-summary-value.highlight {
+    background-color: var(--warning-bg);
+    color: var(--warning-dark);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--warning);
+    font-weight: var(--font-weight-semibold);
+}
+
+.dark .tagastused-summary-value.highlight,
+.dark-mode .tagastused-summary-value.highlight {
+    background-color: var(--warning-dark-bg);
+    color: #fbbf24;
+    border-color: var(--warning);
+}
+
+/* Summary dividers */
+.tagastused-summary-divider {
+    height: 1px;
+    background-color: var(--border-primary);
+    margin: var(--space-2) 0;
+    grid-column: 1 / -1;
+}
+
+.dark .tagastused-summary-divider,
+.dark-mode .tagastused-summary-divider {
+    background-color: var(--dark-border);
+}
+
+/* Date range display */
+.tagastused-date-range {
+    font-size: var(--compact-font-size);
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: var(--space-2);
+    text-align: center;
+    padding: var(--space-2);
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-primary);
+}
+
+.dark .tagastused-date-range,
+.dark-mode .tagastused-date-range {
+    color: var(--dark-text-muted);
+    background-color: var(--dark-surface-strong);
+    border-color: var(--dark-border);
+}
+
+/* =================================
+   CURRENCY FORMATTING
+   ================================= */
+
+.tagastused-currency {
+    font-family: 'Courier New', monospace;
+    font-weight: var(--font-weight-medium);
+    text-align: right;
+}
+
+.tagastused-currency.positive {
+    color: var(--success-dark);
+}
+
+.tagastused-currency.negative {
+    color: var(--danger);
+}
+
+.tagastused-currency.neutral {
+    color: var(--text-secondary);
+}
+
+.dark .tagastused-currency.positive,
+.dark-mode .tagastused-currency.positive {
+    color: var(--success-light);
+}
+
+.dark .tagastused-currency.negative,
+.dark-mode .tagastused-currency.negative {
+    color: var(--danger-light);
+}
+
+.dark .tagastused-currency.neutral,
+.dark-mode .tagastused-currency.neutral {
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   LOADING STATE
+   ================================= */
+
+.tagastused-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    color: var(--text-secondary);
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-lg);
+}
+
+.dark .tagastused-loading,
+.dark-mode .tagastused-loading {
+    color: var(--dark-text-secondary);
+    background-color: var(--dark-surface);
+}
+
+.tagastused-loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--warning);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+    margin-right: var(--space-3);
+}
+
+.dark .tagastused-loading-spinner,
+.dark-mode .tagastused-loading-spinner {
+    border-color: var(--dark-border);
+}
+
+.tagastused-loading-text {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+/* =================================
+   RESPONSIVE DESIGN
+   ================================= */
+
+@media (max-width: 1024px) {
+    #tagastused-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+    }
+
+    .tagastused-toolbar-actions {
+        justify-content: center;
+    }
+
+    .tagastused-toolbar-info {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .tagastused-header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .tagastused-header-title {
+        font-size: 1.125rem;
+    }
+
+    .tagastused-summary-section {
+        padding: var(--space-3);
+        min-height: auto;
+    }
+
+    .tagastused-summary-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+
+    .tagastused-summary-item {
+        padding: var(--space-2) 0;
+    }
+
+    .tagastused-summary-value {
+        min-width: 60px;
+    }
+
+    #tagastused-toolbar {
+        padding: var(--space-2);
+    }
+
+    #tagastused-toolbar button {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--compact-font-size);
+    }
+}
+
+@media (max-width: 640px) {
+    .tagastused-header-title {
+        font-size: 1rem;
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-1);
+    }
+
+    .tagastused-header-icon {
+        align-self: center;
+    }
+
+    .tagastused-empty-icon {
+        font-size: 3rem;
+    }
+
+    .tagastused-empty-title {
+        font-size: 1rem;
+    }
+
+    .tagastused-summary-title {
+        font-size: 0.875rem;
+    }
+
+    .tagastused-summary-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-1);
+        padding: var(--space-2) 0;
+    }
+
+    .tagastused-summary-value {
+        text-align: left;
+        min-width: auto;
+    }
+
+    .tagastused-date-range {
+        font-size: 0.75rem;
+    }
+}
+
+/* =================================
+   SCROLLBAR STYLING
+   ================================= */
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+}
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-sm);
+}
+
+#tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+.dark #tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-track,
+.dark-mode #tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-track {
+    background: var(--dark-surface);
+}
+
+.dark #tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb,
+.dark-mode #tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb {
+    background: var(--dark-border);
+}
+
+.dark #tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover,
+.dark-mode #tagastused-ag-grid .ag-body-viewport::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-text-secondary);
+}
+
+/* =================================
+   ACCESSIBILITY ENHANCEMENTS
+   ================================= */
+
+/* Focus management */
+.tagastused-summary-item:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .tagastused-summary-section {
+        border-width: 2px;
+    }
+
+    .tagastused-summary-value.highlight {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .tagastused-loading-spinner {
+        animation: none;
+    }
+
+    #tagastused-toolbar button,
+    .tagastused-summary-item {
+        transition: none;
+    }
+
+    #tagastused-empty-state {
+        transition: none;
+    }
+}

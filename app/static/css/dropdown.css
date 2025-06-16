@@ -1,5 +1,5 @@
 /* app/static/css/dropdown.css */
-/* Fixed dropdown system with proper z-index hierarchy */
+/* Dropdown system with proper z-index hierarchy */
 
 /* Base dropdown container */
 .dropdown {
@@ -297,6 +297,53 @@
     color: var(--primary-light);
 }
 
+/* Enhanced dropdown styling for specific use cases */
+.quick-links-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: var(--space-2);
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: var(--radius-lg);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid var(--border-primary);
+}
+
+.quick-link:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.dark-mode .quick-link,
+.dark .quick-link {
+    background-color: var(--dark-surface);
+    color: var(--dark-text-primary);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .quick-link:hover,
+.dark .quick-link:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
 /* Animation variants */
 .dropdown-menu.fade-in {
     transition: opacity var(--transition-normal), visibility var(--transition-normal);
@@ -346,6 +393,10 @@
         transform: translateX(-50%) translateY(0) scale(1);
         z-index: var(--z-maximum) !important;
     }
+
+    .quick-links-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 480px) {
@@ -359,6 +410,10 @@
 
     .dropdown-title {
         padding: var(--space-2) var(--space-3);
+    }
+
+    .quick-links-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -380,12 +435,6 @@
     border-top-color: var(--primary-color);
     border-radius: var(--radius-full);
     animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* FIXED: Dropdown backdrop for mobile with proper z-index */

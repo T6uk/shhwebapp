@@ -1,0 +1,336 @@
+/* app/static/css/toolbar.css */
+/* Toolbar and toolbar-related component styles */
+
+/* Main toolbar styling */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+}
+
+.toolbar-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+/* Toolbar container card */
+#toolbar-container {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-context);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: visible;
+}
+
+#toolbar-container:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.dark-mode #toolbar-container,
+.dark #toolbar-container {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-context);
+}
+
+.dark-mode #toolbar-container:hover,
+.dark #toolbar-container:hover {
+    box-shadow: var(--shadow-dark-lg);
+}
+
+/* Toolbar button groups */
+.toolbar-button-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-1);
+    border: 1px solid var(--border-primary);
+}
+
+.dark-mode .toolbar-button-group,
+.dark .toolbar-button-group {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+/* Search section styling */
+.search-section {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-grow: 1;
+    max-width: 400px;
+}
+
+.search-input-wrapper {
+    position: relative;
+    flex-grow: 1;
+}
+
+.search-input-icon {
+    position: absolute;
+    left: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+    font-size: var(--compact-font-size);
+}
+
+#search-input {
+    padding-left: 2rem;
+    width: 100%;
+}
+
+/* Action buttons section */
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+/* Quick refresh button specific styling */
+#refresh-button {
+    position: relative;
+    min-width: 2rem;
+    min-height: 2rem;
+}
+
+.badge-container {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+.refresh-badge {
+    width: 100%;
+    height: 100%;
+    background-color: var(--danger);
+    border-radius: var(--radius-full);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Loading indicator */
+#mini-loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mini-spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Active filters container */
+#active-filters-container {
+    border-radius: var(--compact-border-radius);
+    background-color: rgba(59, 130, 246, 0.05);
+    padding: var(--space-2) var(--space-3);
+    margin-top: var(--space-2);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode #active-filters-container,
+.dark #active-filters-container {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+#active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.active-filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    background-color: var(--primary-color);
+    color: white;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+}
+
+.active-filter-tag .remove-filter {
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity var(--transition-fast);
+}
+
+.active-filter-tag .remove-filter:hover {
+    opacity: 1;
+}
+
+/* Koondaja button specific styling */
+#koondaja-btn {
+    position: relative;
+    transition: all var(--transition-normal);
+}
+
+#koondaja-btn.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: var(--shadow-md);
+}
+
+#koondaja-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#koondaja-btn:not(:disabled):hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+/* Edit mode container */
+#edit-mode-container {
+    position: relative;
+}
+
+/* Toolbar responsive behavior */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+        padding: var(--space-3);
+    }
+
+    .toolbar-section {
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .search-section {
+        max-width: none;
+        width: 100%;
+        margin-bottom: var(--space-2);
+        order: -1;
+    }
+
+    .toolbar-actions {
+        justify-content: center;
+        gap: var(--space-1);
+    }
+
+    .toolbar-button-group {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 640px) {
+    .toolbar {
+        padding: var(--space-2);
+    }
+
+    .toolbar-section {
+        gap: var(--space-1);
+    }
+
+    .toolbar-actions {
+        gap: var(--space-1);
+    }
+
+    /* Hide less important button text on small screens */
+    .toolbar-actions .compact-btn span:not(.keep-visible) {
+        display: none;
+    }
+
+    /* Keep essential buttons visible */
+    #apply-filters span,
+    #clear-filters span,
+    #koondaja-btn span {
+        display: inline-block !important;
+    }
+}
+
+/* UI hiding transitions */
+#toolbar-container {
+    transition: height var(--transition-slow),
+                opacity var(--transition-slow),
+                margin var(--transition-slow),
+                transform var(--transition-slow);
+}
+
+.toolbar-hidden #toolbar-container {
+    height: 0;
+    opacity: 0;
+    margin: 0;
+    transform: translateY(-100%);
+    overflow: hidden;
+}
+
+/* Toolbar enhancement animations */
+.toolbar-enhanced .toolbar-actions {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Special toolbar states */
+.toolbar-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.toolbar-loading .compact-btn,
+.toolbar-loading .btn {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

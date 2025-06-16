@@ -1,0 +1,640 @@
+/* app/static/css/toimikuleidja.css */
+/* Toimikuleidja modal and search functionality specific styles */
+
+/* =================================
+   TOIMIKULEIDJA MODAL BASE
+   ================================= */
+
+#toimikuleidja-modal {
+    z-index: calc(var(--z-modal) + 20);
+}
+
+/* =================================
+   SEARCH SECTION
+   ================================= */
+
+.toimikuleidja-search-section {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-surface) 100%);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    box-shadow: var(--shadow-sm);
+}
+
+.dark .toimikuleidja-search-section,
+.dark-mode .toimikuleidja-search-section {
+    background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-bg) 100%);
+    border-color: var(--dark-border);
+}
+
+.search-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.search-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.search-field label {
+    font-size: var(--compact-font-size);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.dark .search-field label,
+.dark-mode .search-field label {
+    color: var(--dark-text-primary);
+}
+
+.search-field input {
+    width: 100%;
+    transition: all var(--transition-normal);
+}
+
+.search-field input:focus {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Search button */
+.search-button-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-4);
+}
+
+#toimikuleidja-search-btn {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-lg);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+#toimikuleidja-search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+#toimikuleidja-search-btn:active {
+    transform: translateY(0);
+}
+
+#toimikuleidja-search-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+#toimikuleidja-search-btn:hover::before {
+    left: 100%;
+}
+
+/* =================================
+   RESULTS TABLE
+   ================================= */
+
+.toimikuleidja-results-container {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.dark .toimikuleidja-results-container,
+.dark-mode .toimikuleidja-results-container {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+#toimikuleidja-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.toimikuleidja-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.toimikuleidja-table th,
+.toimikuleidja-table td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    border-bottom: 1px solid var(--border-primary);
+    font-size: var(--compact-font-size);
+}
+
+.dark .toimikuleidja-table th,
+.dark .toimikuleidja-table td,
+.dark-mode .toimikuleidja-table th,
+.dark-mode .toimikuleidja-table td {
+    border-bottom-color: var(--dark-border);
+}
+
+.toimikuleidja-table th {
+    background-color: var(--bg-primary);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.dark .toimikuleidja-table th,
+.dark-mode .toimikuleidja-table th {
+    background-color: var(--dark-surface-strong);
+    color: var(--dark-text-secondary);
+}
+
+.toimikuleidja-table td {
+    color: var(--text-primary);
+    transition: background-color var(--transition-fast);
+}
+
+.dark .toimikuleidja-table td,
+.dark-mode .toimikuleidja-table td {
+    color: var(--dark-text-primary);
+}
+
+.toimikuleidja-table tbody tr {
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.toimikuleidja-table tbody tr:hover {
+    background-color: var(--bg-primary);
+    transform: translateX(2px);
+}
+
+.dark .toimikuleidja-table tbody tr:hover,
+.dark-mode .toimikuleidja-table tbody tr:hover {
+    background-color: var(--dark-surface-strong);
+}
+
+/* Selected row styling */
+.toimikuleidja-row-selected {
+    background-color: var(--primary-100) !important;
+    border-left: 3px solid var(--primary-color) !important;
+}
+
+.dark .toimikuleidja-row-selected,
+.dark-mode .toimikuleidja-row-selected {
+    background-color: #1e3a8a !important;
+}
+
+/* Currency formatting in table */
+.toimikuleidja-table .currency {
+    font-family: 'Courier New', monospace;
+    font-weight: var(--font-weight-medium);
+    text-align: right;
+}
+
+.toimikuleidja-table .toimiku-nr {
+    font-family: 'Courier New', monospace;
+    font-weight: var(--font-weight-semibold);
+    color: var(--primary-color);
+}
+
+/* =================================
+   ACTION BUTTONS IN TABLE
+   ================================= */
+
+.toimiku-select-btn {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.toimiku-select-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.toimiku-select-btn:active {
+    transform: translateY(0);
+}
+
+.toimiku-select-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.3s;
+}
+
+.toimiku-select-btn:hover::before {
+    left: 100%;
+}
+
+.toimiku-select-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* =================================
+   STATE DISPLAYS
+   ================================= */
+
+/* Loading state */
+#toimikuleidja-loading {
+    padding: var(--space-8);
+    text-align: center;
+    background-color: var(--bg-surface);
+}
+
+.dark #toimikuleidja-loading,
+.dark-mode #toimikuleidja-loading {
+    background-color: var(--dark-surface);
+}
+
+.toimikuleidja-loading-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    color: var(--text-secondary);
+}
+
+.dark .toimikuleidja-loading-content,
+.dark-mode .toimikuleidja-loading-content {
+    color: var(--dark-text-secondary);
+}
+
+.toimikuleidja-loading-spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+.dark .toimikuleidja-loading-spinner,
+.dark-mode .toimikuleidja-loading-spinner {
+    border-color: var(--dark-border);
+}
+
+/* Initial state */
+#toimikuleidja-initial {
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.dark #toimikuleidja-initial,
+.dark-mode #toimikuleidja-initial {
+    color: var(--dark-text-muted);
+}
+
+.toimikuleidja-initial-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-4);
+    opacity: 0.6;
+    color: var(--primary-color);
+}
+
+.toimikuleidja-initial-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+.dark .toimikuleidja-initial-title,
+.dark-mode .toimikuleidja-initial-title {
+    color: var(--dark-text-primary);
+}
+
+.toimikuleidja-initial-description {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+.dark .toimikuleidja-initial-description,
+.dark-mode .toimikuleidja-initial-description {
+    color: var(--dark-text-secondary);
+}
+
+/* Empty state */
+#toimikuleidja-empty {
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.dark #toimikuleidja-empty,
+.dark-mode #toimikuleidja-empty {
+    color: var(--dark-text-muted);
+}
+
+.toimikuleidja-empty-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-4);
+    opacity: 0.6;
+    color: var(--warning);
+}
+
+.toimikuleidja-empty-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+.dark .toimikuleidja-empty-title,
+.dark-mode .toimikuleidja-empty-title {
+    color: var(--dark-text-primary);
+}
+
+.toimikuleidja-empty-description {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+.dark .toimikuleidja-empty-description,
+.dark-mode .toimikuleidja-empty-description {
+    color: var(--dark-text-secondary);
+}
+
+/* =================================
+   FOOTER SECTION
+   ================================= */
+
+.toimikuleidja-footer {
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-primary);
+    padding: var(--space-3) var(--space-6);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dark .toimikuleidja-footer,
+.dark-mode .toimikuleidja-footer {
+    background-color: var(--dark-surface);
+    border-top-color: var(--dark-border);
+}
+
+.toimikuleidja-result-count {
+    font-size: var(--compact-font-size);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.dark .toimikuleidja-result-count,
+.dark-mode .toimikuleidja-result-count {
+    color: var(--dark-text-secondary);
+}
+
+#close-toimikuleidja-btn {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
+}
+
+#close-toimikuleidja-btn:hover {
+    background-color: var(--bg-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.dark #close-toimikuleidja-btn,
+.dark-mode #close-toimikuleidja-btn {
+    background-color: var(--dark-surface-strong);
+    color: var(--dark-text-primary);
+    border-color: var(--dark-border);
+}
+
+.dark #close-toimikuleidja-btn:hover,
+.dark-mode #close-toimikuleidja-btn:hover {
+    background-color: var(--dark-surface);
+}
+
+/* =================================
+   ENHANCED INTERACTIONS
+   ================================= */
+
+/* Search field enhancements */
+#toimikuleidja-otsing:focus,
+#toimikuleidja-selgitus:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+    transform: scale(1.02);
+}
+
+/* Row hover effects */
+.toimikuleidja-table tbody tr {
+    position: relative;
+}
+
+.toimikuleidja-table tbody tr::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: transparent;
+    transition: background-color var(--transition-fast);
+}
+
+.toimikuleidja-table tbody tr:hover::before {
+    background-color: var(--primary-color);
+}
+
+/* Button loading state */
+#toimikuleidja-search-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+#toimikuleidja-search-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+/* =================================
+   RESPONSIVE DESIGN
+   ================================= */
+
+@media (max-width: 768px) {
+    .search-fields-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+
+    .toimikuleidja-search-section {
+        padding: var(--space-3);
+    }
+
+    #toimikuleidja-search-btn {
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--compact-font-size);
+    }
+
+    .toimikuleidja-table th,
+    .toimikuleidja-table td {
+        padding: var(--space-2) var(--space-3);
+        font-size: 0.75rem;
+    }
+
+    #toimikuleidja-table-container {
+        max-height: 300px;
+    }
+
+    .toimikuleidja-footer {
+        flex-direction: column;
+        gap: var(--space-2);
+        text-align: center;
+        padding: var(--space-3);
+    }
+
+    .toimiku-select-btn {
+        padding: var(--space-1) var(--space-2);
+        font-size: 0.625rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .toimikuleidja-initial-icon,
+    .toimikuleidja-empty-icon {
+        font-size: 3rem;
+    }
+
+    .toimikuleidja-initial-title,
+    .toimikuleidja-empty-title {
+        font-size: 1rem;
+    }
+
+    .toimikuleidja-table {
+        font-size: 0.75rem;
+    }
+
+    /* Stack table on very small screens */
+    .toimikuleidja-table thead {
+        display: none;
+    }
+
+    .toimikuleidja-table,
+    .toimikuleidja-table tbody,
+    .toimikuleidja-table tr,
+    .toimikuleidja-table td {
+        display: block;
+    }
+
+    .toimikuleidja-table tr {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-2);
+        padding: var(--space-3);
+    }
+
+    .dark .toimikuleidja-table tr,
+    .dark-mode .toimikuleidja-table tr {
+        background-color: var(--dark-surface);
+        border-color: var(--dark-border);
+    }
+
+    .toimikuleidja-table td {
+        border: none;
+        padding: var(--space-1) 0;
+        text-align: left !important;
+    }
+
+    .toimikuleidja-table td:before {
+        content: attr(data-label);
+        font-weight: var(--font-weight-semibold);
+        text-transform: uppercase;
+        font-size: 0.625rem;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: var(--space-1);
+    }
+}
+
+/* =================================
+   ACCESSIBILITY ENHANCEMENTS
+   ================================= */
+
+/* Focus management */
+.toimikuleidja-table tr:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .toimikuleidja-table th,
+    .toimikuleidja-table td {
+        border-width: 2px;
+    }
+
+    .toimiku-select-btn {
+        border: 2px solid var(--primary-dark);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .toimikuleidja-table tbody tr,
+    .toimiku-select-btn,
+    #toimikuleidja-search-btn {
+        transition: none;
+    }
+
+    .toimikuleidja-loading-spinner {
+        animation: none;
+    }
+
+    #toimikuleidja-search-btn::before,
+    .toimiku-select-btn::before {
+        transition: none;
+    }
+}

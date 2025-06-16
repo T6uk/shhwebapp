@@ -1,0 +1,553 @@
+/* app/static/css/base.css */
+/* Base HTML, body, and container styles - FIXED VERSION */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family-base);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+    line-height: 1.5;
+    font-weight: var(--font-weight-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+/* Dark mode body */
+body.dark-mode,
+body.dark {
+    background-color: var(--dark-bg);
+    color: var(--dark-text-primary);
+}
+
+.container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    max-width: 100%;
+    padding: var(--space-3);
+}
+
+/* Modern card styling */
+.card {
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-context);
+    overflow: visible;
+    transition: all var(--transition-normal);
+    border: 1px solid var(--border-primary);
+    position: relative;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.dark-mode .card:hover,
+.dark .card:hover {
+    box-shadow: var(--shadow-dark-lg);
+}
+
+/* Status chips */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+    height: 1.75rem;
+}
+
+/* Enhanced status indicators */
+.status-chip.bg-red-100 {
+    background-color: var(--danger-bg);
+    color: var(--danger-dark);
+    border: 1px solid var(--danger);
+}
+
+.status-chip.bg-green-100 {
+    background-color: var(--success-bg);
+    color: var(--success-dark);
+    border: 1px solid var(--success);
+}
+
+.status-chip.bg-blue-100 {
+    background-color: var(--info-bg);
+    color: var(--info-dark);
+    border: 1px solid var(--info);
+}
+
+.status-chip.bg-yellow-100 {
+    background-color: var(--warning-bg);
+    color: var(--warning-dark);
+    border: 1px solid var(--warning);
+}
+
+/* Dark mode status indicators */
+.dark-mode .status-chip.bg-red-100,
+.dark .status-chip.bg-red-100 {
+    background-color: var(--danger-dark-bg);
+    color: #fca5a5;
+    border-color: var(--danger);
+}
+
+.dark-mode .status-chip.bg-green-100,
+.dark .status-chip.bg-green-100 {
+    background-color: var(--success-dark-bg);
+    color: #86efac;
+    border-color: var(--success);
+}
+
+.dark-mode .status-chip.bg-blue-100,
+.dark .status-chip.bg-blue-100 {
+    background-color: var(--info-dark-bg);
+    color: #93c5fd;
+    border-color: var(--info);
+}
+
+.dark-mode .status-chip.bg-yellow-100,
+.dark .status-chip.bg-yellow-100 {
+    background-color: var(--warning-dark-bg);
+    color: #fcd34d;
+    border-color: var(--warning);
+}
+
+/* FIXED: Proper scrollbars with animations */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-primary);
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-normal);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+.dark-mode ::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb {
+    background: var(--dark-border);
+}
+
+.dark-mode ::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-text-secondary);
+}
+
+/* FIXED: Loading and animation states */
+.loading-state {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading-state::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+    border-radius: inherit;
+}
+
+.dark-mode .loading-state::before,
+.dark .loading-state::before {
+    background: rgba(15, 23, 42, 0.8);
+}
+
+.loading-state::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: -0.75rem 0 0 -0.75rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+    z-index: 11;
+}
+
+/* FIXED: Hidden state utility */
+.hidden {
+    display: none !important;
+}
+
+.invisible {
+    visibility: hidden !important;
+}
+
+.opacity-0 {
+    opacity: 0 !important;
+}
+
+.opacity-50 {
+    opacity: 0.5 !important;
+}
+
+.opacity-100 {
+    opacity: 1 !important;
+}
+
+/* FIXED: Transition utilities */
+.transition-opacity {
+    transition: opacity var(--transition-normal);
+}
+
+.transition-transform {
+    transition: transform var(--transition-normal);
+}
+
+.transition-all {
+    transition: all var(--transition-normal);
+}
+
+.transition-colors {
+    transition: background-color var(--transition-normal),
+               border-color var(--transition-normal),
+               color var(--transition-normal);
+}
+
+/* FIXED: Transform utilities for animations */
+.translate-y-0 {
+    transform: translateY(0);
+}
+
+.translate-y-1 {
+    transform: translateY(0.25rem);
+}
+
+.translate-y-2 {
+    transform: translateY(0.5rem);
+}
+
+.scale-95 {
+    transform: scale(0.95);
+}
+
+.scale-100 {
+    transform: scale(1);
+}
+
+.scale-105 {
+    transform: scale(1.05);
+}
+
+/* FIXED: Interactive states with animations */
+.hover-scale {
+    transition: transform var(--transition-normal);
+}
+
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+.hover-lift {
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.dark-mode .hover-lift:hover,
+.dark .hover-lift:hover {
+    box-shadow: var(--shadow-dark-lg);
+}
+
+/* FIXED: Focus states with animations */
+.focus-ring {
+    outline: none;
+    transition: box-shadow var(--transition-fast);
+}
+
+.focus-ring:focus-visible {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.dark-mode .focus-ring:focus-visible,
+.dark .focus-ring:focus-visible {
+    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3);
+}
+
+/* FIXED: Button press animation */
+.btn-press {
+    transition: transform var(--transition-fast);
+}
+
+.btn-press:active {
+    transform: scale(0.98);
+}
+
+/* FIXED: Pulse animation for emphasis */
+.pulse-emphasis {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.02);
+    }
+}
+
+/* FIXED: Notification animations */
+.notification-enter {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.notification-exit {
+    animation: slideOutLeft 0.3s ease-in;
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutLeft {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+/* FIXED: Modal animations */
+.modal-enter {
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+.modal-exit {
+    animation: modalFadeOut 0.3s ease-in;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes modalFadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+}
+
+/* FIXED: Dropdown animations */
+.dropdown-enter {
+    animation: dropdownSlideIn 0.2s ease-out;
+}
+
+.dropdown-exit {
+    animation: dropdownSlideOut 0.2s ease-in;
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes dropdownSlideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+}
+
+/* FIXED: Loading spinner variants */
+.spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+.spinner-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 1px;
+}
+
+.spinner-lg {
+    width: 2rem;
+    height: 2rem;
+    border-width: 3px;
+}
+
+.spinner-xl {
+    width: 3rem;
+    height: 3rem;
+    border-width: 4px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* FIXED: Skeleton loaders with shimmer */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--bg-primary) 25%,
+        var(--border-primary) 50%,
+        var(--bg-primary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-text {
+    height: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-text:last-child {
+    margin-bottom: 0;
+    width: 60%;
+}
+
+.skeleton-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-full);
+}
+
+.skeleton-button {
+    height: 2.5rem;
+    width: 6rem;
+    border-radius: var(--radius-lg);
+}
+
+/* FIXED: Progress indicators */
+.progress-bar {
+    width: 100%;
+    height: 0.5rem;
+    background-color: var(--border-primary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    transition: width var(--transition-normal);
+}
+
+.progress-indeterminate .progress-fill {
+    width: 30%;
+    animation: progressSlide 1.5s infinite;
+}
+
+@keyframes progressSlide {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(400%);
+    }
+}
+
+/* FIXED: Responsive animation controls */
+@media (max-width: 768px) {
+    .hover-lift:hover,
+    .hover-scale:hover {
+        transform: none;
+    }
+
+    .btn-press:active {
+        transform: scale(0.95);
+    }
+}
+
+/* FIXED: Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .spinner,
+    .skeleton,
+    .progress-indeterminate .progress-fill {
+        animation: none !important;
+    }
+}
