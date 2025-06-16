@@ -1,0 +1,392 @@
+/* app/static/css/dropdown.css */
+/* Smooth dropdown system using centralized variables */
+
+/* Base dropdown container */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Dropdown toggle button enhancements */
+.dropdown-toggle {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.dropdown-toggle:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Dropdown menu base styles */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: var(--z-modal);
+    min-width: 12rem;
+    max-width: 20rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+
+    /* Animation properties */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.5rem) scale(0.95);
+    transition: all var(--transition-normal);
+    transform-origin: top right;
+
+    /* Ensure proper stacking */
+    pointer-events: none;
+}
+
+/* Compact dropdown variant */
+.dropdown-menu.compact-dropdown {
+    min-width: 10rem;
+    font-size: var(--compact-font-size);
+    border-radius: var(--compact-border-radius);
+    box-shadow: var(--shadow-md);
+}
+
+/* Left-aligned dropdown */
+.dropdown-menu.dropdown-left {
+    left: 0;
+    right: auto;
+    transform-origin: top left;
+}
+
+/* Center-aligned dropdown */
+.dropdown-menu.dropdown-center {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(-0.5rem) scale(0.95);
+    transform-origin: top center;
+}
+
+.dropdown-menu.dropdown-center.show {
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Show state */
+.dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* Dropdown menu scrolling */
+.dropdown-menu {
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Custom scrollbar for dropdown */
+.dropdown-menu::-webkit-scrollbar {
+    width: 4px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-full);
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Dropdown items */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-size: inherit;
+    white-space: nowrap;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+    outline: none;
+}
+
+.dropdown-item.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.dropdown-item:disabled,
+.dropdown-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Compact dropdown items */
+.compact-dropdown .dropdown-item {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--compact-font-size);
+    gap: var(--space-2);
+}
+
+.compact-dropdown .dropdown-item.compact-item {
+    padding: var(--space-2) var(--space-3);
+}
+
+/* Dropdown item icons */
+.dropdown-item i {
+    width: 1rem;
+    text-align: center;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+}
+
+.dropdown-item:hover i,
+.dropdown-item:focus i {
+    opacity: 1;
+}
+
+/* Dropdown title */
+.dropdown-title {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--compact-font-size);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
+    margin: 0;
+}
+
+/* Dropdown divider */
+.dropdown-divider {
+    height: 1px;
+    background-color: var(--border-primary);
+    margin: var(--space-1) 0;
+}
+
+/* Dark mode support */
+.dark-mode .dropdown-menu,
+.dark .dropdown-menu {
+    background-color: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: var(--shadow-dark-lg);
+}
+
+.dark-mode .dropdown-item,
+.dark .dropdown-item {
+    color: var(--dark-text-primary);
+}
+
+.dark-mode .dropdown-item:hover,
+.dark-mode .dropdown-item:focus,
+.dark .dropdown-item:hover,
+.dark .dropdown-item:focus {
+    background-color: var(--dark-surface-strong);
+    color: var(--primary-light);
+}
+
+.dark-mode .dropdown-title,
+.dark .dropdown-title {
+    background-color: var(--dark-surface-strong);
+    border-bottom-color: var(--dark-border);
+    color: var(--dark-text-muted);
+}
+
+.dark-mode .dropdown-divider,
+.dark .dropdown-divider {
+    background-color: var(--dark-border);
+}
+
+/* Special dropdown content types */
+.dropdown-content {
+    padding: var(--space-4);
+}
+
+.dropdown-content.compact {
+    padding: var(--space-3);
+}
+
+/* Quick links grid - special styling for the quick links dropdown */
+.quick-links-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+.quick-link-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--compact-border-radius);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    font-size: var(--compact-font-size);
+    color: var(--text-secondary);
+}
+
+.quick-link-item:hover {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.dark-mode .quick-link-item:hover,
+.dark .quick-link-item:hover {
+    background-color: var(--dark-surface-strong);
+    color: var(--primary-light);
+}
+
+/* Animation variants */
+.dropdown-menu.fade-in {
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+    transform: none;
+}
+
+.dropdown-menu.fade-in.show {
+    transform: none;
+}
+
+.dropdown-menu.slide-down {
+    transform: translateY(-1rem);
+    transition: all var(--transition-normal);
+}
+
+.dropdown-menu.slide-down.show {
+    transform: translateY(0);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dropdown-menu {
+        min-width: 10rem;
+        max-width: calc(100vw - 2rem);
+        max-height: 60vh;
+    }
+
+    .dropdown-menu.compact-dropdown {
+        min-width: 8rem;
+    }
+
+    /* Ensure dropdown doesn't overflow on mobile */
+    .dropdown-menu {
+        position: fixed;
+        left: 50% !important;
+        top: auto !important;
+        bottom: 1rem;
+        transform: translateX(-50%) translateY(1rem) scale(0.95);
+        transform-origin: bottom center;
+    }
+
+    .dropdown-menu.show {
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 480px) {
+    .dropdown-item {
+        padding: var(--space-3) var(--space-3);
+    }
+
+    .compact-dropdown .dropdown-item {
+        padding: var(--space-2);
+    }
+
+    .dropdown-title {
+        padding: var(--space-2) var(--space-3);
+    }
+}
+
+/* Loading state for dropdown content */
+.dropdown-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--compact-font-size);
+}
+
+.dropdown-loading .spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Dropdown backdrop for mobile */
+.dropdown-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(2px);
+    z-index: calc(var(--z-modal) - 1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-fast);
+}
+
+.dropdown-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Focus management */
+.dropdown-menu:focus {
+    outline: none;
+}
+
+.dropdown-item:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+}
+
+/* Keyboard navigation indicator */
+.dropdown-item.keyboard-focus {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.dark-mode .dropdown-item.keyboard-focus,
+.dark .dropdown-item.keyboard-focus {
+    background-color: var(--dark-surface-strong);
+    color: var(--primary-light);
+}
