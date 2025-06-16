@@ -56,6 +56,8 @@
     <!-- 3. Compact UI - Alternative component system -->
     <link rel="stylesheet" href="{{ versioned_static('css/compact-ui.css') }}">
 
+    <link rel="stylesheet" href="{{ versioned_static('css/dropdown.css') }}">
+
     <!-- 4. Custom App Styles - App-specific enhancements -->
     <link rel="stylesheet" href="{{ versioned_static('css/custom.css') }}">
 
@@ -1573,6 +1575,8 @@
     </div>
 </div>
 
+<!-- Dropdown System - Load before other modules -->
+<script src="{{ versioned_static('js/dropdown.js') }}"></script>
 <!-- Application Scripts - Load in dependency order -->
 <script src="{{ versioned_static('js/global-bridge.js') }}"></script>
 <script src="{{ versioned_static('js/app.js') }}"></script>

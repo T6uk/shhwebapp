@@ -1,5 +1,4 @@
 /* app/static/css/compact-ui.css */
-/* nupud ja varki */
 /* Compact UI components using centralized variables */
 
 /* Compact Button System - Alternative to standard .btn */
@@ -100,7 +99,7 @@
     color: var(--dark-text-primary);
 }
 
-/* Compact select dropdown arrow */
+/* Compact select arrow */
 .compact-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -163,85 +162,6 @@
 .dark-mode .compact-filter-remove-btn,
 .dark .compact-filter-remove-btn {
     background-color: var(--danger-dark-bg);
-}
-
-/* Compact Dropdown System */
-.compact-dropdown {
-    min-width: 200px;
-    padding: var(--space-2);
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-context);
-}
-
-.compact-dropdown .dropdown-title {
-    font-size: var(--compact-font-size);
-    font-weight: var(--font-weight-semibold);
-    padding: var(--space-2) var(--space-2);
-    margin-bottom: var(--space-1);
-    border-bottom: 1px solid var(--border-primary);
-    color: var(--text-primary);
-}
-
-.compact-dropdown .dropdown-item {
-    font-size: var(--compact-font-size);
-    padding: var(--space-2) var(--space-2);
-    margin-bottom: 0.125rem;
-    border-radius: var(--compact-border-radius);
-    transition: all var(--transition-fast);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    color: var(--text-primary);
-}
-
-.compact-dropdown .dropdown-item:hover {
-    background-color: var(--primary-light);
-    color: var(--primary-color);
-}
-
-.compact-dropdown .dropdown-divider {
-    margin: var(--space-1) 0;
-    height: 1px;
-    background-color: var(--border-primary);
-}
-
-.compact-item i {
-    font-size: 0.75rem;
-    width: 1rem;
-    text-align: center;
-    color: var(--text-secondary);
-}
-
-.compact-dropdown .dropdown-item:hover .compact-item i {
-    color: var(--primary-color);
-}
-
-/* Dark mode dropdown overrides */
-.dark-mode .compact-dropdown,
-.dark .compact-dropdown {
-    background-color: var(--dark-surface);
-    border-color: var(--dark-border);
-    box-shadow: var(--shadow-dark-lg);
-}
-
-.dark-mode .compact-dropdown .dropdown-title,
-.dark .compact-dropdown .dropdown-title {
-    color: var(--dark-text-primary);
-    border-bottom-color: var(--dark-border);
-}
-
-.dark-mode .compact-dropdown .dropdown-item,
-.dark .compact-dropdown .dropdown-item {
-    color: var(--dark-text-primary);
-}
-
-.dark-mode .compact-dropdown .dropdown-item:hover,
-.dark .compact-dropdown .dropdown-item:hover {
-    background-color: var(--dark-surface-strong);
-    color: var(--primary-color);
 }
 
 /* Active Filters Display */

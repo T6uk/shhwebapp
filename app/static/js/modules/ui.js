@@ -1,159 +1,10 @@
 // app/static/js/modules/ui.js
-// UI interactions and utilities with enhanced dropdown and table fixes
+// UI interactions and utilities
 
 (function () {
     // Local references to global state
     const state = window.appState;
     const funcs = window.appFunctions;
-
-    // Enhanced dropdown setup function with dynamic positioning
-    function setupDropdowns() {
-        const dropdowns = [
-            {toggle: "#tools-dropdown-toggle", menu: "#tools-dropdown-menu"},
-            {toggle: "#widgets-dropdown-toggle", menu: "#widgets-dropdown-menu"},
-            {toggle: "#settings-dropdown-toggle", menu: "#settings-dropdown-menu"},
-            {toggle: "#links-dropdown-toggle", menu: "#links-dropdown-menu"},
-            {toggle: "#filters-dropdown-toggle", menu: "#filters-dropdown-menu"},
-            {toggle: "#user-dropdown-toggle", menu: "#user-dropdown-menu"}
-        ];
-
-        // Remove any existing event handlers to prevent conflicts
-        dropdowns.forEach(dropdown => {
-            $(dropdown.toggle).off('click.dropdown mouseenter.dropdown mouseleave.dropdown');
-            $(dropdown.menu).off('click.dropdown mouseenter.dropdown mouseleave.dropdown');
-        });
-
-        // Enhanced dropdown positioning function
-        function positionDropdown($toggle, $menu) {
-            const toggleRect = $toggle[0].getBoundingClientRect();
-            const menuWidth = $menu.outerWidth();
-            const menuHeight = $menu.outerHeight();
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-
-            // Calculate optimal position
-            let left = toggleRect.right - menuWidth;
-            let top = toggleRect.bottom + 8;
-
-            // Adjust if menu would go off-screen horizontally
-            if (left < 16) {
-                left = toggleRect.left;
-            }
-            if (left + menuWidth > viewportWidth - 16) {
-                left = viewportWidth - menuWidth - 16;
-            }
-
-            // Adjust if menu would go off-screen vertically
-            if (top + menuHeight > viewportHeight - 16) {
-                top = toggleRect.top - menuHeight - 8;
-            }
-
-            // Apply positioning
-            $menu.css({
-                position: 'fixed',
-                left: left + 'px',
-                top: top + 'px',
-                right: 'auto',
-                bottom: 'auto',
-                zIndex: 9999
-            });
-        }
-
-        // Set up each dropdown with enhanced behavior
-        dropdowns.forEach(dropdown => {
-            const $toggle = $(dropdown.toggle);
-            const $menu = $(dropdown.menu);
-
-            // Click handler for toggle
-            $toggle.on('click.dropdown', function (e) {
-                e.stopPropagation();
-                e.preventDefault();
-
-                const isCurrentlyOpen = $menu.hasClass("show");
-
-                // Hide all other dropdowns first
-                dropdowns.forEach(other => {
-                    if (other.menu !== dropdown.menu) {
-                        $(other.menu).removeClass("show");
-                    }
-                });
-
-                // Toggle current dropdown
-                if (isCurrentlyOpen) {
-                    $menu.removeClass("show");
-                } else {
-                    // Position dropdown dynamically before showing
-                    positionDropdown($toggle, $menu);
-                    $menu.addClass("show");
-                }
-            });
-
-            // Mouse enter handler for enhanced hover behavior
-            $toggle.on('mouseenter.dropdown', function() {
-                // Only show on hover if another dropdown is already open
-                const anyDropdownOpen = dropdowns.some(d => $(d.menu).hasClass("show"));
-                if (anyDropdownOpen && !$menu.hasClass("show")) {
-                    // Hide other dropdowns
-                    dropdowns.forEach(other => {
-                        if (other.menu !== dropdown.menu) {
-                            $(other.menu).removeClass("show");
-                        }
-                    });
-
-                    // Position and show this dropdown
-                    positionDropdown($toggle, $menu);
-                    $menu.addClass("show");
-                }
-            });
-
-            // Prevent dropdown from closing when clicking inside
-            $menu.on('click.dropdown', function (e) {
-                e.stopPropagation();
-            });
-
-            // Keep dropdown open when hovering over menu
-            $menu.on('mouseenter.dropdown', function() {
-                $menu.addClass("show");
-            });
-        });
-
-        // Close all dropdowns when clicking outside
-        $(document).off('click.dropdown').on('click.dropdown', function (e) {
-            // Check if the click is outside all dropdowns
-            if (!$(e.target).closest('.dropdown').length) {
-                $(".dropdown-menu").removeClass("show");
-            }
-        });
-
-        // Close dropdowns on escape key
-        $(document).off('keydown.dropdown').on('keydown.dropdown', function (e) {
-            if (e.key === 'Escape') {
-                $(".dropdown-menu").removeClass("show");
-            }
-        });
-
-        // Reposition dropdowns on window resize
-        $(window).off('resize.dropdown').on('resize.dropdown', function() {
-            dropdowns.forEach(dropdown => {
-                const $menu = $(dropdown.menu);
-                if ($menu.hasClass("show")) {
-                    const $toggle = $(dropdown.toggle);
-                    positionDropdown($toggle, $menu);
-                }
-            });
-        });
-
-        // Reposition dropdowns on scroll
-        $(window).off('scroll.dropdown').on('scroll.dropdown', function() {
-            dropdowns.forEach(dropdown => {
-                const $menu = $(dropdown.menu);
-                if ($menu.hasClass("show")) {
-                    const $toggle = $(dropdown.toggle);
-                    positionDropdown($toggle, $menu);
-                }
-            });
-        });
-    }
 
     // Enhanced resizeTableContainer function with column width preservation
     function resizeTableContainer() {
@@ -254,7 +105,7 @@
                 $filterPanel.addClass("show");
                 $filterToggle.addClass("active");
 
-                // If showing, update filter field dropdowns with column options
+                // If showing, update filter field options with column options
                 if (funcs.updateFilterFields) {
                     funcs.updateFilterFields();
                 }
@@ -451,11 +302,6 @@
     function setupKeyboardNavigation() {
         // Global keyboard shortcuts
         $(document).off('keydown.navigation').on('keydown.navigation', function(e) {
-            // Close dropdowns on Escape
-            if (e.key === 'Escape') {
-                $('.dropdown-menu').removeClass('show');
-            }
-
             // Toggle filter panel with Ctrl+F or Cmd+F
             if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
                 e.preventDefault();
@@ -510,57 +356,13 @@
         window.addEventListener('error', function(e) {
             if (e.filename && e.filename.includes('ui.js')) {
                 console.error('UI module error:', e.error);
-                // Attempt to reinitialize dropdowns if they fail
-                setTimeout(setupDropdowns, 1000);
             }
         });
-
-        // Handle dropdown positioning errors
-        $(document).on('error', '.dropdown-menu', function(e) {
-            console.warn('Dropdown positioning error, attempting fix...');
-            const $menu = $(this);
-            $menu.css({
-                position: 'fixed',
-                zIndex: 9999,
-                top: '60px',
-                right: '20px'
-            });
-        });
-    }
-
-    // Mutation observer for dynamic content changes
-    function setupDynamicContentObserver() {
-        if ('MutationObserver' in window) {
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    // Reinitialize dropdowns if new dropdown elements are added
-                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                        for (let node of mutation.addedNodes) {
-                            if (node.nodeType === Node.ELEMENT_NODE) {
-                                if (node.querySelector('.dropdown') || node.classList?.contains('dropdown')) {
-                                    console.log('New dropdown detected, reinitializing...');
-                                    setTimeout(setupDropdowns, 100);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }
     }
 
     // Enhanced initialization function
     function initializeUIEnhancements() {
         console.log("Initializing UI enhancements...");
-
-        // Setup enhanced dropdowns
-        setupDropdowns();
 
         // Setup filter toggle with width preservation
         setupFilterToggle();
@@ -600,12 +402,10 @@
                 "F5 või Ctrl + R: Värskenda andmeid",
                 "info"
             );
-            $("#settings-dropdown-menu").removeClass("show");
         });
 
         $(document).on('DOMNodeInserted', function (e) {
             if ($(e.target).hasClass('toast-notification') ||
-                $(e.target).hasClass('dropdown-menu') ||
                 $(e.target).hasClass('filter-row')) {
                 updateDynamicElements();
             }
@@ -614,12 +414,10 @@
         // Export functionality
         $("#export-excel").click(function () {
             if (funcs.exportToExcel) funcs.exportToExcel();
-            $("#tools-dropdown-menu").removeClass("show");
         });
 
         $("#export-pdf").click(function () {
             if (funcs.exportToPDF) funcs.exportToPDF();
-            $("#tools-dropdown-menu").removeClass("show");
         });
 
         // Handle add filter row button
@@ -663,23 +461,19 @@
 
         $("#virtual-file").click(function () {
             showToast("Arendamisel", "Funktsioon 'Virtuaaltoimik' on arendamisel.", "info");
-            $("#tools-dropdown-menu").removeClass("show");
         });
 
         $("#receipts-report").click(function () {
             showToast("Arendamisel", "Funktsioon 'Laekumiste aruanne' on arendamisel.", "info");
-            $("#tools-dropdown-menu").removeClass("show");
         });
 
         // Settings buttons
         $("#toggle-columns").click(function () {
             showColumnVisibilityModal();
-            $("#settings-dropdown-menu").removeClass("show");
         });
 
         $("#save-column-layout").click(function () {
             showToast("Arendamisel", "Veergude paigutuse salvestamine on arendamisel.", "info");
-            $("#settings-dropdown-menu").removeClass("show");
         });
 
         // Toggle dark mode
@@ -689,9 +483,6 @@
 
             // Apply theme change
             if (funcs.updateTheme) funcs.updateTheme();
-
-            // Close dropdown
-            $("#settings-dropdown-menu").removeClass("show");
 
             // Show confirmation with appropriate icon/colors
             const modeText = state.isDarkMode ? "Tume režiim" : "Hele režiim";
@@ -707,12 +498,10 @@
         // Widget buttons
         $("#save-view").click(function () {
             showToast("Arendamisel", "Funktsioon 'Salvesta vaade' on arendamisel.", "info");
-            $("#widgets-dropdown-menu").removeClass("show");
         });
 
         $("#load-view").click(function () {
             showToast("Arendamisel", "Funktsioon 'Lae vaade' on arendamisel.", "info");
-            $("#widgets-dropdown-menu").removeClass("show");
         });
 
         // Column visibility modal
@@ -747,9 +536,8 @@
                 e.preventDefault();
             }
 
-            // Esc to close dropdowns
+            // Esc to close modals
             if (e.keyCode === 27) {
-                $(".dropdown-menu").removeClass("show");
                 $("#column-modal").addClass("hidden");
                 $("#save-filter-modal").addClass("hidden");
             }
@@ -900,18 +688,9 @@
         updateToastStyles();
     }
 
-    // Export functions for global access
-    window.uiEnhancements = {
-        init: initializeUIEnhancements,
-        setupDropdowns: setupDropdowns,
-        setupFilterToggle: setupFilterToggle,
-        resizeTableContainer: resizeTableContainer
-    };
-
     // Expose functions to the global bridge
     funcs.showToast = showToast;
     funcs.resizeTableContainer = resizeTableContainer;
-    funcs.setupDropdowns = setupDropdowns;
     funcs.setupEventHandlers = setupEventHandlers;
     funcs.updateDynamicElements = updateDynamicElements;
 
@@ -920,7 +699,6 @@
         initializeUIEnhancements();
         setupGridEnhancements();
         setupErrorHandling();
-        setupDynamicContentObserver();
         setupEventHandlers();
 
         console.log("All UI enhancements loaded and initialized");

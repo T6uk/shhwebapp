@@ -1,4 +1,12 @@
-// Manual trigger for auto-sizing (equivalent to double-clicking all resize handles)
+// app/static/js/modules/grid.js
+// AG Grid specific functionality with enhanced header support
+
+(function () {
+    // Local references to global state
+    const state = window.appState;
+    const funcs = window.appFunctions;
+
+    // Manual trigger for auto-sizing (equivalent to double-clicking all resize handles)
     function autoSizeAllColumns() {
         if (!state.gridApi) {
             console.warn("Grid API not available for auto-sizing");
@@ -17,13 +25,7 @@
         } catch (error) {
             console.error("Error in manual auto-sizing:", error);
         }
-    }// app/static/js/modules/grid.js
-// AG Grid specific functionality with enhanced header support
-
-(function () {
-    // Local references to global state
-    const state = window.appState;
-    const funcs = window.appFunctions;
+    }
 
     // Get filter parameters based on column type
     function getFilterParams(type) {
@@ -74,7 +76,6 @@
                 .attr("data-field", column.field)
                 .click(function () {
                     scrollToColumn(column.field);
-                    $("#links-dropdown-menu").removeClass("show");
                 });
 
             quickLinksContainer.append(linkElement);

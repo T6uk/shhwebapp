@@ -23,7 +23,7 @@
             $(".app-title-container .text-xs").addClass("text-gray-400").removeClass("text-gray-500");
 
             // Cards and containers
-            $(".card, .dropdown-menu, .loading-card, .filter-panel, .modal-content")
+            $(".card, .loading-card, .filter-panel, .modal-content")
                 .addClass("bg-gray-800 border-gray-700")
                 .removeClass("bg-white border-gray-200");
 
@@ -36,17 +36,6 @@
             $("input, select, .input-control, .filter-select, .filter-input")
                 .addClass("bg-gray-700 text-gray-200 border-gray-600")
                 .removeClass("bg-white text-gray-700 border-gray-200");
-
-            // Dropdown toggles
-            $("[id$='-dropdown-toggle']").each(function() {
-                $(this).addClass("bg-gray-700 text-gray-200 border-gray-600")
-                    .removeClass("bg-white text-gray-700 border-gray-200");
-            });
-
-            // Dropdown items
-            $(".dropdown-item")
-                .addClass("text-gray-200 hover:bg-gray-700")
-                .removeClass("text-gray-700 hover:bg-gray-100");
 
             // Column checkboxes
             $(".compact-checkbox-item")
@@ -96,7 +85,7 @@
             $(".app-title-container .text-xs").removeClass("text-gray-400").addClass("text-gray-500");
 
             // Cards and containers
-            $(".card, .dropdown-menu, .loading-card, .filter-panel, .modal-content")
+            $(".card, .loading-card, .filter-panel, .modal-content")
                 .removeClass("bg-gray-800 border-gray-700")
                 .addClass("bg-white border-gray-200");
 
@@ -109,17 +98,6 @@
             $("input, select, .input-control, .filter-select, .filter-input")
                 .removeClass("bg-gray-700 text-gray-200 border-gray-600")
                 .addClass("bg-white text-gray-700 border-gray-200");
-
-            // Dropdown toggles
-            $("[id$='-dropdown-toggle']").each(function() {
-                $(this).removeClass("bg-gray-700 text-gray-200 border-gray-600")
-                    .addClass("bg-white text-gray-700 border-gray-200");
-            });
-
-            // Dropdown items
-            $(".dropdown-item")
-                .removeClass("text-gray-200 hover:bg-gray-700")
-                .addClass("text-gray-700 hover:bg-gray-100");
 
             // Column checkboxes
             $(".compact-checkbox-item")

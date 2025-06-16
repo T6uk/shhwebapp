@@ -40,11 +40,6 @@
         // Get columns first
         getColumns();
 
-        // Set up dropdown toggles - IMPORTANT: Do this after DOM is ready
-        setTimeout(function () {
-            funcs.setupDropdowns();
-        }, 100);
-
         // Set up event handlers
         funcs.setupEventHandlers();
 
@@ -104,7 +99,7 @@
                         // Apply dark mode to newly added elements
                         $(mutation.addedNodes).find('.btn-secondary:not(.bg-yellow-500):not(.bg-red-500):not(.bg-green-500)').addClass('bg-gray-700 text-gray-200 border-gray-600').removeClass('bg-white text-gray-700 border-gray-200');
                         $(mutation.addedNodes).find('input, select').addClass('bg-gray-700 text-gray-200 border-gray-600').removeClass('bg-white text-gray-700 border-gray-200');
-                        $(mutation.addedNodes).find('.card, .dropdown-menu').addClass('bg-gray-800 border-gray-700').removeClass('bg-white border-gray-200');
+                        $(mutation.addedNodes).find('.card').addClass('bg-gray-800 border-gray-700').removeClass('bg-white border-gray-200');
 
                         // Handle status chips
                         $(mutation.addedNodes).find('.status-chip:not([class*="bg-red-"]):not([class*="bg-green-"]):not([class*="bg-blue-"]):not([class*="bg-yellow-"])').addClass('bg-gray-700 text-gray-200').removeClass('bg-gray-100 text-gray-700');

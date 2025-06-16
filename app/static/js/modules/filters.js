@@ -16,7 +16,7 @@
             $(this).empty().append(placeholder);
         });
 
-        // Add column options to each filter field dropdown
+        // Add column options to each filter field
         state.columnDefs.forEach(function(col) {
             const option = $("<option>")
                 .val(col.field)
@@ -193,7 +193,7 @@
             // For text fields, use a regular text input
             $valueContainer.html(`<input type="text" class="compact-input w-full" placeholder="Filtri väärtus">`);
 
-            // Optionally fetch values for dropdown if column has few unique values
+            // Optionally fetch values for datalist if column has few unique values
             fetchFilterValues(selectedField)
                 .then(response => {
                     if (response.values && response.values.length > 0 && response.values.length <= 100) {
@@ -378,11 +378,10 @@
         funcs.showToast("Filtrid lähtestatud", "Kõik filtrid on eemaldatud", "info");
     }
 
-    // Load saved filters into dropdown
+    // Load saved filters into list
     function loadSavedFiltersList() {
         // Clear existing items
         $("#saved-filters-list").empty();
-        $("#saved-filters-menu").empty();
 
         // Show loading indicator
         $("#saved-filters-list").html('<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i> Laadimine...</div>');
@@ -424,18 +423,10 @@
                     `);
 
                     $("#saved-filters-list").append(listItem);
-
-                    // Also add to toolbar dropdown menu
-                    $("#saved-filters-menu").append(`
-                        <div class="dropdown-item apply-saved-filter" data-id="${filter.id}">
-                            <i class="fas fa-filter"></i>
-                            <span>${filter.name}</span>
-                        </div>
-                    `);
                 });
 
                 // Handle apply filter button clicks
-                $(".apply-filter-btn, .apply-saved-filter").click(function() {
+                $(".apply-filter-btn").click(function() {
                     const filterId = $(this).data("id");
                     applySavedFilter(filterId);
                 });
@@ -493,8 +484,6 @@
                         setTimeout(funcs.resizeTableContainer, 100);
                     }
 
-                    // Close dropdown
-                    $("#filters-dropdown-menu").removeClass("show");
                 } catch (e) {
                     console.error("Error parsing filter model:", e);
                     funcs.showToast("Viga filtri rakendamisel", "Vigane filtri formaat", "error");
