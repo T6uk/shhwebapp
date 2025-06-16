@@ -1,5 +1,5 @@
 /* app/static/css/styles.css */
-/* Main styles using centralized variables */
+/* Main styles using centralized variables - FIXED z-index issues */
 
 /* Base Styles */
 body {
@@ -37,7 +37,7 @@ body.dark {
     color: var(--dark-text-primary);
 }
 
-/* Table Container with Z-Index Fixes */
+/* FIXED: Table Container with proper z-index hierarchy */
 #data-table {
     height: 100%;
     width: 100%;
@@ -55,8 +55,10 @@ body.dark {
     margin-top: var(--space-4);
     border: 1px solid var(--border-primary);
     transition: box-shadow var(--transition-slow);
-    z-index: 1;
-    isolation: isolate;
+    /* FIXED: Use table z-index, not base z-index */
+    z-index: var(--z-table);
+    /* FIXED: Remove isolation to prevent stacking context conflicts */
+    /* isolation: isolate; */
     /* Add transform3d to force hardware acceleration */
     transform: translate3d(0, 0, 0);
     /* Prevent sub-pixel rendering issues */
@@ -75,11 +77,12 @@ body.dark {
     box-shadow: var(--shadow-dark-lg);
 }
 
-/* AG-Grid specific z-index overrides */
+/* FIXED: AG-Grid specific z-index hierarchy */
 .ag-root-wrapper {
-    z-index: 1 !important;
-    /* Force new stacking context to prevent z-index issues */
-    isolation: isolate;
+    /* FIXED: Keep AG-Grid z-index lower than dropdowns */
+    z-index: var(--z-base) !important;
+    /* FIXED: Remove isolation that caused stacking context conflicts */
+    /* isolation: isolate; */
     /* Prevent layout shifts during animations */
     contain: layout style;
 }
@@ -96,11 +99,13 @@ body.dark {
     z-index: 2 !important;
 }
 
-/* Ensure all AG-Grid overlays stay within reasonable z-index */
+/* FIXED: Ensure AG-Grid overlays stay below dropdowns */
 .ag-overlay,
 .ag-menu,
 .ag-popup {
     z-index: 10 !important;
+    /* Ensure they don't interfere with dropdowns */
+    max-z-index: calc(var(--z-dropdown) - 1) !important;
 }
 
 /* Modern card styling */
@@ -328,7 +333,7 @@ body.dark {
     height: 1.75rem;
 }
 
-/* ENHANCED FILTER PANEL STYLES WITH ANIMATION FIXES */
+/* FIXED: ENHANCED FILTER PANEL STYLES WITH PROPER Z-INDEX */
 .filter-panel {
     background-color: var(--bg-surface);
     border-radius: var(--radius-xl);
@@ -341,7 +346,8 @@ body.dark {
     /* Enhanced animation and positioning */
     display: none;
     position: relative;
-    z-index: 5; /* Above table, below modals */
+    /* FIXED: Use appropriate z-index for filter panel */
+    z-index: calc(var(--z-table) + 1);
     opacity: 0;
     transform: translateY(-10px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

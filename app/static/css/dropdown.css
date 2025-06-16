@@ -1,5 +1,5 @@
 /* app/static/css/dropdown.css */
-/* Smooth dropdown system using centralized variables */
+/* Fixed dropdown system with proper z-index hierarchy */
 
 /* Base dropdown container */
 .dropdown {
@@ -15,6 +15,8 @@
     gap: var(--space-2);
     transition: all var(--transition-fast);
     user-select: none;
+    position: relative;
+    z-index: var(--z-dropdown);
 }
 
 .dropdown-toggle:focus {
@@ -22,29 +24,49 @@
     outline-offset: 2px;
 }
 
-/* Dropdown menu base styles */
+/* FIXED: Dropdown menu with proper z-index and positioning */
 .dropdown-menu {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 0.25rem);
     right: 0;
-    z-index: var(--z-modal);
+    /* CRITICAL: Use maximum z-index to ensure visibility above table */
+    z-index: var(--z-maximum) !important;
     min-width: 12rem;
     max-width: 20rem;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-xl);
     overflow: hidden;
 
-    /* Animation properties */
+    /* FIXED: Prevent flickering with proper animation setup */
     opacity: 0;
     visibility: hidden;
     transform: translateY(-0.5rem) scale(0.95);
-    transition: all var(--transition-normal);
+    transition: opacity var(--transition-normal),
+                visibility var(--transition-normal),
+                transform var(--transition-normal);
     transform-origin: top right;
 
-    /* Ensure proper stacking */
+    /* FIXED: Ensure proper stacking and isolation */
     pointer-events: none;
+    isolation: isolate;
+    will-change: opacity, visibility, transform;
+
+    /* FIXED: Force hardware acceleration */
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* FIXED: Specific z-index overrides for toolbar dropdowns */
+#tools-dropdown-menu,
+#widgets-dropdown-menu,
+#settings-dropdown-menu,
+#links-dropdown-menu,
+#filters-dropdown-menu,
+#user-dropdown-menu {
+    z-index: var(--z-maximum) !important;
+    position: absolute !important;
 }
 
 /* Compact dropdown variant */
@@ -52,7 +74,7 @@
     min-width: 10rem;
     font-size: var(--compact-font-size);
     border-radius: var(--compact-border-radius);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Left-aligned dropdown */
@@ -74,12 +96,19 @@
     transform: translateX(-50%) translateY(0) scale(1);
 }
 
-/* Show state */
+/* FIXED: Show state with anti-flicker measures */
 .dropdown-menu.show {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
     pointer-events: auto;
+    /* Prevent re-triggering hover events */
+    z-index: var(--z-maximum) !important;
+}
+
+/* FIXED: Prevent hover interference from parent elements */
+.dropdown.show .dropdown-toggle {
+    z-index: calc(var(--z-maximum) + 1) !important;
 }
 
 /* Dropdown menu scrolling */
@@ -107,7 +136,7 @@
     background: var(--text-muted);
 }
 
-/* Dropdown items */
+/* FIXED: Dropdown items with anti-flicker measures */
 .dropdown-item {
     display: flex;
     align-items: center;
@@ -115,7 +144,7 @@
     padding: var(--space-3) var(--space-4);
     color: var(--text-primary);
     text-decoration: none;
-    transition: all var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
     cursor: pointer;
     border: none;
     background: none;
@@ -123,6 +152,9 @@
     text-align: left;
     font-size: inherit;
     white-space: nowrap;
+    position: relative;
+    /* FIXED: Prevent hover event bubbling */
+    pointer-events: auto;
 }
 
 .dropdown-item:hover,
@@ -130,6 +162,8 @@
     background-color: var(--primary-light);
     color: var(--primary-dark);
     outline: none;
+    /* FIXED: Maintain z-index during hover */
+    z-index: 1;
 }
 
 .dropdown-item.active {
@@ -193,7 +227,7 @@
 .dark .dropdown-menu {
     background-color: var(--dark-surface);
     border-color: var(--dark-border);
-    box-shadow: var(--shadow-dark-lg);
+    box-shadow: var(--shadow-dark-xl);
 }
 
 .dark-mode .dropdown-item,
@@ -282,30 +316,35 @@
     transform: translateY(0);
 }
 
-/* Responsive adjustments */
+/* FIXED: Responsive adjustments with proper z-index */
 @media (max-width: 768px) {
     .dropdown-menu {
         min-width: 10rem;
         max-width: calc(100vw - 2rem);
         max-height: 60vh;
+        /* FIXED: Maintain z-index on mobile */
+        z-index: var(--z-maximum) !important;
     }
 
     .dropdown-menu.compact-dropdown {
         min-width: 8rem;
     }
 
-    /* Ensure dropdown doesn't overflow on mobile */
+    /* FIXED: Mobile positioning without losing z-index */
     .dropdown-menu {
-        position: fixed;
+        position: fixed !important;
         left: 50% !important;
         top: auto !important;
         bottom: 1rem;
         transform: translateX(-50%) translateY(1rem) scale(0.95);
         transform-origin: bottom center;
+        /* Ensure z-index is maintained */
+        z-index: var(--z-maximum) !important;
     }
 
     .dropdown-menu.show {
         transform: translateX(-50%) translateY(0) scale(1);
+        z-index: var(--z-maximum) !important;
     }
 }
 
@@ -349,7 +388,7 @@
     }
 }
 
-/* Dropdown backdrop for mobile */
+/* FIXED: Dropdown backdrop for mobile with proper z-index */
 .dropdown-backdrop {
     position: fixed;
     top: 0;
@@ -358,7 +397,7 @@
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(2px);
-    z-index: calc(var(--z-modal) - 1);
+    z-index: calc(var(--z-maximum) - 1);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-fast);
@@ -389,4 +428,23 @@
 .dark .dropdown-item.keyboard-focus {
     background-color: var(--dark-surface-strong);
     color: var(--primary-light);
+}
+
+/* FIXED: Anti-flicker utility classes */
+.dropdown-no-flicker {
+    pointer-events: none;
+}
+
+.dropdown-no-flicker.show {
+    pointer-events: auto;
+}
+
+/* FIXED: Ensure dropdowns always render above everything */
+.dropdown-menu,
+.dropdown-menu.show {
+    z-index: var(--z-maximum) !important;
+    /* Force new stacking context */
+    isolation: isolate;
+    /* Prevent interference from parent transforms */
+    contain: layout style;
 }

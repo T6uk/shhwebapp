@@ -96,11 +96,15 @@
     --shadow-dark-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
     --shadow-dark-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
 
-    /* Z-Index Scale */
+    /* Z-Index Scale - FIXED: Added missing z-index values */
+    --z-base: 1;
+    --z-table: 5;
+    --z-dropdown: 50;
     --z-modal: 100;
     --z-modal-high: 200;
     --z-notification: 300;
     --z-tooltip: 400;
+    --z-maximum: 9999;
 
     /* Animation Timing */
     --transition-fast: 0.15s ease;

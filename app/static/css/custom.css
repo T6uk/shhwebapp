@@ -1,6 +1,5 @@
 /* app/static/css/custom.css */
-/* toolbari jaoks vajalik */
-/* App-specific enhancements and custom styling */
+/* App-specific enhancements and custom styling - FIXED dropdown z-index issues */
 
 /* Enhanced component interactions */
 .app-bar {
@@ -74,7 +73,7 @@
     background-color: rgba(59, 130, 246, 0.2);
 }
 
-/* ENHANCED DROPDOWN STYLING WITH Z-INDEX FIXES */
+/* FIXED: ENHANCED DROPDOWN STYLING WITH PROPER Z-INDEX */
 .dropdown {
     position: relative;
     display: inline-block;
@@ -84,7 +83,8 @@
     position: absolute;
     top: calc(100% + var(--space-2));
     right: 0;
-    z-index: calc(var(--z-dropdown) + 50) !important; /* Ensure it's above table */
+    /* FIXED: Use proper z-index variable instead of undefined one */
+    z-index: var(--z-maximum) !important;
     min-width: 250px;
     max-width: calc(100vw - 2rem);
     background-color: var(--bg-surface);
@@ -98,8 +98,11 @@
     opacity: 0;
     transform: scale(0.95);
     pointer-events: none;
-    /* Ensure dropdown is always on top */
+    /* FIXED: Ensure dropdown is always on top */
     isolation: isolate;
+    /* FIXED: Force hardware acceleration to prevent flickering */
+    will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .dropdown-menu.show {
@@ -108,25 +111,26 @@
     transform: scale(1);
     pointer-events: auto;
     animation: dropdownFadeIn 0.25s ease forwards;
-    /* Force new stacking context */
-    will-change: transform, opacity;
+    /* FIXED: Maintain maximum z-index when shown */
+    z-index: var(--z-maximum) !important;
 }
 
-/* Fix for specific toolbar dropdowns */
+/* FIXED: Remove conflicting z-index rules that caused issues */
+/* Specific toolbar dropdowns - simplified z-index */
 #tools-dropdown-menu,
 #widgets-dropdown-menu,
 #settings-dropdown-menu,
 #links-dropdown-menu,
 #filters-dropdown-menu,
 #user-dropdown-menu {
-    z-index: 9999 !important; /* Maximum priority over table */
-    position: fixed !important; /* Use fixed positioning for reliability */
+    z-index: var(--z-maximum) !important;
+    position: absolute !important;
 }
 
-/* Adjust positioning for fixed dropdowns */
+/* FIXED: Simplified dropdown focus states */
 .dropdown-toggle:focus + .dropdown-menu,
 .dropdown-toggle.active + .dropdown-menu {
-    z-index: 9999 !important;
+    z-index: var(--z-maximum) !important;
 }
 
 @keyframes dropdownFadeIn {
@@ -176,6 +180,8 @@
     background: none;
     text-decoration: none;
     width: 100%;
+    /* FIXED: Prevent hover event interference */
+    position: relative;
 }
 
 .dropdown-item:hover {
@@ -399,6 +405,9 @@
     box-shadow: var(--shadow-2xl);
     border: 1px solid var(--border-primary);
     padding: var(--space-6);
+    /* FIXED: Ensure modals have proper z-index */
+    z-index: var(--z-modal);
+    position: relative;
 }
 
 .dark-mode .modal-content,
@@ -478,6 +487,8 @@
         max-height: 70vh;
         overflow-y: auto;
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+        /* FIXED: Maintain z-index on mobile */
+        z-index: var(--z-maximum) !important;
     }
 
     #user-dropdown-menu {
@@ -485,6 +496,8 @@
         left: auto;
         width: auto;
         min-width: 12rem;
+        /* FIXED: Ensure user dropdown stays above other elements */
+        z-index: var(--z-maximum) !important;
     }
 
     .quick-links-grid {
@@ -529,6 +542,8 @@ select,
     box-shadow: var(--shadow-xl);
     border-radius: var(--radius-xl);
     backdrop-filter: blur(8px);
+    /* FIXED: Ensure edit panel has proper z-index */
+    z-index: var(--z-modal);
 }
 
 .dark-mode #edit-history-panel,
@@ -552,4 +567,19 @@ select,
 .dark-mode .change-item:hover,
 .dark .change-item:hover {
     background-color: var(--dark-surface-strong);
+}
+
+/* FIXED: Anti-flicker helper classes */
+.no-hover-flicker {
+    pointer-events: none;
+}
+
+.no-hover-flicker.active {
+    pointer-events: auto;
+}
+
+/* FIXED: Prevent dropdown interference with table */
+.dropdown-active .dropdown-menu {
+    z-index: var(--z-maximum) !important;
+    isolation: isolate;
 }
